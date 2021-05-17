@@ -8,7 +8,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import useStorageState from './useStorageState';
 import Form from 'react-bootstrap/esm/Form';
 
-function App() {
+export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
   const [data, setData] = React.useState<object>();
   const client = React.useCallback(() => {
@@ -30,5 +30,3 @@ function App() {
     {<ReactJson src={process.env}/>}
   </Container>
 }
-
-export default App;
