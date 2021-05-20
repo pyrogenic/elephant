@@ -28,6 +28,9 @@ type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
 
 type Fields = Map<number, ElementType<FieldsResponse["fields"]>>;
 
+function all<TResponse extends Pagination>(response: TResponse) {
+}
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
