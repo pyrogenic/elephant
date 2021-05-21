@@ -1,7 +1,6 @@
 import React from 'react';
 import './App.css';
 import Container from 'react-bootstrap/esm/Container';
-import Button from 'react-bootstrap/esm/Button';
 import { Discojs } from 'discojs';
 import ReactJson from 'react-json-view';
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -9,8 +8,8 @@ import useStorageState from './useStorageState';
 import Form from 'react-bootstrap/esm/Form';
 import Figure from 'react-bootstrap/esm/Figure';
 
-type PromiseType<T> = T extends Promise<infer T> ? T : never;
-type ElementType<T> = T extends Array<infer T> ? T : never;
+type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
+type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
 
 type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -22,14 +21,28 @@ type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>;
 
 type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
 
+type CollectionItems = Folder["releases"];
+
+type Collection = {[instanceId: number]: ElementType<CollectionItems>};
+
 type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
   avatar_url?: string,
 };
 
 type Fields = Map<number, ElementType<FieldsResponse["fields"]>>;
 
-function all<TResponse extends Pagination>(response: TResponse) {
+/**
+ "pagination": {
+  "page": 1,
+  "pages": 13,
+  "per_page": 50,
+  "items": 632,
+  "urls": {
+    "last": "https://api.discogs.com/users/pyrogenique/collection/folders/0/releases?sort=added&sort_order=asc&page=13&per_page=50",
+    "next": "https://api.discogs.com/users/pyrogenique/collection/folders/0/releases?sort=added&sort_order=asc&page=2&per_page=50"
+  }
 }
+*/
 
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
@@ -46,9 +59,9 @@ export default function Elephant() {
   const [inventory, setInventory] = React.useState<Inventory>();
   const [folders, setFolders] = React.useState<Folders>();
   const [fields, setFields] = React.useState<Fields>();
-  const [collection, setCollection] = React.useState<Folder>();
   const [profile, setProfile] = React.useState<Profile>();
-
+  const collection = React.useRef<Collection>({});
+  const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
   React.useEffect(getIdentity, [client]);
   React.useEffect(getCollection, [client]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
@@ -74,7 +87,7 @@ export default function Elephant() {
       // fields && <ReactJson src={Array.from(fields)} />
       }
       {folders && <ReactJson src={folders} />}
-      {collection && <ReactJson src={collection} />}
+      {<ReactJson src={collection.current} collapsed={true}/>}
     </Form>
   </Container>;
 
@@ -85,10 +98,19 @@ export default function Elephant() {
     // client().getInventory().then(setInventory, setError);
   }
 
+  function addToCollection(items: CollectionItems) {
+    const newItems: Collection = {};
+    items.forEach((item) => newItems[item.instance_id] = item);
+    collection.current = {...collection.current, ...newItems};
+    setCollectionTimestamp(new Date());
+  }
+  
   function getCollection() {
     client().listCustomFields().then(({fields}) => setFields(new Map(
       fields.map((field) => [field.id, field])
-    )), setError);
-    client().listItemsInFolder(0).then(setCollection, setError);
+      )), setError);
+      
+      client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
+
   }
 }
