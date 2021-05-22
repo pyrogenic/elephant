@@ -98,22 +98,20 @@ export default function Elephant() {
       src={avararUrl()}
       alt={profile?.username}
     />}
-    {identity && <ReactJson src={identity} />}
-    {profile && <ReactJson src={profile} />}
-    {inventory && <ReactJson src={inventory} />}
-    {
-      // fields && <ReactJson src={Array.from(fields)} />
-    }
-    {folders && <ReactJson src={folders} />}
     <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
-    {<ReactJson src={collection.current} collapsed={true} />}
+    {collection.current && <ReactJson src={collection.current} collapsed={true} />}
+    {folders && <ReactJson src={folders} collapsed={true} />}
+    {identity && <ReactJson src={identity} collapsed={true} />}
+    {profile && <ReactJson src={profile} collapsed={true} />}
+    {inventory && <ReactJson src={inventory} collapsed={true} />}
+    {fields && <ReactJson src={Array.from(fields)} collapsed={true} />}
   </Container>;
 
   function getIdentity() {
-    // client().getProfile().then(setProfile, setError);
-    // client().listFolders().then(setFolders, setError);
-    // client().getIdentity().then(setIdentity, setError);
-    // client().getInventory().then(setInventory, setError);
+    client().getProfile().then(setProfile, setError);
+    client().listFolders().then(setFolders, setError);
+    client().getIdentity().then(setIdentity, setError);
+    client().getInventory().then(setInventory, setError);
   }
 
   function addToCollection(items: CollectionItems) {

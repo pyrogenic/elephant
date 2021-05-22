@@ -13,6 +13,7 @@ import {
     FiChevronRight,
     FiMoreHorizontal,
 } from "react-icons/fi";
+import "./Pager.scss";
 
 export default function Pager({
     count,
@@ -43,7 +44,7 @@ export default function Pager({
     }, [count, currentPage, pageSize]);
     variant = variant || "outline-primary";
     const currentPageSpine = React.useMemo(() => spine?.(currentPage), [spine, currentPage]);
-    return <Row>
+    return <Row className="Pager">
         <Col>
             <InputGroup>
                 <InputGroup.Prepend>
