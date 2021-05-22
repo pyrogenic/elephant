@@ -7,6 +7,9 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import useStorageState from './useStorageState';
 import Form from 'react-bootstrap/esm/Form';
 import Figure from 'react-bootstrap/esm/Figure';
+import { Column } from 'react-table';
+import BootstrapTable from './BootstrapTable';
+import Alert from 'react-bootstrap/esm/Alert';
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -23,7 +26,9 @@ type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
 
 type CollectionItems = Folder["releases"];
 
-type Collection = {[instanceId: number]: ElementType<CollectionItems>};
+type CollectionItem = ElementType<CollectionItems>;
+
+type Collection = { [instanceId: number]: CollectionItem };
 
 type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
   avatar_url?: string,
@@ -65,6 +70,15 @@ export default function Elephant() {
   React.useEffect(getIdentity, [client]);
   React.useEffect(getCollection, [client]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
+  const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
+    {
+      Header: "Release",
+      accessor: 'id',
+    }
+  ], []);
   return <Container>
     <Form>
       <Form.Group>
@@ -74,24 +88,28 @@ export default function Elephant() {
           onChange={({ target: { value } }) => setToken(value)}
         />
       </Form.Group>
-      {avararUrl() && <Figure.Image
-        width={100}
-        rounded
-        src={avararUrl()}
-        alt={profile?.username}
-      />}
-      {identity && <ReactJson src={identity} />}
-      {profile && <ReactJson src={profile} />}
-      {inventory && <ReactJson src={inventory} />}
-      {
-      // fields && <ReactJson src={Array.from(fields)} />
-      }
-      {folders && <ReactJson src={folders} />}
-      {<ReactJson src={collection.current} collapsed={true}/>}
     </Form>
+    {error && <Alert variant="warning">
+      <code>{JSON.stringify(error, null, 2)}</code>
+    </Alert>}
+    {avararUrl() && <Figure.Image
+      width={100}
+      rounded
+      src={avararUrl()}
+      alt={profile?.username}
+    />}
+    {identity && <ReactJson src={identity} />}
+    {profile && <ReactJson src={profile} />}
+    {inventory && <ReactJson src={inventory} />}
+    {
+      // fields && <ReactJson src={Array.from(fields)} />
+    }
+    {folders && <ReactJson src={folders} />}
+    <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
+    {<ReactJson src={collection.current} collapsed={true} />}
   </Container>;
 
-  function getIdentity() { 
+  function getIdentity() {
     // client().getProfile().then(setProfile, setError);
     // client().listFolders().then(setFolders, setError);
     // client().getIdentity().then(setIdentity, setError);
@@ -101,16 +119,16 @@ export default function Elephant() {
   function addToCollection(items: CollectionItems) {
     const newItems: Collection = {};
     items.forEach((item) => newItems[item.instance_id] = item);
-    collection.current = {...collection.current, ...newItems};
+    collection.current = { ...collection.current, ...newItems };
     setCollectionTimestamp(new Date());
   }
-  
+
   function getCollection() {
-    client().listCustomFields().then(({fields}) => setFields(new Map(
+    client().listCustomFields().then(({ fields }) => setFields(new Map(
       fields.map((field) => [field.id, field])
-      )), setError);
-      
-      client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
+    )), setError);
+
+    client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
 
   }
 }
