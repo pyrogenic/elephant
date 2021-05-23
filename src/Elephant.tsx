@@ -13,6 +13,8 @@ import Navbar from "react-bootstrap/esm/Navbar";
 import logo from "./elephant.svg";
 import isEmpty from "lodash/isEmpty";
 import range from "lodash/range";
+import { SiAmazon, SiDiscogs } from "react-icons/si";
+import { Badge } from "react-bootstrap";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -32,6 +34,8 @@ type CollectionItems = Folder["releases"];
 type CollectionItem = ElementType<CollectionItems>;
 
 type Collection = { [instanceId: number]: CollectionItem };
+
+type Artist = ElementType<CollectionItem["basic_information"]["artists"]>;
 
 type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
   avatar_url?: string,
@@ -61,16 +65,22 @@ enum Source {
 function orderUri(source: Source, orderNumber: string) {
   switch (source) {
     case Source.amazon:
-      return `https://smile.amazon.com/gp/your-account/order-details/ref=ppx_yo_dt_b_order_details_o00?ie=UTF8&orderID=${orderNumber}`;
+      return {
+        Icon: SiAmazon,
+        uri: `https://smile.amazon.com/gp/your-account/order-details/ref=ppx_yo_dt_b_order_details_o00?ie=UTF8&orderID=${orderNumber}`,
+      };
     case Source.discogs:
-      return `https://www.discogs.com/sell/order/${orderNumber}`;
+      return {
+        Icon: SiDiscogs,
+        uri: `https://www.discogs.com/sell/order/${orderNumber}`,
+      };
     default:
-      return undefined;
+      return {};
   }
 }
 
-function autoFormat(str: string) {
-  switch(str) {
+function autoFormat(str: string|undefined) {
+  switch (str) {
     case KnownFieldTitle.mediaCondition:
       return "Media";
     case KnownFieldTitle.sleeveCondition:
@@ -91,8 +101,10 @@ function autoFormat(str: string) {
       return "F";
     case "Poor (P)":
       return "P";
+    case undefined:
+      return "";
     default:
-      return str;
+      return str.replace(/ \(\d+\)$/,"");
   }
 }
 
@@ -115,7 +127,7 @@ export default function Elephant() {
     const result: FieldsByName = new Map<string, Field>();
     fieldsById?.forEach((field) => result.set(field.name, field))
     return result;
-    },[fieldsById]);
+  }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
   const collection = React.useRef<Collection>({});
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
@@ -149,11 +161,12 @@ export default function Elephant() {
         accessor({ notes }) {
           const source = autoFormat(noteById(notes, sourceId));
           const orderNumber = autoFormat(noteById(notes, orderNumberId));
-          const uri = orderUri(source as Source, orderNumber);
+          let {uri, Icon} = orderUri(source as Source, orderNumber);
+          Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
-            return <a href={uri} target="_blank" rel="noreferrer">{source}</a>;
+            return <a href={uri} target="_blank" rel="noreferrer"><Icon/></a>;
           }
-          return `${source} ${orderNumber}`;
+          return <Icon />;
         },
       }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber]];
     }
@@ -172,56 +185,56 @@ export default function Elephant() {
       }
     });
 
-    fieldsById?.forEach(({name, id}) => !(handledFieldNames.includes(name)) && columns.push({
+    fieldsById?.forEach(({ name, id }) => !(handledFieldNames.includes(name)) && columns.push({
       Header: autoFormat(name),
-      accessor: ({notes}) => autoFormat(noteById(notes, id)),
+      accessor: ({ notes }) => autoFormat(noteById(notes, id)),
     }));
     return columns;
   }, [conditionColumn, fieldsById, sourceColumn]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
-      Header: () => null,
+      Header: <>&nbsp;</>,
       id: "Cover",
       accessor: ({ basic_information: { thumb } }) => thumb,
       //Cell: (...args: any) => {console.log({args}); return "a";},//(value: any) => cvalue,//<Figure.Image src={value} alt={value} />,
-      Cell: ({value}: any) => <img src={value} alt="Cover" />,
+      Cell: ({ value }: any) => <Figure.Image src={value} alt="Cover" />,
     },
     {
       Header: "Artist",
-      accessor: ({basic_information: {artists}}) => artists.map(({name}) => name).join(", "),
+      accessor: ({ basic_information: { artists } }) => <ArtistsCell artists={artists} />,
     },
     {
       Header: "Title",
-      accessor: ({basic_information: {title}}) => title,
+      accessor: ({ basic_information: { title } }) => title,
     },
     {
       Header: "Rating",
       accessor: "rating",
-      Cell: ({value}: {value: number}) => range(1, 6).map((n) => value >= n ? "★" : "☆"),
+      Cell: ({ value }: { value: number }) => range(1, 6).map((n) => value >= n ? "★" : "☆"),
     },
     ...fieldColumns,
   ], [fieldColumns]);
   return <>
     <Navbar bg="light" style={{
-        backgroundImage: `url(${logo})`,
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-      }}>
-        <Navbar.Brand className="ml-5">Elephant</Navbar.Brand>
+      backgroundImage: `url(${logo})`,
+      backgroundSize: "contain",
+      backgroundRepeat: "no-repeat",
+    }}>
+      <Navbar.Brand className="ml-5">Elephant</Navbar.Brand>
       <Navbar.Toggle />
       <Navbar.Collapse className="justify-content-end">
-      <Form inline>
-        <Form.Group>
-          <Form.Label>Discogs Token</Form.Label>
-          <Form.Control
-            value={token}
-            onChange={({ target: { value } }) => setToken(value)}
-          />
-        </Form.Group>
-      </Form>
+        <Form inline>
+          <Form.Group>
+            <Form.Label>Discogs Token</Form.Label>
+            <Form.Control
+              value={token}
+              onChange={({ target: { value } }) => setToken(value)}
+            />
+          </Form.Group>
+        </Form>
         {avararUrl() &&
           <Figure.Image
-          rounded
+            rounded
             width={32}
             src={avararUrl()}
             alt={profile?.username}
@@ -270,3 +283,8 @@ export default function Elephant() {
 
   }
 }
+
+function ArtistsCell({ artists }: { artists: Artist[] }) {
+  return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;
+}
+
