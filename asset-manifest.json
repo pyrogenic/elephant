@@ -1,25 +1,26 @@
 {
   "files": {
-    "main.css": "/elephant/static/css/main.8c8b27cf.chunk.css",
-    "main.js": "/elephant/static/js/main.46bb2ff2.chunk.js",
-    "main.js.map": "/elephant/static/js/main.46bb2ff2.chunk.js.map",
-    "runtime-main.js": "/elephant/static/js/runtime-main.73f23c6f.js",
-    "runtime-main.js.map": "/elephant/static/js/runtime-main.73f23c6f.js.map",
-    "static/css/2.4477070a.chunk.css": "/elephant/static/css/2.4477070a.chunk.css",
-    "static/js/2.3731a0b9.chunk.js": "/elephant/static/js/2.3731a0b9.chunk.js",
-    "static/js/2.3731a0b9.chunk.js.map": "/elephant/static/js/2.3731a0b9.chunk.js.map",
-    "static/js/3.34210ae9.chunk.js": "/elephant/static/js/3.34210ae9.chunk.js",
-    "static/js/3.34210ae9.chunk.js.map": "/elephant/static/js/3.34210ae9.chunk.js.map",
+    "main.css": "/elephant/static/css/main.a4bb30f2.chunk.css",
+    "main.js": "/elephant/static/js/main.d6a8a35d.chunk.js",
+    "main.js.map": "/elephant/static/js/main.d6a8a35d.chunk.js.map",
+    "runtime-main.js": "/elephant/static/js/runtime-main.3b6b28bf.js",
+    "runtime-main.js.map": "/elephant/static/js/runtime-main.3b6b28bf.js.map",
+    "static/css/2.7d64f28b.chunk.css": "/elephant/static/css/2.7d64f28b.chunk.css",
+    "static/js/2.fed85c23.chunk.js": "/elephant/static/js/2.fed85c23.chunk.js",
+    "static/js/2.fed85c23.chunk.js.map": "/elephant/static/js/2.fed85c23.chunk.js.map",
+    "static/js/3.8087b8d8.chunk.js": "/elephant/static/js/3.8087b8d8.chunk.js",
+    "static/js/3.8087b8d8.chunk.js.map": "/elephant/static/js/3.8087b8d8.chunk.js.map",
     "index.html": "/elephant/index.html",
-    "static/css/2.4477070a.chunk.css.map": "/elephant/static/css/2.4477070a.chunk.css.map",
-    "static/css/main.8c8b27cf.chunk.css.map": "/elephant/static/css/main.8c8b27cf.chunk.css.map",
-    "static/js/2.3731a0b9.chunk.js.LICENSE.txt": "/elephant/static/js/2.3731a0b9.chunk.js.LICENSE.txt"
+    "static/css/2.7d64f28b.chunk.css.map": "/elephant/static/css/2.7d64f28b.chunk.css.map",
+    "static/css/main.a4bb30f2.chunk.css.map": "/elephant/static/css/main.a4bb30f2.chunk.css.map",
+    "static/js/2.fed85c23.chunk.js.LICENSE.txt": "/elephant/static/js/2.fed85c23.chunk.js.LICENSE.txt",
+    "static/media/elephant.ac9ac1b2.svg": "/elephant/static/media/elephant.ac9ac1b2.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.73f23c6f.js",
-    "static/css/2.4477070a.chunk.css",
-    "static/js/2.3731a0b9.chunk.js",
-    "static/css/main.8c8b27cf.chunk.css",
-    "static/js/main.46bb2ff2.chunk.js"
+    "static/js/runtime-main.3b6b28bf.js",
+    "static/css/2.7d64f28b.chunk.css",
+    "static/js/2.fed85c23.chunk.js",
+    "static/css/main.a4bb30f2.chunk.css",
+    "static/js/main.d6a8a35d.chunk.js"
   ]
 }
