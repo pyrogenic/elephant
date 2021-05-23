@@ -13,6 +13,9 @@ import {
     FiChevronRight,
     FiMoreHorizontal,
 } from "react-icons/fi";
+import "./Pager.scss";
+
+const MAX_PAGES = 8;
 
 export default function Pager({
     count,
@@ -29,21 +32,25 @@ export default function Pager({
     spine?: SpineFactory,
     variant?: ButtonProps["variant"],
 }) {
-    const { maxPage, minShownPage, maxShownPage } = React.useMemo(() => {
+    const { maxPage, minShownPage, minShownPageSm, maxShownPageSm, maxShownPage } = React.useMemo(() => {
         const maxPage = Math.ceil(count / pageSize) - 1;
-        let [minShownPage, maxShownPage] = [0, maxPage];
+        let [minShownPage, minShownPageSm, maxShownPageSm, maxShownPage] = [0, 0, maxPage, maxPage];
         if (Math.abs(currentPage - minShownPage) < Math.abs(currentPage - maxShownPage)) {
-            minShownPage = Math.max(0, currentPage - 5);
-            maxShownPage = Math.min(maxPage, minShownPage + 10);
+            minShownPage = Math.max(0, currentPage - MAX_PAGES / 2);
+            minShownPageSm = Math.max(0, currentPage - 2);
+            maxShownPageSm = Math.min(maxPage, minShownPageSm + 4);
+            maxShownPage = Math.min(maxPage, minShownPage + MAX_PAGES);
         } else {
-            maxShownPage = Math.min(maxShownPage, currentPage + 5);
-            minShownPage = Math.max(0, maxShownPage - 10);
+            maxShownPage = Math.min(maxShownPage, currentPage + MAX_PAGES / 2);
+            maxShownPageSm = Math.min(maxShownPage, currentPage + 2);
+            minShownPageSm = Math.max(0, maxShownPageSm - 4);
+            minShownPage = Math.max(0, maxShownPage - MAX_PAGES);
         }
-        return { maxPage, minShownPage, maxShownPage };
+        return { maxPage, minShownPage, minShownPageSm, maxShownPageSm, maxShownPage };
     }, [count, currentPage, pageSize]);
-    variant = variant || "outline-primary";
+    variant = variant || "outline-secondary";
     const currentPageSpine = React.useMemo(() => spine?.(currentPage), [spine, currentPage]);
-    return <Row>
+    return <Row className="Pager">
         <Col>
             <InputGroup>
                 <InputGroup.Prepend>
@@ -63,23 +70,25 @@ export default function Pager({
                     >
                         <FiChevronLeft />
                     </Button>
-                    {0 < minShownPage && <InputGroup.Text key={0}>
+                    {0 < minShownPageSm && <InputGroup.Text className={0 < minShownPage ? "" : "auto-show-md"} key={0}>
                         <FiMoreHorizontal />
                     </InputGroup.Text>}
-                    {minShownPage < currentPage && range(minShownPage, currentPage).map((page: number) => <PageButton key={page} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
+                    {minShownPage < currentPage && range(minShownPage, currentPage).map((page: number) =>
+                        <PageButton key={page} autoHide={page < minShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
                     {currentPageSpine?.[0] && <InputGroup.Text>{currentPageSpine[0]}</InputGroup.Text>}
                 </InputGroup.Prepend>
                 <Form.Control
                     key={currentPage + 1}
+                    className="spine"
                     type="number"
-                    style={{ textAlign: "center" }}
                     min={1}
                     max={maxPage + 1}
                     value={(currentPage + 1).toString()}
                     onChange={({ target: { value } }) => gotoPage(clamp(Number(value) - 1, 0, maxPage))} />
                 <InputGroup.Append>
                     {currentPageSpine?.[1] && <InputGroup.Text>{currentPageSpine[1]}</InputGroup.Text>}
-                    {currentPage < maxShownPage && range(currentPage + 1, maxShownPage + 1).map((page: number) => <PageButton key={page} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
+                    {currentPage < maxShownPage && range(currentPage + 1, maxShownPage + 1).map((page: number) =>
+                        <PageButton key={page}  autoHide={page > maxShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
                     {maxShownPage < maxPage && <InputGroup.Text key={maxPage}>
                         <FiMoreHorizontal />
                     </InputGroup.Text>}
@@ -110,18 +119,20 @@ type Spine = [from: string, to: string];
 type SpineFactory = (page: number) => Spine;
 
 function PageButton({
+    autoHide,
     page,
     spine,
     gotoPage,
-    variant
+    variant,
 }: {
+    autoHide: boolean,
     page: number,
     spine?: SpineFactory,
     gotoPage: (page: number) => void,
     variant: ButtonProps["variant"],
 }) {
     const [spineA, spineB] = spine?.(page) ?? [];
-    return <Button className="spine" key={page + 1} variant={variant} onClick={() => gotoPage(page)}>
+    return <Button className={autoHide ? "spine auto-hide-md" : "spine"} key={page + 1} variant={variant} onClick={() => gotoPage(page)}>
         {spineA && <div className="from">
             {spineA}
         </div>}
