@@ -1,6 +1,24 @@
+$grid-breakpoints-xs: 0;
+$grid-breakpoints-sm: 576px;
+$grid-breakpoints-md: 768px;
+$grid-breakpoints-lg: 992px;
+$grid-breakpoints-xl: 1200px;
+
 .Pager {
     .input-group {
         flex-wrap: nowrap;
+    }
+    .spine {
+        $w: $grid-breakpoints-md / 17;
+        min-width: $w;
+        text-align: center;
+        &:not(.form-control) {
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        &.form-control {
+            min-width: 6rem;
+        }
     }
 }
 
@@ -18,26 +36,26 @@ table + .Pager {
     }
 }
 
-$grid-breakpoints-xs: 0;
-$grid-breakpoints-sm: 576px;
-$grid-breakpoints-md: 768px;
-$grid-breakpoints-lg: 992px;
-$grid-breakpoints-xl: 1200px;
-
 @media only screen and (max-width: $grid-breakpoints-md) {
-    .auto-hide {
+    .auto-hide-md {
         display: none;
     }
-    .auto-show {
-        display: inherit;
+}
+
+@media only screen and (min-width: $grid-breakpoints-md) {
+    .auto-show-md {
+        display: none;
     }
 }
 
 @media only screen and (max-width: $grid-breakpoints-sm) {
-    .auto-hide {
+    .auto-hide-sm {
         display: none;
     }
-    .auto-show {
-        display: inherit;
+}
+
+@media only screen and (min-width: $grid-breakpoints-sm) {
+    .auto-show-sm {
+        display: none;
     }
 }
