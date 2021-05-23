@@ -1,15 +1,17 @@
 import React from 'react';
-import './App.css';
 import Container from 'react-bootstrap/esm/Container';
 import { Discojs } from 'discojs';
 import ReactJson from 'react-json-view';
 import "bootstrap/dist/css/bootstrap.min.css";
-import useStorageState from './useStorageState';
+import useStorageState from './shared/useStorageState';
 import Form from 'react-bootstrap/esm/Form';
 import Figure from 'react-bootstrap/esm/Figure';
 import { Column } from 'react-table';
-import BootstrapTable from './BootstrapTable';
+import BootstrapTable from './shared/BootstrapTable';
 import Alert from 'react-bootstrap/esm/Alert';
+import Navbar from 'react-bootstrap/esm/Navbar';
+import logo from './elephant.svg';
+import isEmpty from 'lodash/isEmpty';
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -79,33 +81,51 @@ export default function Elephant() {
       accessor: 'id',
     }
   ], []);
-  return <Container>
-    <Form>
-      <Form.Group>
-        <Form.Label>Discogs Token</Form.Label>
-        <Form.Control
-          value={token}
-          onChange={({ target: { value } }) => setToken(value)}
+  return <>
+    <Navbar bg="light" expand="lg">
+      <Navbar.Brand>
+        <Figure.Image
+          width={32}
+          rounded
+          src={logo}
+          alt="Elephant"
         />
-      </Form.Group>
-    </Form>
-    {error && <Alert variant="warning">
-      <code>{JSON.stringify(error, null, 2)}</code>
-    </Alert>}
-    {avararUrl() && <Figure.Image
-      width={100}
-      rounded
-      src={avararUrl()}
-      alt={profile?.username}
-    />}
-    <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
-    {collection.current && <ReactJson src={collection.current} collapsed={true} />}
-    {folders && <ReactJson src={folders} collapsed={true} />}
-    {identity && <ReactJson src={identity} collapsed={true} />}
-    {profile && <ReactJson src={profile} collapsed={true} />}
-    {inventory && <ReactJson src={inventory} collapsed={true} />}
-    {fields && <ReactJson src={Array.from(fields)} collapsed={true} />}
-  </Container>;
+      </Navbar.Brand>
+      <Navbar.Toggle />
+      <Navbar.Collapse className="justify-content-end">
+      <Form inline>
+        <Form.Group>
+          <Form.Label>Discogs Token</Form.Label>
+          <Form.Control
+            value={token}
+            onChange={({ target: { value } }) => setToken(value)}
+          />
+        </Form.Group>
+      </Form>
+        {avararUrl() && <Navbar.Text>
+          <a href={identity?.resource_url} target="blank">{identity?.consumer_name}</a>
+          <Figure.Image
+            width={32}
+            src={avararUrl()}
+            alt={profile?.username}
+          />
+        </Navbar.Text>
+        }
+      </Navbar.Collapse>
+    </Navbar>
+    <Container>
+      {!isEmpty(error) && <Alert variant="warning">
+        <code>{JSON.stringify(error, null, 2)}</code>
+      </Alert>}
+      <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
+      {collection.current && <ReactJson src={collection.current} collapsed={true} />}
+      {folders && <ReactJson src={folders} collapsed={true} />}
+      {identity && <ReactJson src={identity} collapsed={true} />}
+      {profile && <ReactJson src={profile} collapsed={true} />}
+      {inventory && <ReactJson src={inventory} collapsed={true} />}
+      {fields && <ReactJson src={Array.from(fields)} collapsed={true} />}
+    </Container>
+  </>;
 
   function getIdentity() {
     client().getProfile().then(setProfile, setError);
