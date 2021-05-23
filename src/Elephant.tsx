@@ -1,17 +1,17 @@
-import React from 'react';
-import Container from 'react-bootstrap/esm/Container';
-import { Discojs } from 'discojs';
-import ReactJson from 'react-json-view';
+import React from "react";
+import Container from "react-bootstrap/esm/Container";
+import { Discojs } from "discojs";
+import ReactJson from "react-json-view";
 import "bootstrap/dist/css/bootstrap.min.css";
-import useStorageState from './shared/useStorageState';
-import Form from 'react-bootstrap/esm/Form';
-import Figure from 'react-bootstrap/esm/Figure';
-import { Column } from 'react-table';
-import BootstrapTable from './shared/BootstrapTable';
-import Alert from 'react-bootstrap/esm/Alert';
-import Navbar from 'react-bootstrap/esm/Navbar';
-import logo from './elephant.svg';
-import isEmpty from 'lodash/isEmpty';
+import useStorageState from "./shared/useStorageState";
+import Form from "react-bootstrap/esm/Form";
+import Figure from "react-bootstrap/esm/Figure";
+import { Column } from "react-table";
+import BootstrapTable from "./shared/BootstrapTable";
+import Alert from "react-bootstrap/esm/Alert";
+import Navbar from "react-bootstrap/esm/Navbar";
+import logo from "./elephant.svg";
+import isEmpty from "lodash/isEmpty";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -37,19 +37,6 @@ type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
 };
 
 type Fields = Map<number, ElementType<FieldsResponse["fields"]>>;
-
-/**
- "pagination": {
-  "page": 1,
-  "pages": 13,
-  "per_page": 50,
-  "items": 632,
-  "urls": {
-    "last": "https://api.discogs.com/users/pyrogenique/collection/folders/0/releases?sort=added&sort_order=asc&page=13&per_page=50",
-    "next": "https://api.discogs.com/users/pyrogenique/collection/folders/0/releases?sort=added&sort_order=asc&page=2&per_page=50"
-  }
-}
-*/
 
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
@@ -78,19 +65,17 @@ export default function Elephant() {
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
       Header: "Release",
-      accessor: 'id',
-    }
+      accessor: "id",
+    },
   ], []);
   return <>
-    <Navbar bg="light" expand="lg">
-      <Navbar.Brand>
-        <Figure.Image
-          width={32}
-          rounded
-          src={logo}
-          alt="Elephant"
-        />
-      </Navbar.Brand>
+    <Navbar bg="light" style={{
+      outline: "1px red solid",
+        backgroundImage: `url(${logo})`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+      }}>
+        <Navbar.Brand className="ml-5">Elephant</Navbar.Brand>
       <Navbar.Toggle />
       <Navbar.Collapse className="justify-content-end">
       <Form inline>
@@ -142,7 +127,7 @@ export default function Elephant() {
 
   function getCollection() {
     client().listCustomFields().then(({ fields }) => setFields(new Map(
-      fields.map((field) => [field.id, field])
+      fields.map((field) => [field.id, field]),
     )), setError);
 
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);

@@ -43,7 +43,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 {headerGroups.map(headerGroup => (
                     <tr {...headerGroup.getHeaderGroupProps()}>
                         {headerGroup.headers.map(column => (
-                            <th {...column.getHeaderProps()}>{column.render('Header')}</th>
+                            <th {...column.getHeaderProps()}>{column.render("Header")}</th>
                         ))}
                     </tr>
                 ))}
@@ -54,7 +54,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     return (
                         <tr {...row.getRowProps()}>
                             {row.cells.map(cell => {
-                                return <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+                                return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
                             })}
                         </tr>
                     )
