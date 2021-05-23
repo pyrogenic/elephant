@@ -12,6 +12,7 @@ import Alert from "react-bootstrap/esm/Alert";
 import Navbar from "react-bootstrap/esm/Navbar";
 import logo from "./elephant.svg";
 import isEmpty from "lodash/isEmpty";
+import range from "lodash/range";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -38,6 +39,33 @@ type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
 
 type Fields = Map<number, ElementType<FieldsResponse["fields"]>>;
 
+function autoFormat(str: string) {
+  switch(str) {
+    case "Media Condition":
+      return "Media";
+    case "Sleeve Condition":
+      return "Sleeve";
+    case "Mint (M)":
+      return "M";
+    case "Near Mint (NM or M-)":
+      return "NM";
+    case "Very Good Plus (VG+)":
+      return "VG";
+    case "Very Good (VG)":
+      return "VG";
+    case "Good Plus (G+)":
+      return "G";
+    case "Good (G)":
+      return "G";
+    case "Fair (F)":
+      return "F";
+    case "Poor (P)":
+      return "P";
+    default:
+      return str;
+  }
+}
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
@@ -62,15 +90,39 @@ export default function Elephant() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
+  const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
+    const result: Column<CollectionItem>[] = [];
+    fields?.forEach(({name, id}) => result.push({
+      Header: autoFormat(name),
+      accessor: ({notes}) => autoFormat(noteById(notes, id)),
+    }));
+    return result;
+  }, [fields]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
+    {
+      Header: () => null,
+      id: "Cover",
+      accessor: ({ basic_information: { thumb } }) => thumb,
+      //Cell: (...args: any) => {console.log({args}); return "a";},//(value: any) => cvalue,//<Figure.Image src={value} alt={value} />,
+      Cell: ({value}: any) => <img width="50%" src={value} alt="Cover" />,
+    },
+    {
+      Header: "Artist",
+      accessor: ({basic_information: {artists}}) => artists.map(({name}) => name).join(", "),
+    },
     {
       Header: "Title",
       accessor: ({basic_information: {title}}) => title,
     },
-  ], []);
+    {
+      Header: "Rating",
+      accessor: "rating",
+      Cell: ({value}: {value: number}) => range(1, 6).map((n) => value >= n ? "★" : "☆"),
+    },
+    ...fieldColumns,
+  ], [fieldColumns]);
   return <>
     <Navbar bg="light" style={{
-      outline: "1px red solid",
         backgroundImage: `url(${logo})`,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
@@ -102,14 +154,18 @@ export default function Elephant() {
         <code>{JSON.stringify(error, null, 2)}</code>
       </Alert>}
       <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
-      {collection.current && <ReactJson src={collection.current} collapsed={true} />}
-      {folders && <ReactJson src={folders} collapsed={true} />}
-      {identity && <ReactJson src={identity} collapsed={true} />}
-      {profile && <ReactJson src={profile} collapsed={true} />}
-      {inventory && <ReactJson src={inventory} collapsed={true} />}
-      {fields && <ReactJson src={Array.from(fields)} collapsed={true} />}
+      {collection.current && <ReactJson name="collection" src={collection.current} collapsed={true} />}
+      {fields && <ReactJson name="fields" src={Array.from(fields)} collapsed={true} />}
+      {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
+      {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
+      {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
+      {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
     </Container>
   </>;
+
+  function noteById(notes: { field_id: number; value: string; }[], id: number): any {
+    return notes.find(({ field_id }) => field_id === id)?.value;
+  }
 
   function getIdentity() {
     client().getProfile().then(setProfile, setError);
