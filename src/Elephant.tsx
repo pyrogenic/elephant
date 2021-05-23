@@ -102,14 +102,13 @@ export default function Elephant() {
           />
         </Form.Group>
       </Form>
-        {avararUrl() && <Navbar.Text>
-          <a href={identity?.resource_url} target="blank">{identity?.consumer_name}</a>
+        {avararUrl() &&
           <Figure.Image
+          rounded
             width={32}
             src={avararUrl()}
             alt={profile?.username}
           />
-        </Navbar.Text>
         }
       </Navbar.Collapse>
     </Navbar>

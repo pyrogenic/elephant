@@ -10,25 +10,20 @@ import {
 } from "react-table";
 import Pager from "./Pager";
 
-export default function BootstrapTable<TElement extends {}>(props: { columns: Column<TElement>[], data: TElement[] }) {
-    // Use the state and functions returned from useTable to build your UI
+type BootstrapTableProps<TElement extends {}> = {
+    columns: Column<TElement>[];
+    data: TElement[];
+};
+
+export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
     const {
-        getTableProps,
         getTableBodyProps,
+        getTableProps,
+        gotoPage,
         headerGroups,
+        page,
         prepareRow,
         rows,
-        page, // Instead of using 'rows', we'll use page,
-        // which has only the rows for the active page
-
-        // The rest of these things are super handy, too ;)
-        canPreviousPage,
-        canNextPage,
-        pageOptions,
-        pageCount,
-        gotoPage,
-        nextPage,
-        previousPage,
         setPageSize,
         state: { pageIndex, pageSize },
     } = useTable(
@@ -54,7 +49,7 @@ export default function BootstrapTable<TElement extends {}>(props: { columns: Co
                 ))}
             </thead>
             <tbody {...getTableBodyProps()}>
-                {page.map((row, i) => {
+                {page.map((row) => {
                     prepareRow(row)
                     return (
                         <tr {...row.getRowProps()}>
