@@ -64,8 +64,8 @@ export default function Elephant() {
   const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
-      Header: "Release",
-      accessor: "id",
+      Header: "Title",
+      accessor: ({basic_information: {title}}) => title,
     },
   ], []);
   return <>
