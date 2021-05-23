@@ -37,13 +37,43 @@ type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
   avatar_url?: string,
 };
 
-type Fields = Map<number, ElementType<FieldsResponse["fields"]>>;
+type Field = ElementType<FieldsResponse["fields"]>;
+
+type FieldsById = Map<number, Field>;
+type FieldsByName = Map<string, Field>;
+
+enum KnownFieldTitle {
+  mediaCondition = "Media Condition",
+  sleeveCondition = "Sleeve Condition",
+  source = "Source",
+  orderNumber = "Order",
+  notes = "Notes",
+  price = "Price",
+}
+
+enum Source {
+  amazon = "Amazon",
+  discogs = "Discogs",
+  gift = "Gift",
+  pfc = "PFC",
+}
+
+function orderUri(source: Source, orderNumber: string) {
+  switch (source) {
+    case Source.amazon:
+      return `https://smile.amazon.com/gp/your-account/order-details/ref=ppx_yo_dt_b_order_details_o00?ie=UTF8&orderID=${orderNumber}`;
+    case Source.discogs:
+      return `https://www.discogs.com/sell/order/${orderNumber}`;
+    default:
+      return undefined;
+  }
+}
 
 function autoFormat(str: string) {
   switch(str) {
-    case "Media Condition":
+    case KnownFieldTitle.mediaCondition:
       return "Media";
-    case "Sleeve Condition":
+    case KnownFieldTitle.sleeveCondition:
       return "Sleeve";
     case "Mint (M)":
       return "M";
@@ -80,7 +110,12 @@ export default function Elephant() {
   const [identity, setIdentity] = React.useState<Identity>();
   const [inventory, setInventory] = React.useState<Inventory>();
   const [folders, setFolders] = React.useState<Folders>();
-  const [fields, setFields] = React.useState<Fields>();
+  const [fieldsById, setFieldsById] = React.useState<FieldsById>();
+  const fieldsByName = React.useMemo(() => {
+    const result: FieldsByName = new Map<string, Field>();
+    fieldsById?.forEach((field) => result.set(field.name, field))
+    return result;
+    },[fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
   const collection = React.useRef<Collection>({});
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
@@ -92,19 +127,55 @@ export default function Elephant() {
   const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
   const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
     const result: Column<CollectionItem>[] = [];
-    fields?.forEach(({name, id}) => result.push({
+    const used: string[] = [];
+
+    const mediaConditionId = fieldsByName.get(KnownFieldTitle.mediaCondition)?.id;
+    const sleeveConditionId = fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id;
+    if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
+      used.push(KnownFieldTitle.mediaCondition);
+      used.push(KnownFieldTitle.sleeveCondition);
+      result.push({
+        Header: "Cond.",
+        accessor({notes}) {
+          const media = autoFormat(noteById(notes, mediaConditionId));
+          const sleeve = autoFormat(noteById(notes, sleeveConditionId));
+          return `${media}/${sleeve}`;
+        },
+      })
+    }
+
+    const sourceId = fieldsByName.get(KnownFieldTitle.source)?.id;
+    const orderNumberId = fieldsByName.get(KnownFieldTitle.orderNumber)?.id;
+    if (sourceId !== undefined && orderNumberId !== undefined) {
+      used.push(KnownFieldTitle.source);
+      used.push(KnownFieldTitle.orderNumber);
+      result.push({
+        Header: "Source",
+        accessor({notes}) {
+          const source = autoFormat(noteById(notes, sourceId));
+          const orderNumber = autoFormat(noteById(notes, orderNumberId));
+          const uri = orderUri(source as Source, orderNumber);
+          if (uri) {
+            return <a href={uri} target="_blank" rel="noreferrer">{source}</a>;
+          }
+          return `${source} ${orderNumber}`;
+        },
+      })
+    }
+
+    fieldsById?.forEach(({name, id}) => !(used.includes(name)) && result.push({
       Header: autoFormat(name),
       accessor: ({notes}) => autoFormat(noteById(notes, id)),
     }));
     return result;
-  }, [fields]);
+  }, [fieldsById, fieldsByName]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
       Header: () => null,
       id: "Cover",
       accessor: ({ basic_information: { thumb } }) => thumb,
       //Cell: (...args: any) => {console.log({args}); return "a";},//(value: any) => cvalue,//<Figure.Image src={value} alt={value} />,
-      Cell: ({value}: any) => <img width="50%" src={value} alt="Cover" />,
+      Cell: ({value}: any) => <img src={value} alt="Cover" />,
     },
     {
       Header: "Artist",
@@ -155,7 +226,7 @@ export default function Elephant() {
       </Alert>}
       <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
       {collection.current && <ReactJson name="collection" src={collection.current} collapsed={true} />}
-      {fields && <ReactJson name="fields" src={Array.from(fields)} collapsed={true} />}
+      {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
       {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
       {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
       {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
@@ -182,7 +253,7 @@ export default function Elephant() {
   }
 
   function getCollection() {
-    client().listCustomFields().then(({ fields }) => setFields(new Map(
+    client().listCustomFields().then(({ fields }) => setFieldsById(new Map(
       fields.map((field) => [field.id, field]),
     )), setError);
 
