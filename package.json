@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@pyrogenic/memo": "~1.0.0",
     "@testing-library/dom": "~7.31.0",
     "@testing-library/jest-dom": "~5.11.4",
     "@testing-library/react": "~11.1.0",
@@ -15,7 +16,7 @@
     "@types/react": "~17.0.0",
     "@types/react-dom": "~17.0.0",
     "bootstrap": "~4.6.0",
-    "discojs": "*",
+    "discojs": "~2.0.0",
     "eslint": "~7.27.0",
     "eslint-config-react-app": "~6.0.0",
     "eslint-plugin-jest": "~24.3.6",

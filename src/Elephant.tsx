@@ -1,20 +1,21 @@
-import React from "react";
-import Container from "react-bootstrap/esm/Container";
-import { Discojs } from "discojs";
-import ReactJson from "react-json-view";
+import MemoizedFetch from "@pyrogenic/memo/lib/MemoizedFetch";
 import "bootstrap/dist/css/bootstrap.min.css";
-import useStorageState from "./shared/useStorageState";
-import Form from "react-bootstrap/esm/Form";
-import Figure from "react-bootstrap/esm/Figure";
-import { Column } from "react-table";
-import BootstrapTable from "./shared/BootstrapTable";
-import Alert from "react-bootstrap/esm/Alert";
-import Navbar from "react-bootstrap/esm/Navbar";
-import logo from "./elephant.svg";
+import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
 import range from "lodash/range";
-import { SiAmazon, SiDiscogs } from "react-icons/si";
+import React from "react";
 import { Badge } from "react-bootstrap";
+import Alert from "react-bootstrap/esm/Alert";
+import Container from "react-bootstrap/esm/Container";
+import Figure from "react-bootstrap/esm/Figure";
+import Form from "react-bootstrap/esm/Form";
+import Navbar from "react-bootstrap/esm/Navbar";
+import { SiAmazon, SiDiscogs } from "react-icons/si";
+import ReactJson from "react-json-view";
+import { Column } from "react-table";
+import logo from "./elephant.svg";
+import BootstrapTable from "./shared/BootstrapTable";
+import useStorageState from "./shared/useStorageState";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -111,12 +112,16 @@ function autoFormat(str: string|undefined) {
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
+  const fetchMemo = React.useMemo(() => new MemoizedFetch("local").fetch, []);
   const client = React.useCallback(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
       userToken: token,
+      fetchOptions: {
+        fetch: fetchMemo,
+      },
     });
-  }, [token]);
+  }, [fetchMemo, token]);
 
   const [error, setError] = React.useState<any>();
   const [identity, setIdentity] = React.useState<Identity>();
