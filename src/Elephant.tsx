@@ -123,35 +123,30 @@ export default function Elephant() {
   React.useEffect(getCollection, [client]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
-  const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
-    const result: Column<CollectionItem>[] = [];
-    const used: string[] = [];
+  type ColumnFactoryResult = [Column<CollectionItem>, KnownFieldTitle[]] | undefined;
 
+  const conditionColumn = React.useCallback((): ColumnFactoryResult => {
     const mediaConditionId = fieldsByName.get(KnownFieldTitle.mediaCondition)?.id;
     const sleeveConditionId = fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id;
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
-      used.push(KnownFieldTitle.mediaCondition);
-      used.push(KnownFieldTitle.sleeveCondition);
-      result.push({
+      return [{
         Header: "Cond.",
-        accessor({notes}) {
+        accessor({ notes }) {
           const media = autoFormat(noteById(notes, mediaConditionId));
           const sleeve = autoFormat(noteById(notes, sleeveConditionId));
           return `${media}/${sleeve}`;
         },
-      })
+      }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
+  }, [fieldsByName]);
 
+  const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     const sourceId = fieldsByName.get(KnownFieldTitle.source)?.id;
     const orderNumberId = fieldsByName.get(KnownFieldTitle.orderNumber)?.id;
     if (sourceId !== undefined && orderNumberId !== undefined) {
-      used.push(KnownFieldTitle.source);
-      used.push(KnownFieldTitle.orderNumber);
-      result.push({
+      return [{
         Header: "Source",
-        accessor({notes}) {
+        accessor({ notes }) {
           const source = autoFormat(noteById(notes, sourceId));
           const orderNumber = autoFormat(noteById(notes, orderNumberId));
           const uri = orderUri(source as Source, orderNumber);
@@ -160,15 +155,29 @@ export default function Elephant() {
           }
           return `${source} ${orderNumber}`;
         },
-      })
+      }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber]];
     }
+  }, [fieldsByName]);
 
-    fieldsById?.forEach(({name, id}) => !(used.includes(name)) && result.push({
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
+  const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
+    const columns: Column<CollectionItem>[] = [];
+    const handledFieldNames: string[] = [];
+
+    [conditionColumn(), sourceColumn()].forEach((e) => {
+      if (e) {
+        columns.push(e[0]);
+        e[1].forEach((i) => handledFieldNames.push(i));
+      }
+    });
+
+    fieldsById?.forEach(({name, id}) => !(handledFieldNames.includes(name)) && columns.push({
       Header: autoFormat(name),
       accessor: ({notes}) => autoFormat(noteById(notes, id)),
     }));
-    return result;
-  }, [fieldsById, fieldsByName]);
+    return columns;
+  }, [conditionColumn, fieldsById, sourceColumn]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
       Header: () => null,
