@@ -1,0 +1,13 @@
+@mixin center-vertically {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.center-vertically {
+    @include center-vertically();
+}
+
+td > img:only-child {
+    margin: -0.5rem;
+}

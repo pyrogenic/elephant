@@ -7,7 +7,6 @@ import React from "react";
 import { Badge } from "react-bootstrap";
 import Alert from "react-bootstrap/esm/Alert";
 import Container from "react-bootstrap/esm/Container";
-import Figure from "react-bootstrap/esm/Figure";
 import Form from "react-bootstrap/esm/Form";
 import Navbar from "react-bootstrap/esm/Navbar";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
@@ -16,6 +15,8 @@ import { Column } from "react-table";
 import logo from "./elephant.svg";
 import BootstrapTable from "./shared/BootstrapTable";
 import useStorageState from "./shared/useStorageState";
+import "./shared/Shared.scss";
+import "./Elephant.scss";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -80,7 +81,7 @@ function orderUri(source: Source, orderNumber: string) {
   }
 }
 
-function autoFormat(str: string|undefined) {
+function autoFormat(str: string | undefined) {
   switch (str) {
     case KnownFieldTitle.mediaCondition:
       return "Media";
@@ -105,7 +106,7 @@ function autoFormat(str: string|undefined) {
     case undefined:
       return "";
     default:
-      return str.replace(/ \(\d+\)$/,"");
+      return str.replace(/ \(\d+\)$/, "");
   }
 }
 
@@ -166,10 +167,10 @@ export default function Elephant() {
         accessor({ notes }) {
           const source = autoFormat(noteById(notes, sourceId));
           const orderNumber = autoFormat(noteById(notes, orderNumberId));
-          let {uri, Icon} = orderUri(source as Source, orderNumber);
+          let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
-            return <a href={uri} target="_blank" rel="noreferrer"><Icon/></a>;
+            return <a href={uri} target="_blank" rel="noreferrer"><Icon /></a>;
           }
           return <Icon />;
         },
@@ -202,7 +203,7 @@ export default function Elephant() {
       id: "Cover",
       accessor: ({ basic_information: { thumb } }) => thumb,
       //Cell: (...args: any) => {console.log({args}); return "a";},//(value: any) => cvalue,//<Figure.Image src={value} alt={value} />,
-      Cell: ({ value }: any) => <Figure.Image src={value} alt="Cover" />,
+      Cell: ({ value }: any) => <img className="cover" src={value} width={64} alt="Cover" />,
     },
     {
       Header: "Artist",
@@ -220,38 +221,15 @@ export default function Elephant() {
     ...fieldColumns,
   ], [fieldColumns]);
   return <>
-    <Navbar bg="light" style={{
-      backgroundImage: `url(${logo})`,
-      backgroundSize: "contain",
-      backgroundRepeat: "no-repeat",
-    }}>
-      <Navbar.Brand className="ml-5">Elephant</Navbar.Brand>
-      <Navbar.Toggle />
-      <Navbar.Collapse className="justify-content-end">
-        <Form inline>
-          <Form.Group>
-            <Form.Label>Discogs Token</Form.Label>
-            <Form.Control
-              value={token}
-              onChange={({ target: { value } }) => setToken(value)}
-            />
-          </Form.Group>
-        </Form>
-        {avararUrl() &&
-          <Figure.Image
-            rounded
-            width={32}
-            src={avararUrl()}
-            alt={profile?.username}
-          />
-        }
-      </Navbar.Collapse>
-    </Navbar>
+    <Masthead />
     <Container>
       {!isEmpty(error) && <Alert variant="warning">
         <code>{JSON.stringify(error, null, 2)}</code>
       </Alert>}
-      <BootstrapTable columns={collectionTableColumns} data={collectionTableData()} />
+      <BootstrapTable
+        columns={collectionTableColumns}
+        data={collectionTableData()}
+      />
       {collection.current && <ReactJson name="collection" src={collection.current} collapsed={true} />}
       {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
       {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
@@ -286,6 +264,41 @@ export default function Elephant() {
 
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
 
+  }
+
+  function Masthead() {
+    const formSpacing = "mr-2";
+    return <Navbar bg="light">
+      <Navbar.Brand className="pl-5" style={{
+        backgroundImage: `url(${logo})`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+      }}>Elephant</Navbar.Brand>
+      <Navbar.Toggle />
+      <Navbar.Collapse className="justify-content-end">
+        <Form inline>
+          <Form.Group>
+            <Form.Label className={formSpacing}>Discogs Token</Form.Label>
+            <Form.Control
+              className={formSpacing}
+              value={token}
+              onChange={({ target: { value } }) => setToken(value)}
+            />
+          </Form.Group>
+        </Form>
+      </Navbar.Collapse>
+      {avararUrl() &&
+        <span
+          className="pr-5"
+          style={{
+            backgroundImage: `url(${avararUrl()})`, 
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right",
+            padding: 0,
+          }}>&nbsp;</span>
+      }
+    </Navbar>;
   }
 }
 
