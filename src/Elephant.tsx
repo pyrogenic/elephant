@@ -112,16 +112,16 @@ function autoFormat(str: string|undefined) {
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
-  const fetchMemo = React.useMemo(() => new MemoizedFetch("local").fetch, []);
+  const fetchMemo = React.useMemo(() => new MemoizedFetch("local"), []);
   const client = React.useCallback(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
       userToken: token,
       fetchOptions: {
-        fetch: fetchMemo,
+        fetch: fetchMemo.fetch,
       },
     });
-  }, [fetchMemo, token]);
+  }, [fetchMemo.fetch, token]);
 
   const [error, setError] = React.useState<any>();
   const [identity, setIdentity] = React.useState<Identity>();
