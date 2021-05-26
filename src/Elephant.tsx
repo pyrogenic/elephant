@@ -17,6 +17,7 @@ import BootstrapTable from "./shared/BootstrapTable";
 import useStorageState from "./shared/useStorageState";
 import "./shared/Shared.scss";
 import "./Elephant.scss";
+import DiscogsCache from "./DiscogsCache";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -113,17 +114,17 @@ function autoFormat(str: string | undefined) {
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
-  const fetchMemo = React.useMemo(() => new MemoizedFetch("local"), []);
+  const cache = React.useMemo(() => new DiscogsCache("local", window.localStorage), []);
   const client = React.useCallback(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
       userToken: token,
-      fetchOptions: {
-        fetch: fetchMemo.fetch,
-      },
+      cache,
     });
-  }, [fetchMemo.fetch, token]);
-
+  }, [cache, token]);
+  
+  const [verbose, setVerbose] = useStorageState("local", "verbose", false);
+  const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
   const [identity, setIdentity] = React.useState<Identity>();
   const [inventory, setInventory] = React.useState<Inventory>();
@@ -139,6 +140,7 @@ export default function Elephant() {
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
   React.useEffect(getIdentity, [client]);
   React.useEffect(getCollection, [client]);
+  React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
 
   type ColumnFactoryResult = [Column<CollectionItem>, KnownFieldTitle[]] | undefined;
@@ -243,6 +245,11 @@ export default function Elephant() {
     return notes.find(({ field_id }) => field_id === id)?.value;
   }
 
+  function updateMemoSettings() {
+    cache.bypass = bypassCache;
+    cache.log = verbose;
+  }
+
   function getIdentity() {
     client().getProfile().then(setProfile, setError);
     client().listFolders().then(setFolders, setError);
@@ -277,6 +284,18 @@ export default function Elephant() {
       <Navbar.Toggle />
       <Navbar.Collapse className="justify-content-end">
         <Form inline>
+        <Form.Check
+            className={formSpacing}
+            checked={bypassCache}
+            label="Bypass Cache"
+            onChange={() => setBypassCache(!bypassCache)}
+          />
+          <Form.Check
+            className={formSpacing}
+            checked={verbose}
+            label="Verbose"
+            onChange={() => setVerbose(!verbose)}
+          />
           <Form.Group>
             <Form.Label className={formSpacing}>Discogs Token</Form.Label>
             <Form.Control
