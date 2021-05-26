@@ -1,10 +1,9 @@
-import MemoizedFetch from "@pyrogenic/memo/lib/MemoizedFetch";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
 import range from "lodash/range";
 import React from "react";
-import { Badge } from "react-bootstrap";
+import { Badge, Button } from "react-bootstrap";
 import Alert from "react-bootstrap/esm/Alert";
 import Container from "react-bootstrap/esm/Container";
 import Form from "react-bootstrap/esm/Form";
@@ -40,9 +39,7 @@ type Collection = { [instanceId: number]: CollectionItem };
 
 type Artist = ElementType<CollectionItem["basic_information"]["artists"]>;
 
-type Profile = PromiseType<ReturnType<Discojs["getProfile"]>> & {
-  avatar_url?: string,
-};
+type Profile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
 type Field = ElementType<FieldsResponse["fields"]>;
 
@@ -275,6 +272,7 @@ export default function Elephant() {
 
   function Masthead() {
     const formSpacing = "mr-2";
+    const cacheSize = cache.size;
     return <Navbar bg="light">
       <Navbar.Brand className="pl-5" style={{
         backgroundImage: `url(${logo})`,
@@ -284,18 +282,28 @@ export default function Elephant() {
       <Navbar.Toggle />
       <Navbar.Collapse className="justify-content-end">
         <Form inline>
-        <Form.Check
+          <Form.Check
             className={formSpacing}
             checked={bypassCache}
+            id="Bypass Cache"
             label="Bypass Cache"
             onChange={() => setBypassCache(!bypassCache)}
           />
           <Form.Check
             className={formSpacing}
             checked={verbose}
+            id="Verbose"
             label="Verbose"
             onChange={() => setVerbose(!verbose)}
-          />
+            />
+          <Button
+            className={formSpacing}
+            variant="outline-warning"
+            onClick={cache.clear}
+            disabled={!cacheSize}
+          >
+            Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
+          </Button>
           <Form.Group>
             <Form.Label className={formSpacing}>Discogs Token</Form.Label>
             <Form.Control
