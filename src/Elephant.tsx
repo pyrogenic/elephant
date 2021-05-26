@@ -211,8 +211,7 @@ export default function Elephant() {
                 console.log(`New value: ${Number(value)}`);
                 mutate(playsNote, "value", value, new Promise((resolve, reject) => {
                   setTimeout(() => {
-                    console.log("resolved");
-                    resolve(undefined);
+                    reject(undefined);
                   }, 2000);
                 }));
                 /*
