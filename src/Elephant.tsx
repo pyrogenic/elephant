@@ -10,13 +10,16 @@ import Form from "react-bootstrap/esm/Form";
 import Navbar from "react-bootstrap/esm/Navbar";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import ReactJson from "react-json-view";
-import { Column } from "react-table";
+import { actions, Column } from "react-table";
+import DiscogsCache from "./DiscogsCache";
+import "./Elephant.scss";
 import logo from "./elephant.svg";
 import BootstrapTable from "./shared/BootstrapTable";
-import useStorageState from "./shared/useStorageState";
+import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
-import "./Elephant.scss";
-import DiscogsCache from "./DiscogsCache";
+import useStorageState from "./shared/useStorageState";
+import {action, observable, computed, keys} from "mobx";
+import {observer, Observer} from "mobx-react";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -33,11 +36,12 @@ type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
 
 type CollectionItems = Folder["releases"];
 
-type CollectionItem = ElementType<CollectionItems>;
+type DiscogsCollectionItem = ElementType<CollectionItems>;
+type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 
 type Collection = { [instanceId: number]: CollectionItem };
 
-type Artist = ElementType<CollectionItem["basic_information"]["artists"]>;
+type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
 type Profile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
@@ -45,6 +49,7 @@ type Field = ElementType<FieldsResponse["fields"]>;
 
 type FieldsById = Map<number, Field>;
 type FieldsByName = Map<string, Field>;
+type CollectionNote = ElementType<CollectionItem["notes"]>;
 
 enum KnownFieldTitle {
   mediaCondition = "Media Condition",
@@ -53,6 +58,7 @@ enum KnownFieldTitle {
   orderNumber = "Order",
   notes = "Notes",
   price = "Price",
+  plays = "Plays",
 }
 
 enum Source {
@@ -133,24 +139,30 @@ export default function Elephant() {
     return result;
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
-  const collection = React.useRef<Collection>({});
+  const collection = React.useMemo<Collection>(() => observable({}), []);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
   React.useEffect(getIdentity, [client]);
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
 
-  type ColumnFactoryResult = [Column<CollectionItem>, KnownFieldTitle[]] | undefined;
+  type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
+
+  const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
+  const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
+  const sourceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.source)?.id, [fieldsByName]);
+  const orderNumberId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.orderNumber)?.id, [fieldsByName]);
+  const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
+
+  const mediaCondition = React.useCallback((notes) => mediaConditionId && autoFormat(getNote(notes, mediaConditionId)), [mediaConditionId]);
 
   const conditionColumn = React.useCallback((): ColumnFactoryResult => {
-    const mediaConditionId = fieldsByName.get(KnownFieldTitle.mediaCondition)?.id;
-    const sleeveConditionId = fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id;
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
       return [{
         Header: "Cond.",
         accessor({ notes }) {
-          const media = autoFormat(noteById(notes, mediaConditionId));
-          const sleeve = autoFormat(noteById(notes, sleeveConditionId));
+          const media = mediaCondition(notes);
+          const sleeve = autoFormat(getNote(notes, sleeveConditionId));
           return `${media}/${sleeve}`;
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
@@ -158,14 +170,12 @@ export default function Elephant() {
   }, [fieldsByName]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
-    const sourceId = fieldsByName.get(KnownFieldTitle.source)?.id;
-    const orderNumberId = fieldsByName.get(KnownFieldTitle.orderNumber)?.id;
     if (sourceId !== undefined && orderNumberId !== undefined) {
       return [{
         Header: "Source",
         accessor({ notes }) {
-          const source = autoFormat(noteById(notes, sourceId));
-          const orderNumber = autoFormat(noteById(notes, orderNumberId));
+          const source = autoFormat(getNote(notes, sourceId));
+          const orderNumber = autoFormat(getNote(notes, orderNumberId));
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
@@ -177,13 +187,61 @@ export default function Elephant() {
     }
   }, [fieldsByName]);
 
+  const playCountColumn = React.useCallback((): ColumnFactoryResult => {
+    if (playsId) {
+      return [{
+        Header: "Plays",
+        accessor(row) {
+          return <Observer render={() => {
+            const { folder_id, id: release_id, instance_id, notes } = row;
+            const playsNote = noteById(notes, playsId)!;
+            let plays = Number(pendingValue(playsNote.value ?? "0"));
+            const media = mediaCondition(notes);
+            if (!plays && media) {
+              plays = 1;
+            }
+            return <Form.Control
+              disabled={pending(playsNote.value ?? "")}
+              type="number"
+              min={0}
+              step={1}
+              value={plays ? plays : ""}
+              onChange={({ target: { value }}) => {
+                console.log({folder_id, release_id, instance_id, notes});
+                console.log(`New value: ${Number(value)}`);
+                mutate(playsNote, "value", value, new Promise((resolve, reject) => {
+                  setTimeout(() => {
+                    console.log("resolved");
+                    resolve(undefined);
+                  }, 2000);
+                }));
+                /*
+                editCustomFieldForInstance(
+                    folderId: FolderIdsEnum | number,
+                    releaseId: number,
+                    instanceId: number,
+                    fieldId: number,
+                    value: string,
+                */
+                //client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId, value).then(() => getNote)
+              }}/>;
+          }}/>;
+        },
+      },
+      [KnownFieldTitle.plays]];
+    }
+  }, [fieldsByName]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const collectionTableData = React.useCallback(() => Object.values(collection.current), [collectionTimestamp]);
+  const collectionTableData = computed(() => keys(collection).map((id) => collection[Number(id)]));
   const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
     const columns: Column<CollectionItem>[] = [];
     const handledFieldNames: string[] = [];
-
-    [conditionColumn(), sourceColumn()].forEach((e) => {
+    [
+      playCountColumn(),
+      conditionColumn(),
+      sourceColumn(),
+    ].forEach((e) => {
       if (e) {
         columns.push(e[0]);
         e[1].forEach((i) => handledFieldNames.push(i));
@@ -192,7 +250,7 @@ export default function Elephant() {
 
     fieldsById?.forEach(({ name, id }) => !(handledFieldNames.includes(name)) && columns.push({
       Header: autoFormat(name),
-      accessor: ({ notes }) => autoFormat(noteById(notes, id)),
+      accessor: ({ notes }) => autoFormat(getNote(notes, id)),
     }));
     return columns;
   }, [conditionColumn, fieldsById, sourceColumn]);
@@ -227,19 +285,34 @@ export default function Elephant() {
       </Alert>}
       <BootstrapTable
         columns={collectionTableColumns}
-        data={collectionTableData()}
+        data={collectionTableData.get()}
       />
-      {collection.current && <ReactJson name="collection" src={collection.current} collapsed={true} />}
+      <Observer>{() => <>
+      {collection && <ReactJson name="collection" src={collection} collapsed={true} />}
       {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
       {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
       {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
       {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
       {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
+      </>}
+    </Observer>
     </Container>
   </>;
 
-  function noteById(notes: { field_id: number; value: string; }[], id: number): any {
-    return notes.find(({ field_id }) => field_id === id)?.value;
+  function noteById(notes: CollectionNote[], id: number) {
+    let result = notes.find(({ field_id }) => field_id === id);
+    if (result) { return result; }
+    result = { field_id: id, value: ""};
+    notes.push(result);
+    return result;
+  }
+
+  function getNote(notes: CollectionNote[], id: number) {
+    return noteById(notes, id)?.value;
+  }
+
+  function setNote(notes: CollectionNote[], id: number, value: any) {
+    noteById(notes, id)!.value = value;
   }
 
   function updateMemoSettings() {
@@ -255,9 +328,8 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    const newItems: Collection = {};
-    items.forEach((item) => newItems[item.instance_id] = item);
-    collection.current = { ...collection.current, ...newItems };
+    console.log({addToCollection: items});
+    items.forEach(action((item) => collection[item.instance_id] = item));
     setCollectionTimestamp(new Date());
   }
 
