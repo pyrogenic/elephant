@@ -10,7 +10,7 @@ import Form from "react-bootstrap/esm/Form";
 import Navbar from "react-bootstrap/esm/Navbar";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import ReactJson from "react-json-view";
-import { actions, Column } from "react-table";
+import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
 import logo from "./elephant.svg";
@@ -18,8 +18,8 @@ import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import useStorageState from "./shared/useStorageState";
-import { action, observable, computed, keys } from "mobx";
-import { observer, Observer } from "mobx-react";
+import { action, observable, computed, keys, reaction } from "mobx";
+import { Observer } from "mobx-react";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -126,14 +126,11 @@ function getNote(notes: CollectionNote[], id: number) {
   return noteById(notes, id)?.value;
 }
 
-function setNote(notes: CollectionNote[], id: number, value: any) {
-  noteById(notes, id)!.value = value;
-}
-
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
   const cache = React.useMemo(() => new DiscogsCache("local", window.localStorage), []);
+  
   const client = React.useCallback(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
@@ -184,7 +181,7 @@ export default function Elephant() {
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
-  }, [fieldsByName]);
+  }, [mediaCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined) {
@@ -202,7 +199,7 @@ export default function Elephant() {
         },
       }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber]];
     }
-  }, [fieldsByName]);
+  }, [orderNumberId, sourceId]);
 
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
     if (playsId) {
@@ -247,19 +244,19 @@ export default function Elephant() {
       },
       [KnownFieldTitle.plays]];
     }
-  }, [fieldsByName]);
+  }, [client, mediaCondition, playsId]);
 
   const notesColumn = React.useCallback((): ColumnFactoryResult => {
     if (notesId) {
       return [{
         Header: "Notes",
         accessor(row) {
-          return <FieldEditor row={row} noteId={notesId} client={client} setError={setError} />;
+          return <FieldEditor row={row} noteId={notesId} client={client} cache={cache} setError={setError} />;
         },
       },
       [KnownFieldTitle.notes]];
     }
-  }, [fieldsByName]);
+  }, [cache, client, notesId]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const collectionTableData = computed(() => keys(collection).map((id) => collection[Number(id)]));
@@ -283,7 +280,7 @@ export default function Elephant() {
       accessor: ({ notes }) => autoFormat(getNote(notes, id)),
     }));
     return columns;
-  }, [conditionColumn, fieldsById, sourceColumn]);
+  }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn]);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -348,17 +345,28 @@ export default function Elephant() {
   }
 
   function getCollection() {
-    client().listCustomFields().then(({ fields }) => setFieldsById(new Map(
+    const p1 = client().listCustomFields().then(({ fields }) => setFieldsById(new Map(
       fields.map((field) => [field.id, field]),
     )), setError);
 
-    client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
+    const p2 = updateCollection();
+    Promise.all([p1, p2]).then(console.log);
+    /*
+    reaction(
+        () => cache.version,
+        updateCollection,
+        { delay: 1000 },
+      )
+    */
+  }
 
+  function updateCollection() {
+    console.log("Updating collection…");
+    client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
   function Masthead() {
     const formSpacing = "mr-2";
-    const cacheSize = cache.size;
     return <Navbar bg="light">
       <Navbar.Brand className="pl-5" style={{
         backgroundImage: `url(${logo})`,
@@ -382,14 +390,16 @@ export default function Elephant() {
             label="Verbose"
             onChange={() => setVerbose(!verbose)}
           />
-          <Button
+          <Observer render={() => {
+          const cacheSize = cache.size;
+          return <Button
             className={formSpacing}
             variant="outline-warning"
-            onClick={cache.clear}
+            onClick={cache.clear.bind(cache, {value: "14434378"})}
             disabled={!cacheSize}
           >
             Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
-          </Button>
+          </Button>}}/>
           <Form.Group>
             <Form.Label className={formSpacing}>Discogs Token</Form.Label>
             <Form.Control
@@ -415,14 +425,17 @@ export default function Elephant() {
   }
 }
 
-function FieldEditor({ row,
+function FieldEditor({
+  row,
   noteId,
   client,
+  cache,
   setError,
 }: {
   row: CollectionItem,
   noteId: number,
   client: () => Discojs,
+  cache: DiscogsCache,
   setError: React.Dispatch<any>,
 }): any {
   const [floatingValue, setFloatingValue] = React.useState<string>();
@@ -439,7 +452,10 @@ function FieldEditor({ row,
         console.log(`New value: ${floatingValue}`);
         if (floatingValue !== undefined) {
           const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
-          mutate(note, "value", floatingValue, promise).then(() => setFloatingValue(undefined), (e) => {
+          mutate(note, "value", floatingValue, promise).then(() => {
+            setFloatingValue(undefined);
+            cache.clear({value: row.instance_id.toString()});
+          }, (e) => {
             setFloatingValue(undefined);
             setError(e);
           });

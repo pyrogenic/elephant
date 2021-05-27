@@ -2,6 +2,7 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import { ResultCache } from "discojs";
 import compact from "lodash/compact";
 import range from "lodash/range";
+import { action, computed, makeObservable, observable } from "mobx";
 
 export default class DiscogsCache implements ResultCache, Required<IMemoOptions> {
     name: string;
@@ -9,10 +10,20 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
     cache: boolean = true;
     bypass: boolean = false;
     log: boolean = false;
+    version: number = 0;
 
     constructor(name: string, storage: Storage) {
         this.name = name;
         this.storage = storage;
+        makeObservable(this, {
+            name: observable,
+            cache: observable,
+            bypass: observable,
+            log: observable,
+            version: observable,
+            clear: action,
+            size: computed,
+        });
     }
 
     public get = async <T>(factory: () => Promise<T>, ...props: Parameters<typeof fetch>) => {
@@ -31,12 +42,22 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
         if (log) { console.log({ props, newValue }); }
         if (cache) {
             this.storage.setItem(key, JSON.stringify(newValue));
+            this.version++;
         }
         return newValue;
     }
 
-    public clear = () => {
-        this.keys.forEach((key) => this.storage.removeItem(key));
+    public clear = ({ query, value }: { query?: string, value?: string } = {}) => {
+        this.keys.forEach((key) => {
+            if (query && !key.includes(query)) {
+                return;
+            }
+            if (value && !this.storage.getItem(key)?.includes(value)) {
+                return;
+            }
+            this.storage.removeItem(key);
+        });
+        this.version++;
     }
 
     public get size() {
@@ -46,6 +67,6 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
     private get keys() {
         const pattern = new RegExp(`^${this.name}/`);
         const allKeys = range(this.storage.length).map((i) => this.storage.key(i));
-        return compact(allKeys).filter((s) => pattern.test(s));
+        return { keys: compact(allKeys).filter((s) => pattern.test(s)), version: this.version }.keys;
     }
 }
