@@ -172,6 +172,7 @@ export default function Elephant() {
   const orderNumberId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.orderNumber)?.id, [fieldsByName]);
   const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
+  const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
   const mediaCondition = React.useCallback((notes) => mediaConditionId && autoFormat(getNote(notes, mediaConditionId)), [mediaConditionId]);
 
@@ -189,22 +190,23 @@ export default function Elephant() {
   }, [mediaCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
-    if (sourceId !== undefined && orderNumberId !== undefined) {
+    if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
       return [{
         Header: "Source",
         accessor({ notes }) {
           const source = autoFormat(getNote(notes, sourceId));
           const orderNumber = autoFormat(getNote(notes, orderNumberId));
+          const price = autoFormat(getNote(notes, priceId));
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
-            return <a href={uri} target="_blank" rel="noreferrer"><Icon /></a>;
+            return <a href={uri} target="_blank" rel="noreferrer"><Icon />{price}</a>;
           }
-          return <Icon />;
+          return <><Icon />{price}</>;
         },
-      }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber]];
+      }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
     }
-  }, [orderNumberId, sourceId]);
+  }, [orderNumberId, priceId, sourceId]);
 
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
     if (playsId) {
