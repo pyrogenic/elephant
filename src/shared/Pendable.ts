@@ -1,4 +1,4 @@
-import { PropertyNamesOfType } from "./TypeConstraints";
+import { action, isObservable } from "mobx";
 
 const SENTINEL = Symbol("Pending");
 
@@ -27,19 +27,23 @@ export function pendingValue<T extends Primitive>(value: Pendable<T>): T {
     }
 }
 
-export async function mutate<T extends Primitive, K extends string | symbol | number, F>(parent: { [k in K]: Pendable<T> }, key: K, value: T, promise: Promise<F>): Promise<F> {
+type PendableContainer<T extends Primitive, K extends string | symbol | number> = {
+    [k in K]: Pendable<T>;
+};
+
+export async function mutate<T extends Primitive, K extends string | symbol | number, F>(parent: PendableContainer<T, K>, key: K, value: T, promise: Promise<F>): Promise<F> {
     const placeholder = {
         value,
         [SENTINEL]: undefined,
     };
     const originalValue = parent[key];
-    parent[key] = placeholder;
+    apply(parent, key, placeholder);
     return promise.then((f) => {
         console.log(`Assigning ${value} to ${JSON.stringify(parent)}[${key}]`)
-        parent[key] = value;
+        apply(parent, key, value);
         return f;
     }, (e) => {
-        parent[key] = originalValue;
+        apply(parent, key, originalValue);
         throw e;
     });
 }
@@ -47,3 +51,12 @@ export async function mutate<T extends Primitive, K extends string | symbol | nu
 export type DeepPendable<T extends {}> = T & { [K in keyof T]: T[K] extends Primitive ? Pendable<T[K]> : DeepPendable<T[K]> };
 
 export default Pendable;
+
+function apply<T extends Primitive, K extends string | symbol | number>(parent: PendableContainer<T, K>, key: K, placeholder: Pendable<T>) {
+    if (isObservable(parent)) {
+        action("mutate", () => parent[key] = placeholder)();
+    } else {
+        parent[key] = placeholder;
+    }
+}
+

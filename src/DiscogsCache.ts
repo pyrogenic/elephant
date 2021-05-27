@@ -16,6 +16,10 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
     }
 
     public get = async <T>(factory: () => Promise<T>, ...props: Parameters<typeof fetch>) => {
+        const method = props[1]?.method ?? "GET";
+        if (method !== "GET") {
+            return factory();
+        }
         const { cache, bypass, log } = this;
         const key = compact([this.name, props[0], props[1] && JSON.stringify(props[1])]).join("/");
         if (log) { console.log({ props, cache, bypass, log }); }

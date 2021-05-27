@@ -18,8 +18,8 @@ import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import useStorageState from "./shared/useStorageState";
-import {action, observable, computed, keys} from "mobx";
-import {observer, Observer} from "mobx-react";
+import { action, observable, computed, keys } from "mobx";
+import { observer, Observer } from "mobx-react";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -114,6 +114,22 @@ function autoFormat(str: string | undefined) {
   }
 }
 
+function noteById(notes: CollectionNote[], id: number) {
+  let result = notes.find(({ field_id }) => field_id === id);
+  if (result) { return result; }
+  result = { field_id: id, value: "" };
+  notes.push(result);
+  return result;
+}
+
+function getNote(notes: CollectionNote[], id: number) {
+  return noteById(notes, id)?.value;
+}
+
+function setNote(notes: CollectionNote[], id: number, value: any) {
+  noteById(notes, id)!.value = value;
+}
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
@@ -125,7 +141,7 @@ export default function Elephant() {
       cache,
     });
   }, [cache, token]);
-  
+
   const [verbose, setVerbose] = useStorageState("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
@@ -153,6 +169,7 @@ export default function Elephant() {
   const sourceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.source)?.id, [fieldsByName]);
   const orderNumberId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.orderNumber)?.id, [fieldsByName]);
   const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
+  const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
 
   const mediaCondition = React.useCallback((notes) => mediaConditionId && autoFormat(getNote(notes, mediaConditionId)), [mediaConditionId]);
 
@@ -206,14 +223,16 @@ export default function Elephant() {
               min={0}
               step={1}
               value={plays ? plays : ""}
-              onChange={({ target: { value }}) => {
-                console.log({folder_id, release_id, instance_id, notes});
+              onChange={({ target: { value } }) => {
+                console.log({ folder_id, release_id, instance_id, notes });
                 console.log(`New value: ${Number(value)}`);
-                mutate(playsNote, "value", value, new Promise((resolve, reject) => {
-                  setTimeout(() => {
-                    reject(undefined);
-                  }, 2000);
-                }));
+                // const rejectPromise = new Promise((resolve, reject) => {
+                //   setTimeout(() => {
+                //     reject(undefined);
+                //   }, 2000);
+                // });
+                const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId, value)
+                mutate(playsNote, "value", value, promise);
                 /*
                 editCustomFieldForInstance(
                     folderId: FolderIdsEnum | number,
@@ -222,12 +241,23 @@ export default function Elephant() {
                     fieldId: number,
                     value: string,
                 */
-                //client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId, value).then(() => getNote)
-              }}/>;
-          }}/>;
+              }} />;
+          }} />;
         },
       },
       [KnownFieldTitle.plays]];
+    }
+  }, [fieldsByName]);
+
+  const notesColumn = React.useCallback((): ColumnFactoryResult => {
+    if (notesId) {
+      return [{
+        Header: "Notes",
+        accessor(row) {
+          return <FieldEditor row={row} noteId={notesId} client={client} setError={setError} />;
+        },
+      },
+      [KnownFieldTitle.notes]];
     }
   }, [fieldsByName]);
 
@@ -240,6 +270,7 @@ export default function Elephant() {
       playCountColumn(),
       conditionColumn(),
       sourceColumn(),
+      notesColumn(),
     ].forEach((e) => {
       if (e) {
         columns.push(e[0]);
@@ -280,39 +311,23 @@ export default function Elephant() {
     <Masthead />
     <Container>
       {!isEmpty(error) && <Alert variant="warning">
-        <code>{JSON.stringify(error, null, 2)}</code>
+        <code>{error.toString()}</code>
       </Alert>}
       <BootstrapTable
         columns={collectionTableColumns}
         data={collectionTableData.get()}
       />
       <Observer>{() => <>
-      {collection && <ReactJson name="collection" src={collection} collapsed={true} />}
-      {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
-      {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
-      {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
-      {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
-      {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
+        {collection && <ReactJson name="collection" src={collection} collapsed={true} />}
+        {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
+        {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
+        {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
+        {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
+        {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
       </>}
-    </Observer>
+      </Observer>
     </Container>
   </>;
-
-  function noteById(notes: CollectionNote[], id: number) {
-    let result = notes.find(({ field_id }) => field_id === id);
-    if (result) { return result; }
-    result = { field_id: id, value: ""};
-    notes.push(result);
-    return result;
-  }
-
-  function getNote(notes: CollectionNote[], id: number) {
-    return noteById(notes, id)?.value;
-  }
-
-  function setNote(notes: CollectionNote[], id: number, value: any) {
-    noteById(notes, id)!.value = value;
-  }
 
   function updateMemoSettings() {
     cache.bypass = bypassCache;
@@ -327,7 +342,7 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    console.log({addToCollection: items});
+    console.log({ addToCollection: items });
     items.forEach(action((item) => collection[item.instance_id] = item));
     setCollectionTimestamp(new Date());
   }
@@ -366,7 +381,7 @@ export default function Elephant() {
             id="Verbose"
             label="Verbose"
             onChange={() => setVerbose(!verbose)}
-            />
+          />
           <Button
             className={formSpacing}
             variant="outline-warning"
@@ -389,7 +404,7 @@ export default function Elephant() {
         <span
           className="pr-5"
           style={{
-            backgroundImage: `url(${avararUrl()})`, 
+            backgroundImage: `url(${avararUrl()})`,
             backgroundSize: "contain",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "right",
@@ -398,6 +413,39 @@ export default function Elephant() {
       }
     </Navbar>;
   }
+}
+
+function FieldEditor({ row,
+  noteId,
+  client,
+  setError,
+}: {
+  row: CollectionItem,
+  noteId: number,
+  client: () => Discojs,
+  setError: React.Dispatch<any>,
+}): any {
+  const [floatingValue, setFloatingValue] = React.useState<string>();
+  return <Observer render={() => {
+    const { folder_id, id: release_id, instance_id, notes } = row;
+    const note = noteById(notes, noteId)!;
+    return <Form.Control
+      disabled={pending(note.value ?? "")}
+      type="textarea"
+      value={floatingValue ?? pendingValue(note.value ?? "")}
+      onChange={({target: {value}}) => setFloatingValue(value)}
+      onBlur={async () => {
+        console.log({ folder_id, release_id, instance_id, notes });
+        console.log(`New value: ${floatingValue}`);
+        if (floatingValue !== undefined) {
+          const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
+          mutate(note, "value", floatingValue, promise).then(() => setFloatingValue(undefined), (e) => {
+            setFloatingValue(undefined);
+            setError(e);
+          });
+        } 
+      }} />;
+  }} />;
 }
 
 function ArtistsCell({ artists }: { artists: Artist[] }) {
