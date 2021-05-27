@@ -3,16 +3,29 @@ img.cover {
     border-radius: 3px;
 }
 
-table .form-control {
-    margin-top: -6px;
-    padding: 0;
-    border-radius: 0;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    &:not(:active):not(:hover) {
-        transition-property: border-color;
-        transition-delay: 50ms;
-        border-color: transparent;
+table {
+    textarea {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        height: 100% !important;
+        // font-size: xx-small !important;
+        // resize: none;
+        // position: relative;
+        // bottom: 0;
+    }
+
+    .form-control {
+        margin-top: -6px;
+        padding: 0;
+        border-radius: 0;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+
+        &:not(:active):not(:hover) {
+            transition-property: border-color;
+            transition-delay: 50ms;
+            border-color: transparent;
+        }
     }
 }

@@ -162,6 +162,7 @@ export default function Elephant() {
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({id}) => id === folder_id)?.name, [folders?.folders]);
 
   type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -306,7 +307,12 @@ export default function Elephant() {
       Cell: ({ value }: { value: number }) => range(1, 6).map((n) => value >= n ? "★" : "☆"),
     },
     ...fieldColumns,
-  ], [fieldColumns]);
+    {
+      Header: "Location",
+      accessor: "folder_id",
+      Cell: ({ value }: { value: number }) => folderName(value),
+    },
+  ], [fieldColumns, folderName]);
   return <>
     <Masthead />
     <Container>
@@ -449,9 +455,10 @@ function FieldEditor({
   return <Observer render={() => {
     const { folder_id, id: release_id, instance_id, notes } = row;
     const note = noteById(notes, noteId)!;
-    return <Form.Control
+    return <div className="flex flex-column">
+      <Form.Control
+      as="textarea"
       disabled={pending(note.value ?? "")}
-      type="textarea"
       value={floatingValue ?? pendingValue(note.value ?? "")}
       onChange={({target: {value}}) => setFloatingValue(value)}
       onBlur={async () => {
@@ -467,7 +474,7 @@ function FieldEditor({
             setError(e);
           });
         } 
-      }} />;
+      }} /></div>;
   }} />;
 }
 
