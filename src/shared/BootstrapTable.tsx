@@ -11,18 +11,30 @@ import {
     UseTableOptions,
 } from "react-table";
 import Pager from "./Pager";
+import useStorageState from "./useStorageState";
 
 type BootstrapTableProps<TElement extends {}> = {
     columns: Column<TElement>[];
     data: TElement[];
+    sessionKey?: string;
 };
 
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
+    type InitialState = UseTableOptions<TElement>["initialState"] & Partial<UsePaginationState<TElement>>;
+
     // const { skipPageResetRef } = props;   
     // React.useEffect(() => {
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
+    const {sessionKey} = props;
+    const [initialPageIndex, setInitialPageIndex] =
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        sessionKey ? useStorageState("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
+    const initialState = React.useMemo<InitialState>(() => ({
+        pageIndex: initialPageIndex,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), []);
     const {
         getTableBodyProps,
         getTableProps,
@@ -35,6 +47,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         state: { pageIndex, pageSize },
     } = useTable(
         {...props,
+            initialState,
             autoResetPage: false,
             autoResetExpanded: false,
             autoResetGroupBy: false,
@@ -45,6 +58,8 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement>,
         usePagination,
     ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & { state: UsePaginationState<TElement> };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
     const pager = <Pager
         count={rows.length}
         currentPage={pageIndex}

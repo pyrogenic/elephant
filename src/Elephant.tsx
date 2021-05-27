@@ -290,7 +290,6 @@ export default function Elephant() {
       Header: <>&nbsp;</>,
       id: "Cover",
       accessor: ({ basic_information: { thumb } }) => thumb,
-      //Cell: (...args: any) => {console.log({args}); return "a";},//(value: any) => cvalue,//<Figure.Image src={value} alt={value} />,
       Cell: ({ value }: any) => <img className="cover" src={value} width={64} alt="Cover" />,
     },
     {
@@ -315,6 +314,7 @@ export default function Elephant() {
         <code>{error.toString()}</code>
       </Alert>}
       <BootstrapTable
+        sessionKey={"Collection"}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
       />
@@ -348,7 +348,6 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    console.log({ addToCollection: items });
     items.forEach(action((item) => collection[item.instance_id] = item));
     setCollectionTimestamp(new Date());
   }
