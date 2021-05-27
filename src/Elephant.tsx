@@ -2,12 +2,17 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
 import range from "lodash/range";
+import { action, computed, keys, observable, reaction } from "mobx";
+import { Observer } from "mobx-react";
 import React from "react";
-import { Badge, Button } from "react-bootstrap";
-import Alert from "react-bootstrap/esm/Alert";
-import Container from "react-bootstrap/esm/Container";
-import Form from "react-bootstrap/esm/Form";
-import Navbar from "react-bootstrap/esm/Navbar";
+import Alert from "react-bootstrap/Alert";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Form from "react-bootstrap/Form";
+import Navbar from "react-bootstrap/Navbar";
+import Row from "react-bootstrap/Row";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import ReactJson from "react-json-view";
 import { Column } from "react-table";
@@ -18,8 +23,6 @@ import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import useStorageState from "./shared/useStorageState";
-import { action, observable, computed, keys, reaction } from "mobx";
-import { Observer } from "mobx-react";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -114,17 +117,17 @@ function autoFormat(str: string | undefined) {
   }
 }
 
-function noteById(notes: CollectionNote[], id: number) {
+const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
   let result = notes.find(({ field_id }) => field_id === id);
   if (result) { return result; }
   result = { field_id: id, value: "" };
   notes.push(result);
   return result;
-}
+});
 
-function getNote(notes: CollectionNote[], id: number) {
+const getNote = action("getNote", (notes: CollectionNote[], id: number) => {
   return noteById(notes, id)?.value;
-}
+});
 
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
@@ -155,6 +158,7 @@ export default function Elephant() {
   const collection = React.useMemo<Collection>(() => observable({}), []);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
   React.useEffect(getIdentity, [client]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
@@ -324,6 +328,11 @@ export default function Elephant() {
       </>}
       </Observer>
     </Container>
+    <Row>
+      <Col>
+        {collectionTimestamp.toLocaleString()}
+      </Col>
+    </Row>
   </>;
 
   function updateMemoSettings() {
@@ -350,17 +359,16 @@ export default function Elephant() {
     )), setError);
 
     const p2 = updateCollection();
-    Promise.all([p1, p2]).then(console.log);
-    /*
-    reaction(
+    Promise.all([p1, p2]).then(() =>
+      reaction(
         () => cache.version,
         updateCollection,
         { delay: 1000 },
-      )
-    */
+      ))
   }
 
   function updateCollection() {
+    //skipPageResetRef.current = true
     console.log("Updating collection…");
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }

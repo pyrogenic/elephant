@@ -5,8 +5,10 @@ import {
     TableInstance,
     usePagination,
     UsePaginationInstanceProps,
+    UsePaginationOptions,
     UsePaginationState,
     useTable,
+    UseTableOptions,
 } from "react-table";
 import Pager from "./Pager";
 
@@ -16,6 +18,11 @@ type BootstrapTableProps<TElement extends {}> = {
 };
 
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
+    // const { skipPageResetRef } = props;   
+    // React.useEffect(() => {
+    //   // After the table has updated, always remove the flag
+    //   skipPageResetRef.current = false;
+    // });
     const {
         getTableBodyProps,
         getTableProps,
@@ -27,7 +34,15 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         setPageSize,
         state: { pageIndex, pageSize },
     } = useTable(
-        props,
+        {...props,
+            autoResetPage: false,
+            autoResetExpanded: false,
+            autoResetGroupBy: false,
+            autoResetSelectedRows: false,
+            autoResetSortBy: false,
+            autoResetFilters: false,
+            autoResetRowState: false,
+        } as UseTableOptions<TElement> & UsePaginationOptions<TElement>,
         usePagination,
     ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & { state: UsePaginationState<TElement> };
     const pager = <Pager
