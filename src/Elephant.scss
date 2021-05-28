@@ -9,13 +9,13 @@ table {
         height: 7vh;
     }
     .form-control {
-        margin-top: -6px;
+        margin-top: -7px;
         padding: 0;
         border-radius: 0;
         border-top: none;
         border-left: none;
         border-right: none;
-
+        background: none;
         &:not(:active):not(:hover) {
             transition-property: border-color;
             transition-delay: 50ms;

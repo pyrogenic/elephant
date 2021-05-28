@@ -9,6 +9,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
+import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
@@ -194,20 +195,22 @@ export default function Elephant() {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
       return [{
         Header: "Source",
-        accessor({ notes }) {
+        accessor(row) {
+          const {notes} = row;
           const source = autoFormat(getNote(notes, sourceId));
           const orderNumber = autoFormat(getNote(notes, orderNumberId));
-          const price = autoFormat(getNote(notes, priceId));
+          const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
+          const price = <div className="flex flex-row d-inline-flex">{unit}<FieldEditor cache={cache} client={client} noteId={priceId} row={row} setError={setError} /></div>;
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
-            return <a href={uri} target="_blank" rel="noreferrer"><Icon />{price}</a>;
+            return <><a href={uri} target="_blank" rel="noreferrer"><Icon /></a>{price}</>;
           }
           return <><Icon />{price}</>;
         },
       }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
     }
-  }, [orderNumberId, priceId, sourceId]);
+  }, [cache, client, orderNumberId, priceId, sourceId]);
 
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
     if (playsId) {
@@ -259,7 +262,7 @@ export default function Elephant() {
       return [{
         Header: "Notes",
         accessor(row) {
-          return <FieldEditor row={row} noteId={notesId} client={client} cache={cache} setError={setError} />;
+          return <FieldEditor as="textarea" row={row} noteId={notesId} client={client} cache={cache} setError={setError} />;
         },
       },
       [KnownFieldTitle.notes]];
@@ -448,19 +451,20 @@ export default function Elephant() {
   }
 }
 
-function FieldEditor({
-  row,
-  noteId,
-  client,
-  cache,
-  setError,
-}: {
+function FieldEditor(props: {
   row: CollectionItem,
   noteId: number,
   client: () => Discojs,
   cache: DiscogsCache,
   setError: React.Dispatch<any>,
-}): JSX.Element {
+} & FormControlProps): JSX.Element {
+  const {
+    row,
+    noteId,
+    client,
+    cache,
+    setError,
+  } = props;
   const [floatingValue, setFloatingValue] = React.useState<string>();
   return <Observer render={() => {
     const { folder_id, id: release_id, instance_id, notes } = row;
@@ -480,9 +484,9 @@ function FieldEditor({
       }
     };
     const pendable = note.value ?? "";
-    return <div className="flex flex-column">
+    return <div className={props.as ? "flex flex-column" : undefined}>
       <Form.Control
-        as="textarea"
+        {...props}
         disabled={pending(pendable)}
         value={floatingValue ?? pendingValue(pendable)}
         onChange={({target: {value}}) => setFloatingValue(value)}
