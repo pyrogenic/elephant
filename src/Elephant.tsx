@@ -1,4 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "popper.js/dist/popper";
+import "jquery/dist/jquery.slim";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
 import { action, computed, keys, observable, reaction } from "mobx";
@@ -204,7 +206,7 @@ export default function Elephant() {
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
           if (uri) {
-            return <><a href={uri} target="_blank" rel="noreferrer"><Icon /></a>{price}</>;
+            return <><a href={uri} target="_blank" rel="noreferrer"><Icon className="mr-1"/></a>{price}</>;
           }
           return <><Icon />{price}</>;
         },
@@ -309,8 +311,7 @@ export default function Elephant() {
     },
     {
       Header: "Rating",
-      accessor: "rating",
-      Cell: ({ value }: { value: number }) => <Stars value={value} count={5} setValue={console.log} />,
+      accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
     },
     ...fieldColumns,
     {
@@ -318,7 +319,7 @@ export default function Elephant() {
       accessor: "folder_id",
       Cell: ({ value }: { value: number }) => folderName(value),
     },
-  ], [fieldColumns, folderName]);
+  ], [cache, client, fieldColumns, folderName]);
   return <>
     <Masthead />
     <Container fluid={fluid}>
@@ -492,6 +493,35 @@ function FieldEditor(props: {
         onChange={({target: {value}}) => setFloatingValue(value)}
         onBlur={commit} />
     </div>;
+  }} />;
+}
+
+function RatingEditor(props: {
+  row: CollectionItem,
+  client: () => Discojs,
+  cache: DiscogsCache,
+  setError: React.Dispatch<any>,
+} & FormControlProps): JSX.Element {
+  const {
+    row,
+    client,
+    cache,
+    setError,
+  } = props;
+  return <Observer render={() => {
+    const { folder_id, id: release_id, instance_id, rating } = row;
+    const value = pendingValue(rating);
+    const commit = async (newValue: number) => {
+      // console.log({ folder_id, release_id, instance_id, notes });
+      // console.log(`New value: ${floatingValue}`);
+      const promise = client().editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
+      mutate(row, "rating", newValue, promise).then(() => {
+        cache.clear({ value: row.instance_id.toString() });
+      }, (e) => {
+        setError(e);
+      });
+    };
+    return <Stars disabled={pending(rating)} value={value} count={5} setValue={commit} />;
   }} />;
 }
 

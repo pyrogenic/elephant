@@ -1,8 +1,14 @@
 .stars {
     display: flex;
     flex-wrap: nowrap;
-    cursor: pointer;
-    &:hover .star.on {
-        transform: scale(1.2);
+    &:not(.disabled) {
+        cursor: pointer;
+        &:hover .star.on {
+            transform: scale(1.2);
+        }
+    }
+    &.disabled * {
+        cursor: initial;
+        color: grey;
     }
 }

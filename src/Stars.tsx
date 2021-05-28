@@ -2,29 +2,38 @@ import range from "lodash/range";
 import React from "react";
 import "./Stars.scss";
 
-export function Star({ value, onEnter, onLeave, onClick }: { value: boolean, onEnter(): void, onLeave(): void, onClick(): void }) {
+type Callback<T extends any[] = [], R = void> = undefined | false | ((...args: T) => R);
+
+function orUndef<T extends any[] = [], R = void> (v: Callback<T, R>) : ((...args: T) => R) | undefined {
+    if (typeof v === "function"){
+        return v;
+    }
+    return undefined;
+}
+
+export function Star({ value, onEnter, onLeave, onClick }: { value: boolean, onEnter: Callback, onLeave: Callback, onClick: Callback }) {
     return <div
         className={`star ${value ? "on" : "off"}`}
-        onMouseMove={onEnter}
-        onMouseLeave={onLeave}
-        onClick={onClick}
+        onMouseMove={orUndef(onEnter)}
+        onMouseLeave={orUndef(onLeave)}
+        onClick={orUndef(onClick)}
     >{value ? "★" : "☆"}</div>;
 }
 
-export default function Stars({ value, count, setValue }: { value: number, count: number, setValue(value: number): void }) {
+export default function Stars({ disabled, value, count, setValue }: { disabled: boolean, value: number, count: number, setValue(value: number): void }) {
     const [floatingValue, setFloatingValue] = React.useState<number>();
     const handle = React.useRef<any>();
 
     return <div
-    className="stars"
-    title={`${value} stars`}
+        className={`stars ${disabled ? "disabled" : ""}`}
+        title={`${value} stars`}
     >
         {range(1, count + 1).map((n) => <Star
             key={n}
             value={n <= (floatingValue ?? value)}
-            onEnter={onHover.bind(null, n, true)}
-            onLeave={onHover.bind(null, n, false)}
-            onClick={onClickStar.bind(null, n)}
+            onEnter={!disabled && onHover.bind(null, n, true)}
+            onLeave={!disabled && onHover.bind(null, n, false)}
+            onClick={!disabled && onClickStar.bind(null, n)}
         />)}
     </div>;
 
