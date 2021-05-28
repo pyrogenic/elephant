@@ -460,31 +460,34 @@ function FieldEditor({
   client: () => Discojs,
   cache: DiscogsCache,
   setError: React.Dispatch<any>,
-}): any {
+}): JSX.Element {
   const [floatingValue, setFloatingValue] = React.useState<string>();
   return <Observer render={() => {
     const { folder_id, id: release_id, instance_id, notes } = row;
     const note = noteById(notes, noteId)!;
+    const commit = async () => {
+      // console.log({ folder_id, release_id, instance_id, notes });
+      // console.log(`New value: ${floatingValue}`);
+      if (floatingValue !== undefined) {
+        const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
+        mutate(note, "value", floatingValue, promise).then(() => {
+          setFloatingValue(undefined);
+          cache.clear({ value: row.instance_id.toString() });
+        }, (e) => {
+          setFloatingValue(undefined);
+          setError(e);
+        });
+      }
+    };
+    const pendable = note.value ?? "";
     return <div className="flex flex-column">
       <Form.Control
-      as="textarea"
-      disabled={pending(note.value ?? "")}
-      value={floatingValue ?? pendingValue(note.value ?? "")}
-      onChange={({target: {value}}) => setFloatingValue(value)}
-      onBlur={async () => {
-        console.log({ folder_id, release_id, instance_id, notes });
-        console.log(`New value: ${floatingValue}`);
-        if (floatingValue !== undefined) {
-          const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
-          mutate(note, "value", floatingValue, promise).then(() => {
-            setFloatingValue(undefined);
-            cache.clear({value: row.instance_id.toString()});
-          }, (e) => {
-            setFloatingValue(undefined);
-            setError(e);
-          });
-        } 
-      }} /></div>;
+        as="textarea"
+        disabled={pending(pendable)}
+        value={floatingValue ?? pendingValue(pendable)}
+        onChange={({target: {value}}) => setFloatingValue(value)}
+        onBlur={commit} />
+    </div>;
   }} />;
 }
 
