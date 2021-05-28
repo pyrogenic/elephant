@@ -1,7 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import range from "lodash/range";
 import { action, computed, keys, observable, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
@@ -23,6 +22,7 @@ import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import useStorageState from "./shared/useStorageState";
+import Stars from "./Stars";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -142,6 +142,7 @@ export default function Elephant() {
     });
   }, [cache, token]);
 
+  const [fluid, setFluid] = useStorageState("local", "fluid", false);
   const [verbose, setVerbose] = useStorageState("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
@@ -293,7 +294,7 @@ export default function Elephant() {
       Header: <>&nbsp;</>,
       id: "Cover",
       accessor: ({ basic_information: { thumb } }) => thumb,
-      Cell: ({ value }: any) => <img className="cover" src={value} width={64} alt="Cover" />,
+      Cell: ({ value }: any) => <img className="cover" src={value} width={64} height={64} alt="Cover" />,
     },
     {
       Header: "Artist",
@@ -306,7 +307,7 @@ export default function Elephant() {
     {
       Header: "Rating",
       accessor: "rating",
-      Cell: ({ value }: { value: number }) => range(1, 6).map((n) => value >= n ? "★" : "☆"),
+      Cell: ({ value }: { value: number }) => <Stars value={value} count={5} setValue={console.log} />,
     },
     ...fieldColumns,
     {
@@ -317,7 +318,7 @@ export default function Elephant() {
   ], [fieldColumns, folderName]);
   return <>
     <Masthead />
-    <Container>
+    <Container fluid={fluid}>
       {!isEmpty(error) && <Alert variant="warning">
         <code>{error.toString()}</code>
       </Alert>}
@@ -391,6 +392,13 @@ export default function Elephant() {
       <Navbar.Toggle />
       <Navbar.Collapse className="justify-content-end">
         <Form inline>
+          <Form.Check
+            className={formSpacing}
+            checked={fluid}
+            id="Fluid"
+            label="Fluid"
+            onChange={() => setFluid(!fluid)}
+          />
           <Form.Check
             className={formSpacing}
             checked={bypassCache}

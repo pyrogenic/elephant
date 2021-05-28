@@ -1,19 +1,13 @@
 img.cover {
     border: 1px grey solid;
     border-radius: 3px;
+    background-color: black;
 }
 
 table {
-    textarea {
-        box-sizing: border-box !important;
-        width: 100% !important;
-        height: 100% !important;
-        // font-size: xx-small !important;
-        resize: both;
-        // position: relative;
-        // bottom: 0;
+    tr {
+        height: 7vh;
     }
-
     .form-control {
         margin-top: -6px;
         padding: 0;
