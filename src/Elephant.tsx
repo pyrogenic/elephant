@@ -26,6 +26,8 @@ import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import useStorageState from "./shared/useStorageState";
 import Stars from "./Stars";
+import Bootstrap from "react-bootstrap/esm/types";
+import omit from "lodash/omit";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -102,11 +104,11 @@ function autoFormat(str: string | undefined) {
     case "Near Mint (NM or M-)":
       return "NM";
     case "Very Good Plus (VG+)":
-      return "VG";
+      return "VG+";
     case "Very Good (VG)":
       return "VG";
     case "Good Plus (G+)":
-      return "G";
+      return "G+";
     case "Good (G)":
       return "G";
     case "Fair (F)":
@@ -117,6 +119,36 @@ function autoFormat(str: string | undefined) {
       return "";
     default:
       return str.replace(/ \(\d+\)$/, "");
+  }
+}
+
+function autoVariant(str: string | undefined): Bootstrap.Color | undefined {
+  switch (str) {
+    case "Mint (M)":
+    case "M":
+      return "dark";
+    case "Near Mint (NM or M-)":
+    case "NM":
+      return "success";
+    case "Very Good Plus (VG+)":
+    case "VG+":
+      return "primary";
+    case "Very Good (VG)":
+    case "VG":
+      return "info";
+    case "Good Plus (G+)":
+    case "G+":
+      return "secondary";
+    case "Good (G)":
+    case "G":
+      return "warning";
+    case "Fair (F)":
+    case "F":
+    case "Poor (P)":
+    case "P":
+      return "danger";
+    default:
+      return undefined;
   }
 }
 
@@ -136,7 +168,7 @@ export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
   const cache = React.useMemo(() => new DiscogsCache("local", window.localStorage), []);
-  
+
   const client = React.useCallback(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
@@ -166,7 +198,7 @@ export default function Elephant() {
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
-  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({id}) => id === folder_id)?.name, [folders?.folders]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name, [folders?.folders]);
 
   type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -178,7 +210,7 @@ export default function Elephant() {
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
-  const mediaCondition = React.useCallback((notes) => mediaConditionId && autoFormat(getNote(notes, mediaConditionId)), [mediaConditionId]);
+  const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
 
   const conditionColumn = React.useCallback((): ColumnFactoryResult => {
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
@@ -187,7 +219,14 @@ export default function Elephant() {
         accessor({ notes }) {
           const media = mediaCondition(notes);
           const sleeve = autoFormat(getNote(notes, sleeveConditionId));
-          return `${media}/${sleeve}`;
+          return <div className="d-flex d-flex-row">
+            <div className="grade grade-media">
+              <Badge as="div" variant={autoVariant(media)}>{media}</Badge>
+            </div>
+            <div className="grade grade-sleeve">
+              <Badge as="div" variant={autoVariant(sleeve)}>{sleeve}</Badge>
+            </div>
+          </div>;
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
@@ -198,15 +237,15 @@ export default function Elephant() {
       return [{
         Header: "Source",
         accessor(row) {
-          const {notes} = row;
+          const { notes } = row;
           const source = autoFormat(getNote(notes, sourceId));
           const orderNumber = autoFormat(getNote(notes, orderNumberId));
           const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
           const price = <div className="flex flex-row d-inline-flex">{unit}<FieldEditor cache={cache} client={client} noteId={priceId} row={row} setError={setError} /></div>;
           let { uri, Icon } = orderUri(source as Source, orderNumber);
-          Icon = Icon ?? (() => <><Badge variant="dark">{source}</Badge> {orderNumber}</>);
+          Icon = Icon ?? (() => <div><Badge variant="dark">{source}</Badge> {orderNumber}</div>);
           if (uri) {
-            return <><a href={uri} target="_blank" rel="noreferrer"><Icon className="mr-1"/></a>{price}</>;
+            return <><a href={uri} target="_blank" rel="noreferrer"><Icon className="mr-1" /></a>{price}</>;
           }
           return <><Icon />{price}</>;
         },
@@ -380,8 +419,6 @@ export default function Elephant() {
   }
 
   function updateCollection() {
-    //skipPageResetRef.current = true
-    console.log("Updating collection…");
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
@@ -418,15 +455,16 @@ export default function Elephant() {
             onChange={() => setVerbose(!verbose)}
           />
           <Observer render={() => {
-          const cacheSize = cache.size;
-          return <Button
-            className={formSpacing}
-            variant="outline-warning"
-            onClick={cache.clear.bind(cache, {value: "14434378"})}
-            disabled={!cacheSize}
-          >
-            Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
-          </Button>}}/>
+            const cacheSize = cache.size;
+            return <Button
+              className={formSpacing}
+              variant="outline-warning"
+              onClick={cache.clear.bind(cache, { value: "14434378" })}
+              disabled={!cacheSize}
+            >
+              Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
+            </Button>
+          }} />
           <Form.Group>
             <Form.Label className={formSpacing}>Discogs Token</Form.Label>
             <Form.Control
@@ -487,10 +525,17 @@ function FieldEditor(props: {
     const pendable = note.value ?? "";
     return <div className={props.as ? "flex flex-column" : undefined}>
       <Form.Control
-        {...props}
+        {...omit(
+          props,
+          "row",
+          "noteId",
+          "client",
+          "cache",
+          "setError",
+        )}
         disabled={pending(pendable)}
         value={floatingValue ?? pendingValue(pendable)}
-        onChange={({target: {value}}) => setFloatingValue(value)}
+        onChange={({ target: { value } }) => setFloatingValue(value)}
         onBlur={commit} />
     </div>;
   }} />;

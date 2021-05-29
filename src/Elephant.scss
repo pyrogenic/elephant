@@ -23,3 +23,24 @@ table {
         }
     }
 }
+
+.grade {
+    width: 1.6rem;
+    .badge {
+        width: 100%;
+    }
+}
+
+.grade-media .badge {
+    padding-left: 0;
+    padding-right: 0;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.grade-sleeve .badge {
+    padding-left: 0;
+    padding-right: 0;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
