@@ -30,6 +30,7 @@ import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
 import InputGroup from "react-bootstrap/esm/InputGroup";
 import { FiMinus, FiPlus } from "react-icons/fi";
+import ExternalLink from "./shared/ExternalLink";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -250,7 +251,7 @@ export default function Elephant() {
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <div><Badge variant="dark">{source}</Badge> {orderNumber}</div>);
           if (uri) {
-            return <><a href={uri} target="_blank" rel="noreferrer"><Icon className="mr-1" /></a>{price}</>;
+            return <><ExternalLink href={uri}><Icon className="mr-1" /></ExternalLink>{price}</>;
           }
           return <><Icon />{price}</>;
         },
@@ -346,8 +347,9 @@ export default function Elephant() {
     {
       Header: <>&nbsp;</>,
       id: "Cover",
-      accessor: ({ basic_information: { thumb } }) => thumb,
-      Cell: ({ value }: any) => <img className="cover" src={value} width={64} height={64} alt="Cover" />,
+      accessor: (row) => <ExternalLink href={releaseUrl(row)}>
+          <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
+        </ExternalLink>,
     },
     {
       Header: "Artist",
@@ -612,3 +614,6 @@ function ArtistsCell({ artists }: { artists: Artist[] }) {
   return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;
 }
 
+function releaseUrl({id}: CollectionItem) {
+  return `https://www.discogs.com/release/${id}`;
+}
