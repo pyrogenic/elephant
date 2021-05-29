@@ -8,6 +8,10 @@ table {
     tr {
         height: 7vh;
     }
+    textarea {
+        margin-top: inherit !important;
+        font-size: small !important;
+    }
     .form-control {
         margin-top: -7px;
         padding: 0;
@@ -20,6 +24,8 @@ table {
             transition-property: border-color;
             transition-delay: 50ms;
             border-color: transparent;
+            resize: none;
+            overflow: hidden;
         }
     }
 }
@@ -43,4 +49,20 @@ table {
     padding-right: 0;
     border-top-left-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
+}
+
+// .spinner {
+//     .input-group-prepend {
+//     }
+//     .input-group-append {
+//     }
+//     &:not(:hover) {
+//         button {
+//             display: none;
+//         }
+//     }
+// }
+
+.price {
+    max-width: 4rem;
 }

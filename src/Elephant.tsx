@@ -28,6 +28,8 @@ import useStorageState from "./shared/useStorageState";
 import Stars from "./Stars";
 import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
+import InputGroup from "react-bootstrap/esm/InputGroup";
+import { FiMinus, FiPlus } from "react-icons/fi";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -148,7 +150,7 @@ function autoVariant(str: string | undefined): Bootstrap.Color | undefined {
     case "P":
       return "danger";
     default:
-      return undefined;
+      return "light";
   }
 }
 
@@ -221,10 +223,10 @@ export default function Elephant() {
           const sleeve = autoFormat(getNote(notes, sleeveConditionId));
           return <div className="d-flex d-flex-row">
             <div className="grade grade-media">
-              <Badge as="div" variant={autoVariant(media)}>{media}</Badge>
+              <Badge as="div" variant={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
             </div>
             <div className="grade grade-sleeve">
-              <Badge as="div" variant={autoVariant(sleeve)}>{sleeve}</Badge>
+              <Badge as="div" variant={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
             </div>
           </div>;
         },
@@ -241,7 +243,7 @@ export default function Elephant() {
           const source = autoFormat(getNote(notes, sourceId));
           const orderNumber = autoFormat(getNote(notes, orderNumberId));
           const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
-          const price = <div className="flex flex-row d-inline-flex">{unit}<FieldEditor cache={cache} client={client} noteId={priceId} row={row} setError={setError} /></div>;
+          const price = <div className="flex flex-row d-inline-flex price">{unit}<FieldEditor cache={cache} client={client} noteId={priceId} row={row} setError={setError} /></div>;
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <div><Badge variant="dark">{source}</Badge> {orderNumber}</div>);
           if (uri) {
@@ -266,31 +268,35 @@ export default function Elephant() {
             if (!plays && media) {
               plays = 1;
             }
-            return <Form.Control
-              disabled={pending(playsNote.value ?? "")}
-              type="number"
-              min={0}
-              step={1}
-              value={plays ? plays : ""}
-              onChange={({ target: { value } }) => {
-                console.log({ folder_id, release_id, instance_id, notes });
-                console.log(`New value: ${Number(value)}`);
-                // const rejectPromise = new Promise((resolve, reject) => {
-                //   setTimeout(() => {
-                //     reject(undefined);
-                //   }, 2000);
-                // });
-                const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId, value)
-                mutate(playsNote, "value", value, promise);
-                /*
-                editCustomFieldForInstance(
-                    folderId: FolderIdsEnum | number,
-                    releaseId: number,
-                    instanceId: number,
-                    fieldId: number,
-                    value: string,
-                */
-              }} />;
+            return <InputGroup className="spinner">
+            <InputGroup.Prepend>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  disabled={plays <= 0}
+                  onClick={change.bind(null, plays - 1)}
+                  >
+                  <FiMinus/>
+                </Button>
+                </InputGroup.Prepend>
+                <InputGroup.Prepend>
+                  <InputGroup.Text>{plays}</InputGroup.Text>
+                </InputGroup.Prepend>
+                <InputGroup.Append>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={change.bind(null, plays + 1)}
+                >
+                  <FiPlus/>
+                </Button>
+                </InputGroup.Append>
+              </InputGroup>;
+
+            function change(value: number) {
+              const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
+              mutate(playsNote, "value", value, promise);
+            }
           }} />;
         },
       },
@@ -303,7 +309,7 @@ export default function Elephant() {
       return [{
         Header: "Notes",
         accessor(row) {
-          return <FieldEditor as="textarea" row={row} noteId={notesId} client={client} cache={cache} setError={setError} />;
+          return <FieldEditor as={"textarea"} row={row} rows={3} noteId={notesId} client={client} cache={cache} setError={setError} />;
         },
       },
       [KnownFieldTitle.notes]];
@@ -490,13 +496,14 @@ export default function Elephant() {
   }
 }
 
-function FieldEditor(props: {
+function FieldEditor<As = "text">(props: {
+  as?: As,
   row: CollectionItem,
   noteId: number,
   client: () => Discojs,
   cache: DiscogsCache,
   setError: React.Dispatch<any>,
-} & FormControlProps): JSX.Element {
+} & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> :As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
   const {
     row,
     noteId,
