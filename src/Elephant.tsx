@@ -3,7 +3,7 @@ import "popper.js/dist/popper";
 import "jquery/dist/jquery.slim";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, keys, observable, reaction } from "mobx";
+import { action, computed, observable, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -49,7 +49,7 @@ type CollectionItems = Folder["releases"];
 type DiscogsCollectionItem = ElementType<CollectionItems>;
 type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 
-type Collection = { [instanceId: number]: CollectionItem };
+type Collection = Map<number, CollectionItem>;
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -117,6 +117,8 @@ function autoFormat(str: string | undefined) {
       return "F";
     case "Poor (P)":
       return "P";
+    case "No Cover":
+      return "—";
     case undefined:
       return "";
     default:
@@ -179,6 +181,8 @@ export default function Elephant() {
     });
   }, [cache, token]);
 
+  const [search, setSearch] = useStorageState("local", "search", "");
+  const searchInputRef = React.createRef<HTMLInputElement>();
   const [fluid, setFluid] = useStorageState("local", "fluid", false);
   const [verbose, setVerbose] = useStorageState("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);
@@ -193,13 +197,12 @@ export default function Elephant() {
     return result;
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
-  const collection = React.useMemo<Collection>(() => observable({}), []);
+  const collection = React.useMemo<Collection>(() => observable(new Map()), []);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
-  const avararUrl = React.useCallback(() => profile?.avatar_url, [profile]);
   const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name, [folders?.folders]);
 
   type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
@@ -317,7 +320,7 @@ export default function Elephant() {
   }, [cache, client, notesId]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const collectionTableData = computed(() => keys(collection).map((id) => collection[Number(id)]));
+  const collectionTableData = computed(() => Array.from(collection.values()));
   const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
     const columns: Column<CollectionItem>[] = [];
     const handledFieldNames: string[] = [];
@@ -366,25 +369,26 @@ export default function Elephant() {
     },
   ], [cache, client, fieldColumns, folderName]);
   return <>
-    <Masthead />
+    <Masthead bypassCache={bypassCache} cache={cache} collection={collection} fluid={fluid} avatarUrl={profile?.avatar_url} search={search} setBypassCache={setBypassCache} setFluid={setFluid} setSearch={setSearch} setToken={setToken} setVerbose={setVerbose} token={token} verbose={verbose}/>
     <Container fluid={fluid}>
       {!isEmpty(error) && <Alert variant="warning">
         <code>{error.toString()}</code>
       </Alert>}
       <BootstrapTable
         sessionKey={"Collection"}
+        search={search}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
       />
-      <Observer>{() => <>
-        {collection && <ReactJson name="collection" src={collection} collapsed={true} />}
+      {/* <Observer>{() => <>
+        {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
         {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
         {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
         {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
         {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
         {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
       </>}
-      </Observer>
+      </Observer> */}
     </Container>
     <Row>
       <Col>
@@ -406,7 +410,7 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    items.forEach(action((item) => collection[item.instance_id] = item));
+    items.forEach((item) => collection.set(item.instance_id, item));
     setCollectionTimestamp(new Date());
   }
 
@@ -428,72 +432,99 @@ export default function Elephant() {
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
-  function Masthead() {
-    const formSpacing = "mr-2";
-    return <Navbar bg="light">
-      <Navbar.Brand className="pl-5" style={{
-        backgroundImage: `url(${logo})`,
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-      }}>Elephant</Navbar.Brand>
-      <Navbar.Toggle />
-      <Navbar.Collapse className="justify-content-end">
-        <Form inline>
-          <Form.Check
+}
+
+function Masthead({
+  avatarUrl,
+  collection,
+  search,
+  setSearch,
+  fluid,
+  setFluid,
+  bypassCache,
+  setBypassCache,
+  verbose,
+  setVerbose,
+  cache,
+  token,
+  setToken,
+}:{
+  avatarUrl?: string,
+  collection: Collection,
+  search: string,
+  setSearch: (value: string) => void,
+  fluid: boolean,
+  setFluid: (value: boolean) => void,
+  bypassCache: boolean,
+  setBypassCache: (value: boolean) => void,
+  verbose: boolean,
+  setVerbose: (value: boolean) => void,
+  cache: DiscogsCache,
+   token: string, 
+   setToken: (value: string) => void,
+ }) {
+  const formSpacing = "mr-2";
+  return <Navbar bg="light">
+    <Navbar.Brand className="pl-5" style={{
+      backgroundImage: `url(${logo})`,
+      backgroundSize: "contain",
+      backgroundRepeat: "no-repeat",
+    }}>Elephant</Navbar.Brand>
+    <Form.Control placeholder={`search ${collection.size} records`} value={search} onChange={({ target: { value } }) => {
+      setSearch(value);
+    } } />
+    <Navbar.Toggle />
+    <Navbar.Collapse className="justify-content-end">
+      <Form inline>
+        <Form.Check
+          className={formSpacing}
+          checked={fluid}
+          id="Fluid"
+          label="Fluid"
+          onChange={() => setFluid(!fluid)} />
+        <Form.Check
+          className={formSpacing}
+          checked={bypassCache}
+          id="Bypass Cache"
+          label="Bypass Cache"
+          onChange={() => setBypassCache(!bypassCache)} />
+        <Form.Check
+          className={formSpacing}
+          checked={verbose}
+          id="Verbose"
+          label="Verbose"
+          onChange={() => setVerbose(!verbose)} />
+        <Observer render={() => {
+          const cacheSize = cache.size;
+          return <Button
             className={formSpacing}
-            checked={fluid}
-            id="Fluid"
-            label="Fluid"
-            onChange={() => setFluid(!fluid)}
-          />
-          <Form.Check
-            className={formSpacing}
-            checked={bypassCache}
-            id="Bypass Cache"
-            label="Bypass Cache"
-            onChange={() => setBypassCache(!bypassCache)}
-          />
-          <Form.Check
-            className={formSpacing}
-            checked={verbose}
-            id="Verbose"
-            label="Verbose"
-            onChange={() => setVerbose(!verbose)}
-          />
-          <Observer render={() => {
-            const cacheSize = cache.size;
-            return <Button
-              className={formSpacing}
-              variant="outline-warning"
-              onClick={cache.clear.bind(cache, { value: "14434378" })}
-              disabled={!cacheSize}
-            >
+            variant="outline-warning"
+            onClick={cache.clear.bind(cache, undefined)}
+            disabled={!cacheSize}
+          >
               Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
-            </Button>
-          }} />
-          <Form.Group>
-            <Form.Label className={formSpacing}>Discogs Token</Form.Label>
-            <Form.Control
-              className={formSpacing}
-              value={token}
-              onChange={({ target: { value } }) => setToken(value)}
-            />
-          </Form.Group>
-        </Form>
-      </Navbar.Collapse>
-      {avararUrl() &&
-        <span
-          className="pr-5"
-          style={{
-            backgroundImage: `url(${avararUrl()})`,
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right",
-            padding: 0,
-          }}>&nbsp;</span>
-      }
-    </Navbar>;
-  }
+          </Button>;
+        } } />
+        <Form.Group>
+          <Form.Label className={formSpacing}>Discogs Token</Form.Label>
+          <Form.Control
+            className={formSpacing}
+            value={token}
+            onChange={({ target: { value } }) => setToken(value)} />
+        </Form.Group>
+      </Form>
+    </Navbar.Collapse>
+    {avatarUrl &&
+      <span
+        className="pr-5"
+        style={{
+          backgroundImage: `url(${avatarUrl})`,
+          backgroundSize: "contain",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right",
+          padding: 0,
+        }}>&nbsp;</span>}
+  </Navbar>;
 }
 
 function FieldEditor<As = "text">(props: {
