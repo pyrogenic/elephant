@@ -3,7 +3,7 @@ import "popper.js/dist/popper";
 import "jquery/dist/jquery.slim";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, observable, reaction } from "mobx";
+import { action, computed, makeAutoObservable, observable, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -198,6 +198,9 @@ export default function Elephant() {
   const [profile, setProfile] = React.useState<Profile>();
   const collection = React.useMemo<Collection>(() => observable(new Map()), []);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
+
+  const lpdb = React.useCallback(() => new LPDB(client(), collection), [client, collection]); 
+
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
@@ -232,7 +235,7 @@ export default function Elephant() {
               <Badge as="div" variant={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
             </div>
           </div>
-          {listing && <Badge variant="light">LISTED</Badge>}
+            {listing && <Badge variant="light">LISTED</Badge>}
           </>;
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
@@ -274,29 +277,29 @@ export default function Elephant() {
               plays = 1;
             }
             return <InputGroup className="spinner">
-            <InputGroup.Prepend>
+              <InputGroup.Prepend>
                 <Button
                   size="sm"
                   variant="outline-secondary"
                   disabled={plays <= 0}
                   onClick={change.bind(null, plays - 1)}
-                  >
-                  <FiMinus/>
+                >
+                  <FiMinus />
                 </Button>
-                </InputGroup.Prepend>
-                <InputGroup.Prepend>
-                  <InputGroup.Text>{plays}</InputGroup.Text>
-                </InputGroup.Prepend>
-                <InputGroup.Append>
+              </InputGroup.Prepend>
+              <InputGroup.Prepend>
+                <InputGroup.Text>{plays}</InputGroup.Text>
+              </InputGroup.Prepend>
+              <InputGroup.Append>
                 <Button
                   size="sm"
                   variant="outline-secondary"
                   onClick={change.bind(null, plays + 1)}
                 >
-                  <FiPlus/>
+                  <FiPlus />
                 </Button>
-                </InputGroup.Append>
-              </InputGroup>;
+              </InputGroup.Append>
+            </InputGroup>;
 
             function change(value: number) {
               const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
@@ -349,8 +352,8 @@ export default function Elephant() {
       Header: <>&nbsp;</>,
       id: "Cover",
       accessor: (row) => <ExternalLink href={releaseUrl(row)}>
-          <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
-        </ExternalLink>,
+        <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
+      </ExternalLink>,
     },
     {
       Header: "Artist",
@@ -370,9 +373,20 @@ export default function Elephant() {
       accessor: "folder_id",
       Cell: ({ value }: { value: number }) => folderName(value),
     },
+    {
+      Header: "Tags",
+      accessor: ({ basic_information: { genres, styles } }) => [...genres, ...styles],
+      Cell: ({ value }: { value: string[] }) => {
+        const badges = value.map((tag) => <><Tag tag={tag}/> </>)
+        return <div className="d-inline d-flex-column">{badges}</div>;
+      },
+    },
   ], [cache, client, fieldColumns, folderName]);
-  return <>
-    <Masthead bypassCache={bypassCache} cache={cache} collection={collection} fluid={fluid} avatarUrl={profile?.avatar_url} search={search} setBypassCache={setBypassCache} setFluid={setFluid} setSearch={setSearch} setToken={setToken} setVerbose={setVerbose} token={token} verbose={verbose}/>
+  return <ElephantContext.Provider value={{
+    lpdb: lpdb(),
+    collection,
+  }}>
+    <Masthead bypassCache={bypassCache} cache={cache} collection={collection} fluid={fluid} avatarUrl={profile?.avatar_url} search={search} setBypassCache={setBypassCache} setFluid={setFluid} setSearch={setSearch} setToken={setToken} setVerbose={setVerbose} token={token} verbose={verbose} />
     <Container fluid={fluid}>
       {!isEmpty(error) && <Alert variant="warning">
         <code>{error.toString()}</code>
@@ -398,7 +412,7 @@ export default function Elephant() {
         {collectionTimestamp.toLocaleString()}
       </Col>
     </Row>
-  </>;
+  </ElephantContext.Provider>;
 
   function updateMemoSettings() {
     cache.bypass = bypassCache;
@@ -444,7 +458,7 @@ function FieldEditor<As = "text">(props: {
   client: () => Discojs,
   cache: DiscogsCache,
   setError: React.Dispatch<any>,
-} & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> :As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
+} & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> : As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
   const {
     row,
     noteId,
@@ -518,10 +532,45 @@ function RatingEditor(props: {
   }} />;
 }
 
+interface IElephantContext {
+  lpdb?: LPDB,
+  collection: Collection,
+};
+
+const ElephantContext = React.createContext<IElephantContext>({
+  collection: new Map(),
+});
+
+class LPDB {
+  constructor(public readonly client: Discojs, public readonly collection: Collection) {
+    makeAutoObservable(this);
+  }
+
+  public byTag(tag: string): CollectionItem[] {
+    const result: CollectionItem[] = [];
+    for (const item of this.collection.values()) {
+      if (item.basic_information.genres.includes(tag)||item.basic_information.styles.includes(tag)) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+}
+
+function Tag({tag}: {tag: string}) {
+  // computed(() => )
+  const {lpdb} = React.useContext(ElephantContext);
+  return <Observer render={content}/>;
+  function content() {
+    const count = lpdb?.byTag(tag).length;
+    return <Badge variant="secondary">{tag}{count && <>&nbsp;<Badge variant="light">{count}</Badge></>}</Badge>;
+  } 
+}
+
 function ArtistsCell({ artists }: { artists: Artist[] }) {
   return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;
 }
 
-function releaseUrl({id}: CollectionItem) {
+function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
 }

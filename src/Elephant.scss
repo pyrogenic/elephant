@@ -30,6 +30,12 @@ table {
     }
 }
 
+td {
+    .badge {
+        font-weight: 400;
+    }
+}
+
 .grade {
     width: 1.8rem;
     .badge {
