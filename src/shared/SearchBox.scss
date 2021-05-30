@@ -1,0 +1,27 @@
+.search-box {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    > .prepend {
+        stroke-width: 4px;
+        color: grey;
+        position: absolute;
+        margin-right: -100%;
+        left: 0.5rem;
+        vertical-align: middle;
+        height: 100%;
+    }
+    > input {
+        padding-left: 1.75rem;
+        border-radius: 2rem;
+    }
+    > .append {
+        stroke-width: 4px;
+        color: grey;
+        position: absolute;
+        margin-left: -100%;
+        right: 0.5rem;
+        vertical-align: middle;
+        height: 100%;
+    }
+}

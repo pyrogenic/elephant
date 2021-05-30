@@ -13,14 +13,12 @@ import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Form from "react-bootstrap/Form";
-import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import ReactJson from "react-json-view";
 import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
-import logo from "./elephant.svg";
 import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
@@ -31,6 +29,7 @@ import omit from "lodash/omit";
 import InputGroup from "react-bootstrap/esm/InputGroup";
 import { FiMinus, FiPlus } from "react-icons/fi";
 import ExternalLink from "./shared/ExternalLink";
+import Masthead from "./Masthead";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -50,7 +49,7 @@ type CollectionItems = Folder["releases"];
 type DiscogsCollectionItem = ElementType<CollectionItems>;
 type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 
-type Collection = Map<number, CollectionItem>;
+export type Collection = Map<number, CollectionItem>;
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -434,99 +433,6 @@ export default function Elephant() {
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
-}
-
-function Masthead({
-  avatarUrl,
-  collection,
-  search,
-  setSearch,
-  fluid,
-  setFluid,
-  bypassCache,
-  setBypassCache,
-  verbose,
-  setVerbose,
-  cache,
-  token,
-  setToken,
-}:{
-  avatarUrl?: string,
-  collection: Collection,
-  search: string,
-  setSearch: (value: string) => void,
-  fluid: boolean,
-  setFluid: (value: boolean) => void,
-  bypassCache: boolean,
-  setBypassCache: (value: boolean) => void,
-  verbose: boolean,
-  setVerbose: (value: boolean) => void,
-  cache: DiscogsCache,
-   token: string, 
-   setToken: (value: string) => void,
- }) {
-  const formSpacing = "mr-2";
-  return <Navbar bg="light">
-    <Navbar.Brand className="pl-5" style={{
-      backgroundImage: `url(${logo})`,
-      backgroundSize: "contain",
-      backgroundRepeat: "no-repeat",
-    }}>Elephant</Navbar.Brand>
-    <Form.Control placeholder={`search ${collection.size} records`} value={search} onChange={({ target: { value } }) => {
-      setSearch(value);
-    } } />
-    <Navbar.Toggle />
-    <Navbar.Collapse className="justify-content-end">
-      <Form inline>
-        <Form.Check
-          className={formSpacing}
-          checked={fluid}
-          id="Fluid"
-          label="Fluid"
-          onChange={() => setFluid(!fluid)} />
-        <Form.Check
-          className={formSpacing}
-          checked={bypassCache}
-          id="Bypass Cache"
-          label="Bypass Cache"
-          onChange={() => setBypassCache(!bypassCache)} />
-        <Form.Check
-          className={formSpacing}
-          checked={verbose}
-          id="Verbose"
-          label="Verbose"
-          onChange={() => setVerbose(!verbose)} />
-        <Observer render={() => {
-          const cacheSize = cache.size;
-          return <Button
-            className={formSpacing}
-            variant="outline-warning"
-            onClick={cache.clear.bind(cache, undefined)}
-            disabled={!cacheSize}
-          >
-              Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
-          </Button>;
-        } } />
-        <Form.Group>
-          <Form.Label className={formSpacing}>Discogs Token</Form.Label>
-          <Form.Control
-            className={formSpacing}
-            value={token}
-            onChange={({ target: { value } }) => setToken(value)} />
-        </Form.Group>
-      </Form>
-    </Navbar.Collapse>
-    {avatarUrl &&
-      <span
-        className="pr-5"
-        style={{
-          backgroundImage: `url(${avatarUrl})`,
-          backgroundSize: "contain",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right",
-          padding: 0,
-        }}>&nbsp;</span>}
-  </Navbar>;
 }
 
 function FieldEditor<As = "text">(props: {
