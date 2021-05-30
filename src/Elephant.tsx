@@ -220,21 +220,24 @@ export default function Elephant() {
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
       return [{
         Header: "Cond.",
-        accessor({ notes }) {
+        accessor({ id, notes }) {
           const media = mediaCondition(notes);
           const sleeve = autoFormat(getNote(notes, sleeveConditionId));
-          return <div className="d-flex d-flex-row">
+          const listing = inventory?.listings.find(({ release: { id: releaseId } }) => id === releaseId);
+          return <><div className="d-flex d-flex-row">
             <div className="grade grade-media">
               <Badge as="div" variant={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
             </div>
             <div className="grade grade-sleeve">
               <Badge as="div" variant={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
             </div>
-          </div>;
+          </div>
+          {listing && <Badge variant="light">LISTED</Badge>}
+          </>;
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
-  }, [mediaCondition, mediaConditionId, sleeveConditionId]);
+  }, [inventory?.listings, mediaCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
