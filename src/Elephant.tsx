@@ -182,7 +182,6 @@ export default function Elephant() {
   }, [cache, token]);
 
   const [search, setSearch] = useStorageState("local", "search", "");
-  const searchInputRef = React.createRef<HTMLInputElement>();
   const [fluid, setFluid] = useStorageState("local", "fluid", false);
   const [verbose, setVerbose] = useStorageState("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);

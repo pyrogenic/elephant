@@ -19,7 +19,6 @@ import {
 import Pager from "./Pager";
 import useStorageState from "./useStorageState";
 import { matchSorter } from "match-sorter"
-import {computed, extendObservable, isObservable} from "mobx";
 import compact from "lodash/compact";
 
 type BootstrapTableProps<TElement extends {}> = {
