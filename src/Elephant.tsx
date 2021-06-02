@@ -1,9 +1,10 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "popper.js/dist/popper";
 import "jquery/dist/jquery.slim";
+import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, makeAutoObservable, observable, reaction } from "mobx";
+import { action, computed, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -22,7 +23,6 @@ import "./Elephant.scss";
 import BootstrapTable from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
-import useStorageState from "./shared/useStorageState";
 import Stars from "./Stars";
 import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
@@ -30,6 +30,7 @@ import InputGroup from "react-bootstrap/esm/InputGroup";
 import { FiMinus, FiPlus } from "react-icons/fi";
 import ExternalLink from "./shared/ExternalLink";
 import Masthead from "./Masthead";
+import LPDB from "./LPDB";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -47,7 +48,7 @@ type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
 type CollectionItems = Folder["releases"];
 
 type DiscogsCollectionItem = ElementType<CollectionItems>;
-type CollectionItem = DeepPendable<DiscogsCollectionItem>;
+export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 
 export type Collection = Map<number, CollectionItem>;
 
@@ -181,10 +182,10 @@ export default function Elephant() {
     });
   }, [cache, token]);
 
-  const [search, setSearch] = useStorageState("local", "search", "");
-  const [fluid, setFluid] = useStorageState("local", "fluid", false);
-  const [verbose, setVerbose] = useStorageState("local", "verbose", false);
-  const [bypassCache, setBypassCache] = useStorageState("local", "bypassCache", false);
+  const [search, setSearch] = useStorageState<string>("session", "search", "");
+  const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
+  const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
+  const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
   const [identity, setIdentity] = React.useState<Identity>();
   const [inventory, setInventory] = React.useState<Inventory>();
@@ -196,10 +197,10 @@ export default function Elephant() {
     return result;
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
-  const collection = React.useMemo<Collection>(() => observable(new Map()), []);
+  const lpdb = React.useMemo<LPDB>(() => new LPDB(client()), [client]);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
 
-  const lpdb = React.useCallback(() => new LPDB(client(), collection), [client, collection]); 
+  const collection = lpdb.collection;
 
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -383,10 +384,24 @@ export default function Elephant() {
     },
   ], [cache, client, fieldColumns, folderName]);
   return <ElephantContext.Provider value={{
-    lpdb: lpdb(),
+    lpdb,
     collection,
   }}>
-    <Masthead bypassCache={bypassCache} cache={cache} collection={collection} fluid={fluid} avatarUrl={profile?.avatar_url} search={search} setBypassCache={setBypassCache} setFluid={setFluid} setSearch={setSearch} setToken={setToken} setVerbose={setVerbose} token={token} verbose={verbose} />
+    <Masthead
+      bypassCache={bypassCache}
+      cache={cache}
+      collection={collection}
+      fluid={fluid}
+      avatarUrl={profile?.avatar_url}
+      search={search}
+      setBypassCache={setBypassCache}
+      setFluid={setFluid}
+      setSearch={setSearch}
+      setToken={setToken}
+      setVerbose={setVerbose}
+      token={token}
+      verbose={verbose}
+    />
     <Container fluid={fluid}>
       {!isEmpty(error) && <Alert variant="warning">
         <code>{error.toString()}</code>
@@ -427,7 +442,7 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    items.forEach((item) => collection.set(item.instance_id, item));
+    items.forEach(action((item) => collection.set(item.instance_id, item)));
     setCollectionTimestamp(new Date());
   }
 
@@ -541,29 +556,13 @@ const ElephantContext = React.createContext<IElephantContext>({
   collection: new Map(),
 });
 
-class LPDB {
-  constructor(public readonly client: Discojs, public readonly collection: Collection) {
-    makeAutoObservable(this);
-  }
-
-  public byTag(tag: string): CollectionItem[] {
-    const result: CollectionItem[] = [];
-    for (const item of this.collection.values()) {
-      if (item.basic_information.genres.includes(tag)||item.basic_information.styles.includes(tag)) {
-        result.push(item);
-      }
-    }
-    return result;
-  }
-}
-
 function Tag({tag}: {tag: string}) {
   // computed(() => )
   const {lpdb} = React.useContext(ElephantContext);
   return <Observer render={content}/>;
   function content() {
     const count = lpdb?.byTag(tag).length;
-    return <Badge variant="secondary">{tag}{count && <>&nbsp;<Badge variant="light">{count}</Badge></>}</Badge>;
+    return <Badge variant="secondary">{tag}{count && <>&nbsp;<Badge variant="light"> {count} </Badge></>}</Badge>;
   } 
 }
 

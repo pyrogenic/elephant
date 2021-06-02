@@ -1,5 +1,6 @@
 import { Observer } from "mobx-react";
 import React from "react";
+import {SetState} from "@pyrogenic/perl/lib/useStorageState";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -27,16 +28,16 @@ export default function Masthead({
     avatarUrl?: string;
     collection: Collection;
     search: string;
-    setSearch: (value: string) => void;
+    setSearch: SetState<string>;
     fluid: boolean;
-    setFluid: (value: boolean) => void;
+    setFluid: SetState<boolean>;
     bypassCache: boolean;
-    setBypassCache: (value: boolean) => void;
+    setBypassCache: SetState<boolean>;
     verbose: boolean;
-    setVerbose: (value: boolean) => void;
+    setVerbose: SetState<boolean>;
     cache: DiscogsCache;
     token: string;
-    setToken: (value: string) => void;
+    setToken: SetState<string>;
 }) {
     const formSpacing = "mr-2";
     return <Navbar bg="light">

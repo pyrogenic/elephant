@@ -3,11 +3,11 @@ import Form from "react-bootstrap/Form";
 import { Collection } from "../Elephant";
 import { FiSearch, FiX } from "react-icons/fi";
 import "./SearchBox.scss";
-import classConcat, { ClassName } from "./classConcat";
+import classConcat, {ClassNames} from "@pyrogenic/perl/lib/classConcat";
 
 export default function SearchBox(
     props: {
-        className?: ClassName;
+        className?: ClassNames;
         collection: Collection;
         search: string;
         setSearch: (value: string) => void;

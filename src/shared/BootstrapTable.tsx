@@ -17,9 +17,9 @@ import {
     UseTableOptions,
 } from "react-table";
 import Pager from "./Pager";
-import useStorageState from "./useStorageState";
 import { matchSorter } from "match-sorter"
 import compact from "lodash/compact";
+import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 
 type BootstrapTableProps<TElement extends {}> = {
     columns: Column<TElement>[];
@@ -40,7 +40,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const { sessionKey, search } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        sessionKey ? useStorageState("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
+        sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
     const initialState = React.useMemo<InitialState>(() => ({
         pageIndex: initialPageIndex,
         // eslint-disable-next-line react-hooks/exhaustive-deps
