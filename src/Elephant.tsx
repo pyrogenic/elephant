@@ -31,6 +31,7 @@ import { FiMinus, FiPlus } from "react-icons/fi";
 import ExternalLink from "./shared/ExternalLink";
 import Masthead from "./Masthead";
 import LPDB from "./LPDB";
+import { Tag } from "./Tag";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -552,19 +553,9 @@ interface IElephantContext {
   collection: Collection,
 };
 
-const ElephantContext = React.createContext<IElephantContext>({
+export const ElephantContext = React.createContext<IElephantContext>({
   collection: new Map(),
 });
-
-function Tag({tag}: {tag: string}) {
-  // computed(() => )
-  const {lpdb} = React.useContext(ElephantContext);
-  return <Observer render={content}/>;
-  function content() {
-    const count = lpdb?.byTag(tag).length;
-    return <Badge variant="secondary">{tag}{count && <>&nbsp;<Badge variant="light"> {count} </Badge></>}</Badge>;
-  } 
-}
 
 function ArtistsCell({ artists }: { artists: Artist[] }) {
   return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;

@@ -1,36 +1,41 @@
 import { CollectionItem } from "../Elephant";
 
 console.warn("Creating worker");
-const state: {
-    collectionJs: string | undefined,
-    collection: CollectionItem[],
+
+type Myself = {
     byTag: Map<string, number[]>,
-} = {
-    collectionJs: undefined,
-    collection: [],
-    byTag: new Map(),
 };
 
+function state(): Myself {
+    const myself = global as unknown as Myself;
+    myself.byTag = myself.byTag ?? new Map();
+    return myself;
+};
+
+function idsForTag(tag: string): number[] {
+    const { byTag } = state();
+    let result = byTag.get(tag);
+    if (result === undefined) {
+        result = [];
+        byTag.set(tag, result);
+    }
+    return result;
+}
+
 export async function setCollection(collectionJs: string) {
-    if (state.collectionJs !== collectionJs) {
-        const collection: CollectionItem[] = JSON.parse(collectionJs);
-        console.log(`[worker] got ${collection.length} records`);
-        state.collection = collection;
-        state.byTag.clear();
+    const collection: CollectionItem[] = JSON.parse(collectionJs);
+    state().byTag.clear();
+    for (const { instance_id, basic_information: { genres, styles } } of collection) {
+        const tagThisInstance = tagIt(instance_id);
+        genres.forEach(tagThisInstance);
+        styles.forEach(tagThisInstance);
     }
 }
 
+function tagIt(instance_id: number): (value: string) => void {
+    return (tag) => idsForTag(tag).push(instance_id);
+}
+
 export async function byTag(tag: string): Promise<number[]> {
-    const { collection, byTag } = state;
-    if (!byTag.has(tag)) {
-        console.warn(`[worker] calculating tags for ${tag}`);
-        const result: number[] = [];
-        for (const { instance_id, basic_information: { genres, styles } } of collection) {
-            if (genres.includes(tag) || styles.includes(tag)) {
-                result.push(instance_id);
-            }
-        }
-        byTag.set(tag, result);
-    }
-    return byTag.get(tag)!;
+    return idsForTag(tag);
 }

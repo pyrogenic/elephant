@@ -39,7 +39,6 @@ export async function mutate<T extends Primitive, K extends string | symbol | nu
     const originalValue = parent[key];
     apply(parent, key, placeholder);
     return promise.then((f) => {
-        console.log(`Assigning ${value} to ${JSON.stringify(parent)}[${key}]`)
         apply(parent, key, value);
         return f;
     }, (e) => {

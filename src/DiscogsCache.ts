@@ -41,8 +41,7 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
         const newValue = await factory();
         if (log) { console.log({ props, newValue }); }
         if (cache) {
-            this.storage.setItem(key, JSON.stringify(newValue));
-            this.version++;
+            this.cacheValue<T>(key, newValue);
         }
         return newValue;
     }
@@ -59,6 +58,11 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
         });
         this.version++;
     }
+
+    private cacheValue = action(<T>(key: string, newValue: T) => {
+        this.storage.setItem(key, JSON.stringify(newValue));
+        this.version++;
+    });
 
     public get size() {
         return this.keys.length;
