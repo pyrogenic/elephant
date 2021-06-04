@@ -2,6 +2,7 @@ import React from "react";
 import Table from "react-bootstrap/esm/Table";
 import {
     Column,
+    HeaderGroup,
     PluginHook,
     TableInstance,
     useAsyncDebounce,
@@ -13,6 +14,9 @@ import {
     UsePaginationInstanceProps,
     UsePaginationOptions,
     UsePaginationState,
+    useSortBy,
+    UseSortByColumnOptions,
+    UseSortByColumnProps,
     useTable,
     UseTableOptions,
 } from "react-table";
@@ -20,6 +24,7 @@ import Pager from "./Pager";
 import { matchSorter } from "match-sorter"
 import compact from "lodash/compact";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 type BootstrapTableProps<TElement extends {}> = {
     columns: Column<TElement>[];
@@ -46,6 +51,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), []);
     const plugins: PluginHook<TElement>[] = [
+        useSortBy,
         usePagination,
     ];
     let globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = undefined;
@@ -102,9 +108,9 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             autoResetRowState: autoReset,
             autoResetGlobalFilter: false,
             globalFilter,
-        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseGlobalFiltersOptions<TElement>,
+        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
-    ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseGlobalFiltersState<TElement> };
+        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByColumnProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseGlobalFiltersState<TElement> };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
     const debouncedSetGlobalFilter = useAsyncDebounce(setGlobalFilter, 200);
@@ -125,8 +131,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             <thead>
                 {headerGroups.map(headerGroup => (
                     <tr {...headerGroup.getHeaderGroupProps()}>
-                        {headerGroup.headers.map(column => (
-                            <th {...column.getHeaderProps()}>{column.render("Header")}</th>
+                        {columnsFor(headerGroup).map((column) => (
+                            <th {...column.getHeaderProps(column.getSortByToggleProps)}>
+                                {column.render("Header")}
+                                {/* Add a sort direction indicator */}
+                                {column.isSorted && (column.isSortedDesc ? <FiChevronDown /> : <FiChevronUp />)}
+                            </th>
                         ))}
                     </tr>
                 ))}
@@ -158,6 +168,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             ))}
         </select>
     </>;
+
+    function columnsFor(headerGroup: HeaderGroup<TElement>) {
+        return headerGroup.headers as Array<HeaderGroup<TElement> & UseSortByColumnProps<TElement>>;
+    }
 }
 
 function deepSearchTargets(obj: object, result?: string[], visited?: Set<any>): string[] {

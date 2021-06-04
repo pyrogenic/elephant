@@ -4,7 +4,7 @@ import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, reaction } from "mobx";
+import { action, computed, reaction, toJS } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -119,6 +119,7 @@ function autoFormat(str: string | undefined) {
       return "F";
     case "Poor (P)":
       return "P";
+    case "Generic":
     case "No Cover":
       return "—";
     case undefined:
@@ -207,7 +208,7 @@ export default function Elephant() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
-  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name, [folders?.folders]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? false, [folders?.folders]);
 
   type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -349,6 +350,19 @@ export default function Elephant() {
     }));
     return columns;
   }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn]);
+
+  const artistsString = React.useCallback((artists: Artist[]) => artists.map(({ name }) => autoFormat(name)).join(" "), []);
+  const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
+    // if (ac.id === "1") { console.log({ artistsA, artistsB }); }
+    const strA = artistsString(ac.values[columnId]);
+    const strB = artistsString(bc.values[columnId]);
+    return strA.localeCompare(strB);//, undefined, { numeric: true });
+  }, [artistsString]);
+  const sortByRating = React.useCallback((ac, bc) => {
+    const a = pendingValue(ac.original.rating);
+    const b = pendingValue(bc.original.rating);
+    return a - b;
+  }, []);
   const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -359,7 +373,9 @@ export default function Elephant() {
     },
     {
       Header: "Artist",
-      accessor: ({ basic_information: { artists } }) => <ArtistsCell artists={artists} />,
+      accessor: ({ basic_information: { artists } }) => artists,
+      Cell: ({ value: artists }: { value: Artist[] }) => <ArtistsCell artists={artists} />,
+      sortType: sortByArtist,
     },
     {
       Header: "Title",
@@ -368,6 +384,7 @@ export default function Elephant() {
     {
       Header: "Rating",
       accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
+      sortType: sortByRating,
     },
     ...fieldColumns,
     {
@@ -383,7 +400,7 @@ export default function Elephant() {
         return <div className="d-inline d-flex-column">{badges}</div>;
       },
     },
-  ], [cache, client, fieldColumns, folderName]);
+  ], [cache, client, fieldColumns, folderName, sortByArtist]);
   return <ElephantContext.Provider value={{
     lpdb,
     collection,
@@ -556,6 +573,7 @@ interface IElephantContext {
 export const ElephantContext = React.createContext<IElephantContext>({
   collection: new Map(),
 });
+
 
 function ArtistsCell({ artists }: { artists: Artist[] }) {
   return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;
