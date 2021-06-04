@@ -59,3 +59,24 @@ table + .Pager {
         display: none;
     }
 }
+
+.spine {
+    font-size: 80%;
+    line-height: 1;
+    padding: 0 0.25rem;
+    min-width: 2.5rem;
+  }
+  
+  .spine .from, .spine .to {
+    width: 100%;
+    font-style: oblique;
+    font-size: 80%;
+  }
+  
+  .spine .from {
+    text-align: left;
+  }
+  
+  .spine .to {
+    text-align: right;
+  }

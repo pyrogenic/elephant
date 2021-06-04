@@ -19,7 +19,7 @@ import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
-import BootstrapTable from "./shared/BootstrapTable";
+import BootstrapTable, { ColumnSetItem } from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import Stars from "./Stars";
@@ -372,7 +372,7 @@ export default function Elephant() {
     const b = pendingValue(bc.original.rating);
     return a - b;
   }, []);
-  const collectionTableColumns = React.useMemo<Column<CollectionItem>[]>(() => [
+  const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
       id: "Cover",
@@ -440,6 +440,14 @@ export default function Elephant() {
         search={search}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
+        mnemonic={(sortedBy, item) => {
+          switch (sortedBy) {
+            case "Artist":
+              return item.basic_information.artists[0].name;
+            default:
+              return undefined;
+          }
+        }}
       />
       {/* <Observer>{() => <>
         {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}

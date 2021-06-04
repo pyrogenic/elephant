@@ -114,9 +114,9 @@ export default function Pager({
     </Row>;
 }
 
-type Spine = [from: string, to: string];
+export type Spine = [from: string | undefined, to: string | undefined];
 
-type SpineFactory = (page: number) => Spine;
+export type SpineFactory = (page: number) => Spine | undefined;
 
 function PageButton({
     autoHide,

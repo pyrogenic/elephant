@@ -1,5 +1,10 @@
+import minDiff from "@pyrogenic/perl/lib/minDiff";
+import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import compact from "lodash/compact";
+import { matchSorter } from "match-sorter";
 import React from "react";
 import Table from "react-bootstrap/esm/Table";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import {
     Column,
     HeaderGroup,
@@ -17,20 +22,20 @@ import {
     useSortBy,
     UseSortByColumnOptions,
     UseSortByColumnProps,
+    UseSortByState,
     useTable,
     UseTableOptions,
 } from "react-table";
-import Pager from "./Pager";
-import { matchSorter } from "match-sorter"
-import compact from "lodash/compact";
-import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import Pager, { Spine } from "./Pager";
 
-type BootstrapTableProps<TElement extends {}> = {
-    columns: Column<TElement>[];
+export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TElement> & { id?: TColumnIds };
+
+type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
+    columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
     search?: string;
     sessionKey?: string;
+    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => string | undefined;
 };
 
 
@@ -42,7 +47,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { sessionKey, search } = props;
+    const { mnemonic, sessionKey, search } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -93,7 +98,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         prepareRow,
         rows,
         setPageSize,
-        state: { pageIndex, pageSize },
+        state: { pageIndex, pageSize, sortBy },
         setGlobalFilter,
     } = useTable(
         {
@@ -110,7 +115,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             globalFilter,
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
-        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByColumnProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseGlobalFiltersState<TElement> };
+        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
     const debouncedSetGlobalFilter = useAsyncDebounce(setGlobalFilter, 200);
@@ -119,11 +124,40 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         lastSearch.current = search;
         return () => { };
     }, [search]);
+    const spine = React.useCallback((page: number) => {
+        if (!mnemonic) {
+            throw new Error("missing mnemonic");
+        }
+        const indexA = page * pageSize;
+        const preA = indexA > 0 ? rows[indexA - 1]?.original : undefined;
+        const a = rows[indexA]?.original;
+        const indexB = Math.min(indexA + pageSize - 1, rows.length - 1);
+        const b = rows[indexB]?.original;
+        const postB = indexB < rows.length - 1 ? rows[indexB + 1]?.original : undefined;
+        if (!a || !b) {
+            return undefined;
+        }
+        const key = sortBy[0]?.id;
+        const mnemonicA = mnemonic(key, a);
+        const mnemonicB = mnemonic(key, b);
+        if (!mnemonicA || !mnemonicB) {
+            return undefined;
+        }
+        const mnemonicPreA = preA && mnemonic(key, preA);
+        const mnemonicPostB = postB && mnemonic(key, postB);
+        if (mnemonicA === "Bobby Hutcherson") {
+            debugger;
+        }
+        const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicPreA, postB: mnemonicPostB });
+        console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
+        return result;
+    }, [mnemonic, pageSize, rows, sortBy]);
     const pager = <Pager
         count={rows.length}
         currentPage={pageIndex}
         gotoPage={gotoPage}
         pageSize={pageSize}
+        spine={mnemonic && spine}
     />
     return <>
         {pager}
