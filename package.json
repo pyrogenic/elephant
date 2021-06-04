@@ -5,9 +5,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@pyrogenic/asset": "~1.0.0",
-    "@pyrogenic/memo": "~1.0.0",
-    "@pyrogenic/perl": "~1.0.0",
+    "@pyrogenic/asset": "^1.0.0",
+    "@pyrogenic/memo": "^1.0.0",
+    "@pyrogenic/perl": "^1.0.0",
     "@testing-library/dom": "~7.31.0",
     "@testing-library/jest-dom": "~5.11.4",
     "@testing-library/react": "~11.1.0",
