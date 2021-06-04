@@ -37,10 +37,21 @@ td {
 }
 
 .grade {
+    box-sizing: content-box;
     width: 1.8rem;
     .badge {
         font-weight: 400;
         width: 100%;
+    }
+}
+
+.listed {
+    box-sizing: content-box;
+    width: 3.6rem;
+    .badge {
+        font-weight: 400;
+        width: 100%;
+        border: solid 0.2px rgb(162, 162, 162);
     }
 }
 
@@ -49,8 +60,7 @@ td {
     padding-right: 0;
     border-top-right-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
-    border-right: 0.2px solid rgba(255, 255, 255, 0.5);
-    box-sizing: content-box;
+    // border-right: 0.2px solid rgba(255, 255, 255, 0.5);
 }
 
 .grade-sleeve .badge {
@@ -58,7 +68,6 @@ td {
     padding-right: 0;
     border-top-left-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
-    box-sizing: content-box;
     border-left: 0.2px solid rgba(255, 255, 255, 0.5);
 }
 

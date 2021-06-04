@@ -5,7 +5,7 @@ import { ElephantContext } from "./Elephant";
 
 export function Tag({ tag }: { tag: string; }) {
     // computed(() => )
-    const { lpdb, collection } = React.useContext(ElephantContext);
+    const { lpdb } = React.useContext(ElephantContext);
     return <Observer render={content} />;
     function content() {
         const count = lpdb?.byTag(tag).length;

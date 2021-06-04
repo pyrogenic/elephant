@@ -2,9 +2,9 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "popper.js/dist/popper";
 import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import { Discojs } from "discojs";
+import { CurrenciesEnum, Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, reaction, toJS } from "mobx";
+import { action, computed, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -16,7 +16,6 @@ import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
-import ReactJson from "react-json-view";
 import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
@@ -36,10 +35,7 @@ import { Tag } from "./Tag";
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
 
-type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
-
-/** listings for sale */
-type Inventory = PromiseType<ReturnType<Discojs["getInventory"]>>;
+// type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
 type FieldsResponse = PromiseType<ReturnType<Discojs["listCustomFields"]>>;
 type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>;
@@ -47,11 +43,16 @@ type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>;
 type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
 
 type CollectionItems = Folder["releases"];
+/** listings for sale */
+type InventoryResponse = PromiseType<ReturnType<Discojs["getInventory"]>>
+type InventoryItems = InventoryResponse["listings"];
 
 type DiscogsCollectionItem = ElementType<CollectionItems>;
 export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
-
 export type Collection = Map<number, CollectionItem>;
+type DiscogsInventoryItem = ElementType<InventoryItems>;
+export type InventoryItem = DeepPendable<DiscogsInventoryItem>;
+export type Inventory = Map<number, InventoryItem>;
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -189,8 +190,7 @@ export default function Elephant() {
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
-  const [identity, setIdentity] = React.useState<Identity>();
-  const [inventory, setInventory] = React.useState<Inventory>();
+  // const [identity, setIdentity] = React.useState<Identity>();
   const [folders, setFolders] = React.useState<Folders>();
   const [fieldsById, setFieldsById] = React.useState<FieldsById>();
   const fieldsByName = React.useMemo(() => {
@@ -202,7 +202,7 @@ export default function Elephant() {
   const lpdb = React.useMemo<LPDB>(() => new LPDB(client()), [client]);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
 
-  const collection = lpdb.collection;
+  const { collection, inventory } = lpdb;
 
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,8 +229,8 @@ export default function Elephant() {
         accessor({ id, notes }) {
           const media = mediaCondition(notes);
           const sleeve = autoFormat(getNote(notes, sleeveConditionId));
-          const listing = inventory?.listings.find(({ release: { id: releaseId } }) => id === releaseId);
-          return <><div className="d-flex d-flex-row">
+          return <>
+            <div className="d-flex d-flex-row">
             <div className="grade grade-media">
               <Badge as="div" variant={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
             </div>
@@ -238,12 +238,21 @@ export default function Elephant() {
               <Badge as="div" variant={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
             </div>
           </div>
-            {listing && <Badge variant="light">LISTED</Badge>}
+            <Observer render={() => {
+              const listing = inventory.get(id);
+              if (!listing) { return null; }
+              return <div className="d-flex d-flex-row">
+                <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
+                  <Badge as="div" variant="light" title={priceToString(listing.price)}>LISTED</Badge>
+                </ExternalLink>
+                </div>
+              </div>;
+            }} />
           </>;
         },
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
-  }, [inventory?.listings, mediaCondition, mediaConditionId, sleeveConditionId]);
+  }, [inventory, mediaCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
@@ -400,7 +409,9 @@ export default function Elephant() {
         return <div className="d-inline d-flex-column">{badges}</div>;
       },
     },
-  ], [cache, client, fieldColumns, folderName, sortByArtist]);
+  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating]);
+  const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
+
   return <ElephantContext.Provider value={{
     lpdb,
     collection,
@@ -455,8 +466,7 @@ export default function Elephant() {
   function getIdentity() {
     client().getProfile().then(setProfile, setError);
     client().listFolders().then(setFolders, setError);
-    client().getIdentity().then(setIdentity, setError);
-    client().getInventory().then(setInventory, setError);
+    // client().getIdentity().then(setIdentity, setError);
   }
 
   function addToCollection(items: CollectionItems) {
@@ -464,24 +474,95 @@ export default function Elephant() {
     setCollectionTimestamp(new Date());
   }
 
-  function getCollection() {
-    const p1 = client().listCustomFields().then(({ fields }) => setFieldsById(new Map(
-      fields.map((field) => [field.id, field]),
-    )), setError);
+  function addToInventory(items: InventoryItems) {
+    items.forEach(action((item) => inventory.set(item.release.id, item)));
+    setCollectionTimestamp(new Date());
+  }
 
+  function getCollection() {
+    updateCollectionReaction.current?.();
+    updateInventory();
+    const p1 = updateCustomFields();
     const p2 = updateCollection();
     Promise.all([p1, p2]).then(() =>
-      reaction(
+      updateCollectionReaction.current = reaction(
         () => cache.version,
         updateCollection,
         { delay: 1000 },
       ))
   }
 
+  function updateInventory() {
+    return client().getInventory().then(((r) => client().all("listings", r, addToInventory)), setError);
+  }
+
+  function updateCustomFields() {
+    return client().listCustomFields().then(({ fields }) =>
+      setFieldsById(new Map(fields.map((field) => [field.id, field]))), setError);
+  }
+
   function updateCollection() {
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
+}
+/*
+
+$ United States Dollar 
+€ Euro 
+£ British Pound Sterling 
+$ Canadian Dollar 
+$ Australian Dollar 
+¥ Japanese Yen 
+*/
+function priceToString(price: InventoryItem["price"]): string | undefined {
+  return `${priceUnit(price.currency)}${price.value}`;
+}
+
+function priceUnit(currency: CurrenciesEnum | undefined) {
+  let unit: string;
+  switch (currency) {
+    case CurrenciesEnum.USD:
+      unit = "$";
+      break;
+    case CurrenciesEnum.GBP:
+      unit = "£";
+      break;
+    case CurrenciesEnum.EUR:
+      unit = "€";
+      break;
+    case CurrenciesEnum.CAD:
+      unit = "C$";
+      break;
+    case CurrenciesEnum.AUD:
+      unit = "A$";
+      break;
+    case CurrenciesEnum.JPY:
+      unit = "¥";
+      break;
+    case CurrenciesEnum.CHF:
+      unit = CurrenciesEnum.CHF;
+      break;
+    case CurrenciesEnum.MXN:
+      unit = CurrenciesEnum.MXN;
+      break;
+    case CurrenciesEnum.BRL:
+      unit = CurrenciesEnum.BRL;
+      break;
+    case CurrenciesEnum.NZD:
+      unit = CurrenciesEnum.NZD;
+      break;
+    case CurrenciesEnum.SEK:
+      unit = CurrenciesEnum.SEK;
+      break;
+    case CurrenciesEnum.ZAR:
+      unit = CurrenciesEnum.ZAR;
+      break;
+    default:
+      unit = currency ?? "?";
+      break;
+  }
+  return unit;
 }
 
 function FieldEditor<As = "text">(props: {

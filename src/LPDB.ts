@@ -1,7 +1,7 @@
 import { Discojs } from "discojs";
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { action, observable, reaction, toJS } from "mobx";
-import { Collection } from "./Elephant";
+import { Collection, Inventory } from "./Elephant";
 import Worker from "./worker";
 
 const worker = new Worker();
@@ -9,6 +9,7 @@ const osync = action(sync);
 
 export default class LPDB {
   public readonly collection: Collection = observable(new Map());
+  public readonly inventory: Inventory = observable(new Map());
   private readonly byTagCache: Map<string, number[]> = new Map();
 
   public byTag(tag: string): number[] {
