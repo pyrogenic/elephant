@@ -1,14 +1,15 @@
 import { Observer } from "mobx-react";
 import React from "react";
-import {SetState} from "@pyrogenic/perl/lib/useStorageState";
+import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
 import DiscogsCache from "./DiscogsCache";
 import logo from "./elephant.svg";
-import { Collection } from "./Elephant";
+import { Collection, ElephantContext } from "./Elephant";
 import SearchBox from "./shared/SearchBox";
+import SelectBox from "./shared/SelectBox";
 
 export default function Masthead({
     avatarUrl,
@@ -40,6 +41,8 @@ export default function Masthead({
     setToken: SetState<string>;
 }) {
     const formSpacing = "mr-2";
+    const { lpdb } = React.useContext(ElephantContext);
+    const [selectedTags, setSelectedTags] = useStorageState<string[]>("session", "selectedTags", []);
     return <Navbar bg="light">
         <Navbar.Brand className="pl-5" style={{
             backgroundImage: `url(${logo})`,
@@ -50,6 +53,13 @@ export default function Masthead({
             className={formSpacing}
             collection={collection}
             search={search} setSearch={setSearch} />
+        <Observer render={() => (lpdb?.tags && <SelectBox
+            className={formSpacing}
+            placeholder="tags"
+            options={lpdb.tags}
+            value={selectedTags}
+            setValue={setSelectedTags}
+        />) ?? null} />
         <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-end">
             <Form inline>

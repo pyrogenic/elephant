@@ -149,7 +149,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             debugger;
         }
         const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicPreA, postB: mnemonicPostB });
-        console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
+        // console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
     const pager = <Pager

@@ -10,6 +10,7 @@ const osync = action(sync);
 export default class LPDB {
   public readonly collection: Collection = observable(new Map());
   public readonly inventory: Inventory = observable(new Map());
+  public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
 
   public byTag(tag: string): number[] {
@@ -28,6 +29,7 @@ export default class LPDB {
       return collectionItemsJs;
     }, (collectionItemsJs) => {
       worker.setCollection(collectionItemsJs).then(() => {
+        worker.tags().then((tags) => sync(tags.sort(), this.tags));
         this.byTagCache.forEach((result, tag) => this.refresh(tag, result));
       });
     }, {

@@ -39,3 +39,7 @@ function tagIt(instance_id: number): (value: string) => void {
 export async function byTag(tag: string): Promise<number[]> {
     return idsForTag(tag);
 }
+
+export async function tags(): Promise<string[]> {
+    return Array.from(state().byTag.keys());
+}
