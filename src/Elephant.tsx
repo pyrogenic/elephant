@@ -360,13 +360,14 @@ export default function Elephant() {
     return columns;
   }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn]);
 
-  const artistsString = React.useCallback((artists: Artist[]) => artists.map(({ name }) => autoFormat(name)).join(" "), []);
+  const sortableString = React.useCallback((name: string) => autoFormat(name).replace(/\W/g, ""), []);
+  const sortableArtistsString = React.useCallback((artists: Artist[]) => artists.map(({ name }) => sortableString(name)).join(" "), [sortableString]);
   const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
     // if (ac.id === "1") { console.log({ artistsA, artistsB }); }
-    const strA = artistsString(ac.values[columnId]);
-    const strB = artistsString(bc.values[columnId]);
+    const strA = sortableArtistsString(ac.values[columnId]);
+    const strB = sortableArtistsString(bc.values[columnId]);
     return strA.localeCompare(strB);//, undefined, { numeric: true });
-  }, [artistsString]);
+  }, [sortableArtistsString]);
   const sortByRating = React.useCallback((ac, bc) => {
     const a = pendingValue(ac.original.rating);
     const b = pendingValue(bc.original.rating);
