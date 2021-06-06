@@ -1,6 +1,6 @@
 import Badge from "react-bootstrap/esm/Badge";
 import Dropdown from "react-bootstrap/esm/Dropdown";
-import { arraySetAddAll, arraySetRemove, ElementType } from "@pyrogenic/asset/lib";
+import { arraySetAddAll, arraySetRemove, ElementType, ensure } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "./FilterBox.scss";
 import React from "react";
@@ -86,12 +86,23 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
         return setFilteredItems?.(filteredItems);
     }, [setFilteredItems, filteredItems]);
 
-    const filteredTags = React.useMemo(() => {
+    const { filteredTags, filteredTagCounts } = React.useMemo(() => {
         const result: string[] = [];
-        openFilteredItems.forEach((item) => arraySetAddAll(result, tags(item), true));
+        const counts: { [tag: string]: number } = {};
+        openFilteredItems.forEach((item) => {
+            arraySetAddAll(result, tags(item), true);
+            tags(item).forEach((tag) => {
+                ensure(counts, tag, { factory: Number });
+                counts[tag]++;
+            });
+        });
         Object.keys(filters).forEach((tag) => arraySetRemove(result, tag));
-        return result;
+        const output = { filteredTags: result, filteredTagCounts: counts };
+        console.log(output);
+        return output;
     }, [openFilteredItems, filters, tags]);
+
+    const badge = React.useCallback((tag: string) => filteredTagCounts[tag], [filteredTagCounts]);
     const ands = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "and").sort(byTag), [filters]);
     const ors = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "or").sort(byTag), [filters]);
     const nots = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "not").sort(byTag), [filters]);
@@ -104,22 +115,25 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
         {ors.map(([tag], i) => <Badge key={i} variant="success" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
         {nots.map(([tag], i) => <Badge key={i} variant="danger" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
         {filteredTags.length ? <>
-        <DropdownPicker
+            <DropdownPicker
                 placeholder={"and"}
                 variant={"primary"}
                 options={filteredTags}
-            onSelect={(tag) => setFilters({ ...filters, [tag]: "and" })}
+                badge={badge}
+                onSelect={(tag) => setFilters({ ...filters, [tag]: "and" })}
             />
             <DropdownPicker
                 placeholder={"or"}
                 variant={"success"}
                 options={filteredTags}
+                badge={badge}
                 onSelect={(tag) => setFilters({ ...filters, [tag]: "or" })}
             />
             <DropdownPicker
                 placeholder={"not"}
                 variant={"danger"}
                 options={filteredTags}
+                badge={badge}
                 onSelect={(tag) => setFilters({ ...filters, [tag]: "not" })}
             />
         </> : false}
@@ -183,11 +197,13 @@ const FilteredChildren = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
 );
 
 function DropdownPicker({
+    badge,
     options,
     onSelect,
     placeholder,
     variant,
 }: {
+        badge?: (option: string) => React.ReactText,
     options: string[],
     onSelect(option: string): void,
     placeholder: string,
@@ -201,7 +217,10 @@ function DropdownPicker({
             <Dropdown.Menu key="menu" as={FilteredChildren}
                 filter={value ? (child: React.ReactElement) => child.props.children.toLowerCase().match(value) : undefined}
             >
-                {options.map((option, i) => <Dropdown.Item key={i} eventKey={option}>{option}</Dropdown.Item>)}
+                {options.map((option, i) => {
+                    const itemBadge = badge?.(option);
+                    return <Dropdown.Item key={i} eventKey={option}>{option}{itemBadge && <> <Badge variant="secondary">{itemBadge}</Badge></>}</Dropdown.Item>;
+                })}
             </Dropdown.Menu>
         </Dropdown>);
 }
