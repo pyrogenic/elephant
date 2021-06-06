@@ -33,7 +33,7 @@ export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TEleme
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
-    search?: string;
+    search?: { search?: string, filter?: (item: TElement) => boolean };
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => string | undefined;
 };
@@ -60,32 +60,36 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         usePagination,
     ];
     let globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = undefined;
-    if (search !== undefined) {
-        plugins.unshift(useGlobalFilter);
-        globalFilter = (rows, _columns, filterValue) => {
-            if (!filterValue) {
-                return rows;
-            }
-            return matchSorter(rows, filterValue, {
+    plugins.unshift(useGlobalFilter);
+    globalFilter = (rows, _columns, filterValue) => {
+        console.log({ globalFilter: filterValue });
+        if (!filterValue) {
+            return rows;
+        }
+        if (filterValue.filter) {
+            rows = rows.filter(({ original }) => filterValue.filter(original));
+        }
+        if (filterValue.search) {
+            rows = matchSorter(rows, filterValue, {
                 keys: [(row) => {
                     return deepSearchTargets(row.original);
-                    // const ch = (row.original as unknown as {deepSearchTargets: string[]});
-                    // if (isObservable(ch) && ch.deepSearchTargets === undefined) {
-                    //     console.log(`extending observable for row ${row.id}`);
-                    //     extendObservable(ch, {
-                    //         get deepSearchTargets() {
-                    //             const targets = deepSearchTargets(this);
-                    //             console.log(`dst row ${row.id}: ${targets.join()}`);
-                    //             return targets;
-                    //         },
-                    //     });
-                    // }
-                    // return ch.deepSearchTargets;
+                // const ch = (row.original as unknown as {deepSearchTargets: string[]});
+                // if (isObservable(ch) && ch.deepSearchTargets === undefined) {
+                //     console.log(`extending observable for row ${row.id}`);
+                //     extendObservable(ch, {
+                //         get deepSearchTargets() {
+                //             const targets = deepSearchTargets(this);
+                //             console.log(`dst row ${row.id}: ${targets.join()}`);
+                //             return targets;
+                //         },
+                //     });
+                // }
+                // return ch.deepSearchTargets;
                 }],
-                
             });
-        };
-    }
+        }
+        return rows;
+    };
     const lastSearch = React.useRef<string>();
     const autoReset = lastSearch.current !== search;
     const {
@@ -121,7 +125,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const debouncedSetGlobalFilter = useAsyncDebounce(setGlobalFilter, 200);
     React.useEffect(() => debouncedSetGlobalFilter(search), [debouncedSetGlobalFilter, search, setGlobalFilter]);
     React.useLayoutEffect(() => {
-        lastSearch.current = search;
+        lastSearch.current = search?.search;
         return () => { };
     }, [search]);
     const spine = React.useCallback((page: number) => {

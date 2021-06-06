@@ -186,6 +186,7 @@ export default function Elephant() {
   }, [cache, token]);
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
+  const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean }>({});
   const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
@@ -425,6 +426,12 @@ export default function Elephant() {
       avatarUrl={profile?.avatar_url}
       search={search}
       setBypassCache={setBypassCache}
+      setFilter={(newFilter) => {
+        if (newFilter !== filter.filter) {
+          console.log({ newFilter, filter: filter.filter });
+          setFilter({ ...filter, filter: newFilter });
+        }
+      }}
       setFluid={setFluid}
       setSearch={setSearch}
       setToken={setToken}
@@ -438,7 +445,7 @@ export default function Elephant() {
       </Alert>}
       <BootstrapTable
         sessionKey={"Collection"}
-        search={search}
+        search={{ search, ...filter }}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
         mnemonic={(sortedBy, item) => {

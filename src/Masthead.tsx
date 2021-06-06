@@ -7,11 +7,19 @@ import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
 import DiscogsCache from "./DiscogsCache";
 import logo from "./elephant.svg";
-import { Collection, ElephantContext } from "./Elephant";
+import { Collection, CollectionItem, ElephantContext } from "./Elephant";
 import SearchBox from "./shared/SearchBox";
-import SelectBox from "./shared/SelectBox";
 import FilterBox from "./shared/FilterBox";
 import { computed } from "mobx";
+import { pendingValue } from "./shared/Pendable";
+
+const tagsForItem = (item: CollectionItem): string[] => {
+    if (!item?.basic_information) {
+        return [];
+    }
+    const { basic_information: { genres, styles } } = item;
+    return [...genres, ...styles].map(pendingValue);
+};
 
 export default function Masthead({
     avatarUrl,
@@ -27,20 +35,22 @@ export default function Masthead({
     cache,
     token,
     setToken,
+    setFilter,
 }: {
-    avatarUrl?: string;
-    collection: Collection;
-    search: string;
-    setSearch: SetState<string>;
-    fluid: boolean;
-    setFluid: SetState<boolean>;
-    bypassCache: boolean;
-    setBypassCache: SetState<boolean>;
-    verbose: boolean;
-    setVerbose: SetState<boolean>;
-    cache: DiscogsCache;
-    token: string;
-    setToken: SetState<string>;
+        avatarUrl?: string,
+        collection: Collection,
+        search: string,
+        setSearch: SetState<string>,
+        fluid: boolean,
+        setFluid: SetState<boolean>,
+        bypassCache: boolean,
+        setBypassCache: SetState<boolean>,
+        verbose: boolean,
+        setVerbose: SetState<boolean>,
+        cache: DiscogsCache,
+        token: string,
+        setToken: SetState<string>,
+        setFilter(filter: ((item: CollectionItem) => boolean) | undefined): void,
 }) {
     const formSpacing = "mr-2";
     const { lpdb } = React.useContext(ElephantContext);
@@ -62,13 +72,9 @@ export default function Masthead({
             return <>
                 <FilterBox
                     items={items.get()}
-                    tags={(item) => {
-                        if (!item?.basic_information) {
-                            return [];
-                        }
-                        const { basic_information: { genres, styles } } = item;
-                        return [...genres, ...styles];
-                    }} />
+                    tags={tagsForItem}
+                    setFilter={setFilter}
+                />
             </>;
         }} />
         <Navbar.Toggle />
