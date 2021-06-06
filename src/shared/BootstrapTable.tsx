@@ -62,7 +62,6 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     let globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = undefined;
     plugins.unshift(useGlobalFilter);
     globalFilter = (rows, _columns, filterValue) => {
-        console.log({ globalFilter: filterValue });
         if (!filterValue) {
             return rows;
         }

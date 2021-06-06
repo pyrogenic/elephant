@@ -1,6 +1,6 @@
 import { Observer } from "mobx-react";
 import React from "react";
-import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
+import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";

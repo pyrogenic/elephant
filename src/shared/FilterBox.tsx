@@ -7,6 +7,7 @@ import React from "react";
 import Form from "react-bootstrap/esm/Form";
 import omit from "lodash/omit";
 import { ButtonProps } from "react-bootstrap/esm/Button";
+import { useAsyncDebounce } from "react-table";
 
 type Filter<T> = (item: T) => boolean | undefined;
 
@@ -51,7 +52,7 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
         openFilter?: Filter<T>,
     }>({});
 
-    React.useEffect(() => {
+    const itemChangeEffect = useAsyncDebounce(() => {
         if (Object.keys(filters).length === 0) {
             setLocalFilter({});
         } else {
@@ -66,7 +67,10 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
                 },
             });
         }
-    }, [filters, tags]);
+    }, 200);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useEffect(itemChangeEffect, [filters, tags]);
 
     React.useEffect(() => {
         return setFilter?.(filter.filter);
@@ -98,7 +102,6 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
         });
         Object.keys(filters).forEach((tag) => arraySetRemove(result, tag));
         const output = { filteredTags: result, filteredTagCounts: counts };
-        console.log(output);
         return output;
     }, [openFilteredItems, filters, tags]);
 
