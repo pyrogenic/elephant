@@ -50,7 +50,7 @@ export default function Masthead({
         cache: DiscogsCache,
         token: string,
         setToken: SetState<string>,
-        setFilter(filter: ((item: CollectionItem) => boolean) | undefined): void,
+        setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "mr-2";
     const { lpdb } = React.useContext(ElephantContext);

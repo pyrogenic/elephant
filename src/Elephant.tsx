@@ -186,7 +186,7 @@ export default function Elephant() {
   }, [cache, token]);
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
-  const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean }>({});
+  const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean | undefined }>({});
   const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);

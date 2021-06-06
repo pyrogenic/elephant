@@ -7,9 +7,8 @@ import React from "react";
 import Form from "react-bootstrap/esm/Form";
 import omit from "lodash/omit";
 import { ButtonProps } from "react-bootstrap/esm/Button";
-import { useAsyncDebounce } from "react-table";
 
-type Filter<T> = (item: T) => boolean;
+type Filter<T> = (item: T) => boolean | undefined;
 
 type FilterBoxProps<T> = {
     items: T[],
@@ -28,7 +27,7 @@ type FilterEntry = [tag: string, op: "and" | "not" | "or"];
 const byTag = ([a]: FilterEntry, [b]: FilterEntry): number => a.localeCompare(b);
 
 function filterItem(filters: Filters, tags: string[]) {
-    let result = false;
+    let result: boolean | undefined;
     for (const [tag, op] of Object.entries(filters)) {
         if (tags.includes(tag)) {
             if (op === "not") {
@@ -47,7 +46,10 @@ function filterItem(filters: Filters, tags: string[]) {
 };
 export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter }: FilterBoxProps<T>) {
     const [filters, setFilters] = useStorageState<Filters>("session", "FilterBox", {});
-    const [filter, setLocalFilter] = React.useState<{ filter?: Filter<T> }>({});
+    const [filter, setLocalFilter] = React.useState<{
+        filter?: Filter<T>,
+        openFilter?: Filter<T>,
+    }>({});
 
     React.useEffect(() => {
         if (Object.keys(filters).length === 0) {
@@ -58,29 +60,38 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
                     const itemTags = tags(item);
                     return filterItem(filters, itemTags);
                 },
+                openFilter: (item) => {
+                    const itemTags = tags(item);
+                    return filterItem(filters, itemTags) ?? true;
+                },
             });
         }
     }, [filters, tags]);
 
-    const debouncedSetFilter = useAsyncDebounce((g) => setFilter?.(g), 1000);
     React.useEffect(() => {
-        console.log({ setFilter, filter: filter.filter })
-        return debouncedSetFilter(filter.filter);
-    }, [debouncedSetFilter, filter, setFilter]);
+        return setFilter?.(filter.filter);
+    }, [setFilter, filter]);
 
     const filteredItems = React.useMemo(() => {
         const result = filter.filter ? items.filter(filter.filter) : items;
-        // console.log({ items, filter, result });
         return result;
     }, [filter, items]);
 
+    const openFilteredItems = React.useMemo(() => {
+        const result = filter.openFilter ? items.filter(filter.openFilter) : items;
+        return result;
+    }, [filter, items]);
+
+    React.useEffect(() => {
+        return setFilteredItems?.(filteredItems);
+    }, [setFilteredItems, filteredItems]);
+
     const filteredTags = React.useMemo(() => {
         const result: string[] = [];
-        filteredItems.forEach((item) => arraySetAddAll(result, tags(item), true));
+        openFilteredItems.forEach((item) => arraySetAddAll(result, tags(item), true));
         Object.keys(filters).forEach((tag) => arraySetRemove(result, tag));
-        // console.log({ filteredItems, result });
         return result;
-    }, [filteredItems, filters, tags]);
+    }, [openFilteredItems, filters, tags]);
     const ands = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "and").sort(byTag), [filters]);
     const ors = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "or").sort(byTag), [filters]);
     const nots = React.useMemo(() => Object.entries(filters).filter(([, op]) => op === "not").sort(byTag), [filters]);

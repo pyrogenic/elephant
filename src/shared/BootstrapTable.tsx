@@ -33,7 +33,7 @@ export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TEleme
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
-    search?: { search?: string, filter?: (item: TElement) => boolean };
+    search?: { search?: string, filter?: (item: TElement) => boolean | undefined };
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => string | undefined;
 };
