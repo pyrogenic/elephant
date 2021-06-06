@@ -10,6 +10,7 @@ import logo from "./elephant.svg";
 import { Collection, ElephantContext } from "./Elephant";
 import SearchBox from "./shared/SearchBox";
 import SelectBox from "./shared/SelectBox";
+import FilterBox from "./shared/FilterBox";
 
 export default function Masthead({
     avatarUrl,
@@ -43,6 +44,7 @@ export default function Masthead({
     const formSpacing = "mr-2";
     const { lpdb } = React.useContext(ElephantContext);
     const [selectedTags, setSelectedTags] = useStorageState<string[]>("session", "selectedTags", []);
+    const items = React.useMemo(() => Array.from(collection.values()), [collection]);
     return <Navbar bg="light">
         <Navbar.Brand className="pl-5" style={{
             backgroundImage: `url(${logo})`,
@@ -60,6 +62,10 @@ export default function Masthead({
             value={selectedTags}
             setValue={setSelectedTags}
         />) ?? null} />
+        <FilterBox
+            items={items}
+            tags={({ basic_information: { genres, styles } }) => [...genres, ...styles]}
+        />
         <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-end">
             <Form inline>
