@@ -168,13 +168,29 @@ const CustomToggle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLI
     );
 });
 
+function anyChildMatches(value: string, child: ReactChild): boolean {
+    if (!child) { return false; }
+    switch (typeof child) {
+        case "number":
+            return child.toString().match(value) !== null;
+        case "string":
+            return child.toLocaleLowerCase().match(value) !== null;
+        case "object":
+            if ("props" in child) {
+                return React.Children.toArray(child.props.children).some(anyChildMatches.bind(null, value));
+            }
+    }
+    console.log({ unexpectedChild: child });
+    return false;
+}
+
 type ReactChild = ElementType<ReturnType<typeof React.Children.toArray>>;
 // forwardRef again here!
 // Dropdown needs access to the DOM of the Menu to measure it
 const FilteredChildren = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLElement> & { filter: undefined | false | ((child: React.ReactElement) => boolean) }>(
     (props, ref) => {
         const { filter } = props;
-        //                        (child) => !value || ((typeof child === "object") && ("props" in child) && child.props.children.toLowerCase().match(value)),
+        //                        (child) => !value || ((typeof child === "object") && ("props" in child) && child.props.children.toLocaleLowerCase().match(value)),
         return (
             <div
                 {...omit(props, "filter")}
@@ -190,9 +206,6 @@ const FilteredChildren = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
             if (!filter) { return true; }
             if (child && typeof child === "object" && "props" in child) {
                 return filter(child);
-            }
-            if (Array.isArray(child)) {
-                return child.some(filterWrap);
             }
             return true;
         }
@@ -218,7 +231,7 @@ function DropdownPicker({
             <Dropdown.Toggle key="toggle" as={CustomToggle} value={value} setValue={setValue} placeholder={placeholder} variant={variant} />
 
             <Dropdown.Menu key="menu" as={FilteredChildren}
-                filter={value ? (child: React.ReactElement) => child.props.children.toLowerCase().match(value) : undefined}
+                filter={value ? anyChildMatches.bind(null, value.toLocaleLowerCase()) : undefined}
             >
                 {options.map((option, i) => {
                     const itemBadge = badge?.(option);
