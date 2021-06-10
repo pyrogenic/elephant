@@ -1,5 +1,26 @@
 div.FilterBox {
-    // display: inline-flex;
+    flex-direction: row;
+    display: inline-flex;
+    .dropdown {
+        display: inline-flex;
+    }
+    input {
+        // outline: 1px solid red;
+        // outline-offset: 4px;        
+        height: min-content;
+        width: 4rem;
+        display: inline-flex;
+        padding: .25em .4em;
+        font-size: 75%;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border: none;
+        border-radius: .25rem;
+        transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
 }
 
 .badge:empty {
