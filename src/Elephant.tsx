@@ -160,6 +160,37 @@ function autoVariant(str: string | undefined): Bootstrap.Color | undefined {
   }
 }
 
+function autoOrder(str: string | undefined): number {
+  switch (str) {
+    case "Mint (M)":
+    case "M":
+      return 8;
+    case "Near Mint (NM or M-)":
+    case "NM":
+      return 7;
+    case "Very Good Plus (VG+)":
+    case "VG+":
+      return 6;
+    case "Very Good (VG)":
+    case "VG":
+      return 5;
+    case "Good Plus (G+)":
+    case "G+":
+      return 4;
+    case "Good (G)":
+    case "G":
+      return 3;
+    case "Fair (F)":
+    case "F":
+      return 2;
+    case "Poor (P)":
+    case "P":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
   let result = notes.find(({ field_id }) => field_id === id);
   if (result) { return result; }
@@ -211,7 +242,7 @@ export default function Elephant() {
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? false, [folders?.folders]);
 
-  type ColumnFactoryResult = [column: Column<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
+  type ColumnFactoryResult = [column: ColumnSetItem<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
   const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
   const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
@@ -222,14 +253,25 @@ export default function Elephant() {
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
   const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
-
+  const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
+  const sortByCondition = React.useCallback((ac, bc) => {
+    const mca = mediaCondition(ac.original.notes);
+    const sca = sleeveCondition(ac.original.notes);
+    const mcb = mediaCondition(bc.original.notes);
+    const scb = sleeveCondition(bc.original.notes);
+    const aa = autoOrder(mca);
+    const ab = autoOrder(sca);
+    const ba = autoOrder(mcb);
+    const bb = autoOrder(scb);
+    return (aa - ba) || (ab - bb);
+  }, [mediaCondition, sleeveCondition]);
   const conditionColumn = React.useCallback((): ColumnFactoryResult => {
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
       return [{
         Header: "Cond.",
         accessor({ id, notes }) {
           const media = mediaCondition(notes);
-          const sleeve = autoFormat(getNote(notes, sleeveConditionId));
+          const sleeve = sleeveCondition(notes);
           return <>
             <div className="d-flex d-flex-row">
             <div className="grade grade-media">
@@ -251,9 +293,10 @@ export default function Elephant() {
             }} />
           </>;
         },
+        ...{ sortType: sortByCondition } as any,
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
-  }, [inventory, mediaCondition, mediaConditionId, sleeveConditionId]);
+  }, [inventory, mediaCondition, sleeveCondition, sortByCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
