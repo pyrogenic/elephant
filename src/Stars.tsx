@@ -11,13 +11,15 @@ function orUndef<T extends any[] = [], R = void> (v: Callback<T, R>) : ((...args
     return undefined;
 }
 
+export const FILLED_STAR = "★";
+export const OPEN_STAR = "☆";
 export function Star({ value, onEnter, onLeave, onClick }: { value: boolean, onEnter: Callback, onLeave: Callback, onClick: Callback }) {
     return <div
         className={`star ${value ? "on" : "off"}`}
         onMouseMove={orUndef(onEnter)}
         onMouseLeave={orUndef(onLeave)}
         onClick={orUndef(onClick)}
-    >{value ? "★" : "☆"}</div>;
+    >{value ? FILLED_STAR : OPEN_STAR}</div>;
 }
 
 export default function Stars({ disabled, value, count, setValue }: { disabled: boolean, value: number, count: number, setValue(value: number): void }) {

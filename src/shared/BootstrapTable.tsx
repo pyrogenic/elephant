@@ -35,7 +35,7 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     data: TElement[];
     search?: { search?: string, filter?: (item: TElement) => boolean | undefined };
     sessionKey?: string;
-    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => string | undefined;
+    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Parameters<typeof minDiff>[0] | undefined;
 };
 
 
@@ -148,10 +148,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         }
         const mnemonicPreA = preA && mnemonic(key, preA);
         const mnemonicPostB = postB && mnemonic(key, postB);
-        if (mnemonicA === "Bobby Hutcherson") {
-            debugger;
-        }
-        const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicPreA, postB: mnemonicPostB });
+        const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicPreA?.[1], postB: mnemonicPostB?.[1] });
         // console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);

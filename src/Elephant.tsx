@@ -22,7 +22,7 @@ import "./Elephant.scss";
 import BootstrapTable, { ColumnSetItem } from "./shared/BootstrapTable";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
-import Stars from "./Stars";
+import Stars, { FILLED_STAR } from "./Stars";
 import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
 import InputGroup from "react-bootstrap/esm/InputGroup";
@@ -417,6 +417,11 @@ export default function Elephant() {
     const b = pendingValue(bc.original.rating);
     return a - b;
   }, []);
+  const sortByTags = React.useCallback((ac, bc, columnId) => {
+    const a = ac.values[columnId].join();
+    const b = bc.values[columnId].join();
+    return a.localeCompare(b);
+  }, []);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -453,8 +458,9 @@ export default function Elephant() {
         const badges = value.map((tag) => <><Tag tag={tag}/> </>)
         return <div className="d-inline d-flex-column">{badges}</div>;
       },
+      sortType: sortByTags,
     },
-  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating]);
+  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   return <ElephantContext.Provider value={{
@@ -495,6 +501,10 @@ export default function Elephant() {
           switch (sortedBy) {
             case "Artist":
               return item.basic_information.artists[0].name;
+            case "Rating":
+              return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
+            case "Tags":
+              return item.basic_information.genres[0];
             default:
               return undefined;
           }
