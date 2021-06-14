@@ -422,6 +422,7 @@ export default function Elephant() {
     const b = bc.values[columnId].join();
     return a.localeCompare(b);
   }, []);
+  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }) => [...genres, ...styles], []);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -453,14 +454,14 @@ export default function Elephant() {
     },
     {
       Header: "Tags",
-      accessor: ({ basic_information: { genres, styles } }) => [...genres, ...styles],
+      accessor: tagsFor,
       Cell: ({ value }: { value: string[] }) => {
         const badges = value.map((tag) => <><Tag tag={tag}/> </>)
         return <div className="d-inline d-flex-column">{badges}</div>;
       },
       sortType: sortByTags,
     },
-  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags]);
+  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags, tagsFor]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   return <ElephantContext.Provider value={{
@@ -504,7 +505,7 @@ export default function Elephant() {
             case "Rating":
               return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
             case "Tags":
-              return item.basic_information.genres[0];
+              return ["words", tagsFor(item).join(" ")];
             default:
               return undefined;
           }
