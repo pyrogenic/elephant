@@ -121,8 +121,11 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
-    const debouncedSetGlobalFilter = useAsyncDebounce(setGlobalFilter, 200);
-    React.useEffect(() => debouncedSetGlobalFilter(search), [debouncedSetGlobalFilter, search, setGlobalFilter]);
+    const wrappedSetGlobalFilter = React.useCallback(() => {
+        setGlobalFilter(search?.search);
+    }, [search, setGlobalFilter]);
+    const debouncedSetGlobalFilter = useAsyncDebounce(wrappedSetGlobalFilter, 200);
+    React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
     React.useLayoutEffect(() => {
         lastSearch.current = search?.search;
         return () => { };

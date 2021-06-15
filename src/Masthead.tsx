@@ -63,7 +63,9 @@ export default function Masthead({
         <SearchBox
             className={formSpacing}
             collection={collection}
-            search={search} setSearch={setSearch} />
+            search={search}
+            setSearch={setSearch}
+        />
         <Observer render={() => {
             const items = computed(() => Array.from(collection.values()));
             if (!items.get() || !lpdb?.tags) {
