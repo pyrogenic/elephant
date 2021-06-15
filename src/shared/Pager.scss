@@ -18,6 +18,7 @@ $grid-breakpoints-xl: 1200px;
         }
         &.form-control {
             min-width: 6rem;
+            height: unset;
         }
     }
 }
