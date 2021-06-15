@@ -252,6 +252,35 @@ export default function Elephant() {
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
+  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }) =>
+    [...genres, ...styles], []);
+
+  const sourceMnemonicFor = React.useCallback((item) => {
+    if (!sourceId || !orderNumberId) {
+      return undefined;
+    }
+    let source = getNote(item.notes, sourceId);
+    if (source === "PFC") {
+      source = `${source} ${getNote(item.notes, orderNumberId)}`;
+    }
+    return ["literal", source];
+  }, [sourceId, orderNumberId]);
+
+  const mnemonic = React.useCallback((sortedBy, item) => {
+    switch (sortedBy) {
+      case "Artist":
+        return item.basic_information.artists[0].name;
+      case "Rating":
+        return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
+      case "Source":
+        return sourceMnemonicFor(item);
+      case "Tags":
+        return ["words", tagsFor(item).join(" ")];
+      default:
+        return undefined;
+    }
+  }, [sourceMnemonicFor, tagsFor]);
+
   const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
   const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
   const sortByCondition = React.useCallback((ac, bc) => {
@@ -298,6 +327,12 @@ export default function Elephant() {
     }
   }, [inventory, mediaCondition, sleeveCondition, sortByCondition, mediaConditionId, sleeveConditionId]);
 
+  const sortBySource = React.useCallback((ac, bc) => {
+    const [, aStr] = mnemonic("Source", ac.original);
+    const [, bStr] = mnemonic("Source", bc.original);
+    return aStr.localeCompare(bStr);
+  }, [mnemonic])
+
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
       return [{
@@ -315,9 +350,11 @@ export default function Elephant() {
           }
           return <><Icon />{price}</>;
         },
-      }, [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
+        sortType: sortBySource,
+      } as ColumnSetItem<CollectionItem>,
+        [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
     }
-  }, [cache, client, orderNumberId, priceId, sourceId]);
+  }, [cache, client, orderNumberId, priceId, sourceId, sortBySource]);
 
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
     if (playsId) {
@@ -422,7 +459,6 @@ export default function Elephant() {
     const b = bc.values[columnId].join();
     return a.localeCompare(b);
   }, []);
-  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }) => [...genres, ...styles], []);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -498,18 +534,7 @@ export default function Elephant() {
         search={{ search, ...filter }}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
-        mnemonic={(sortedBy, item) => {
-          switch (sortedBy) {
-            case "Artist":
-              return item.basic_information.artists[0].name;
-            case "Rating":
-              return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
-            case "Tags":
-              return ["words", tagsFor(item).join(" ")];
-            default:
-              return undefined;
-          }
-        }}
+        mnemonic={mnemonic}
       />
       {/* <Observer>{() => <>
         {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
