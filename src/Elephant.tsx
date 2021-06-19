@@ -2,7 +2,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "popper.js/dist/popper";
 import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import { CurrenciesEnum, Discojs } from "discojs/lib/src";
+import { CurrenciesEnum, Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
 import { action, computed, reaction } from "mobx";
 import { Observer } from "mobx-react";

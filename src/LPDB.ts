@@ -1,4 +1,4 @@
-import { Discojs } from "discojs/lib/src";
+import { Discojs } from "discojs";
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { action, observable, reaction, toJS } from "mobx";
 import { Collection, Inventory } from "./Elephant";

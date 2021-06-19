@@ -1,5 +1,5 @@
 import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
-import { ResultCache } from "discojs/lib/src";
+import { ResultCache } from "discojs";
 import compact from "lodash/compact";
 import range from "lodash/range";
 import { action, computed, makeObservable, observable } from "mobx";
