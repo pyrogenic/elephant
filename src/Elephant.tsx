@@ -4,7 +4,7 @@ import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { CurrenciesEnum, Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, reaction } from "mobx";
+import { action, computed, reaction, IComputedValue } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -39,13 +39,25 @@ type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
 
 type FieldsResponse = PromiseType<ReturnType<Discojs["listCustomFields"]>>;
 type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>;
+type DiscogsLists = PromiseType<ReturnType<Discojs["getLists"]>>;
 
 type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
+type DiscogsList = PromiseType<ReturnType<Discojs["getListItems"]>>;
 
 type CollectionItems = Folder["releases"];
+
 /** listings for sale */
 type InventoryResponse = PromiseType<ReturnType<Discojs["getInventory"]>>
 type InventoryItems = InventoryResponse["listings"];
+
+type DiscogsListItems = DiscogsList["items"];
+
+type ListDefinition = ElementType<DiscogsLists["lists"]>;
+
+export type List = DeepPendable<{
+  definition: ListDefinition,
+  items: DiscogsListItems,
+}>;
 
 type DiscogsCollectionItem = ElementType<CollectionItems>;
 export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
@@ -53,6 +65,7 @@ export type Collection = Map<number, CollectionItem>;
 type DiscogsInventoryItem = ElementType<InventoryItems>;
 export type InventoryItem = DeepPendable<DiscogsInventoryItem>;
 export type Inventory = Map<number, InventoryItem>;
+export type Lists = Map<number, List>;
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -234,7 +247,7 @@ export default function Elephant() {
   const lpdb = React.useMemo<LPDB>(() => new LPDB(client()), [client]);
   const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
 
-  const { collection, inventory } = lpdb;
+  const { collection, inventory, lists } = lpdb;
 
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -459,6 +472,7 @@ export default function Elephant() {
     const b = bc.values[columnId].join();
     return a.localeCompare(b);
   }, []);
+  const listsForRelease = React.useCallback(({ id }: CollectionItem) => computed(() => lpdb.listsForRelease(id)), [lpdb]);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -489,6 +503,11 @@ export default function Elephant() {
       Cell: ({ value }: { value: number }) => folderName(value),
     },
     {
+      Header: "Lists",
+      accessor: listsForRelease,
+      Cell: ({ value }: { value: IComputedValue<List[]> }) => value.get().map(({ definition: { name } }) => name).join(", "),
+    },
+    {
       Header: "Tags",
       accessor: tagsFor,
       Cell: ({ value }: { value: string[] }) => {
@@ -497,7 +516,7 @@ export default function Elephant() {
       },
       sortType: sortByTags,
     },
-  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags, tagsFor]);
+  ], [cache, client, fieldColumns, folderName, listsForRelease, sortByArtist, sortByRating, sortByTags, tagsFor]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   return <ElephantContext.Provider value={{
@@ -574,9 +593,15 @@ export default function Elephant() {
     setCollectionTimestamp(new Date());
   }
 
+  function addToLists(items: DiscogsLists["lists"]) {
+    items.forEach((item) => client().getListItems(item.id).then(({ items }) => items).then(action((items) => lists.set(item.id, { definition: item, items }))));
+    setCollectionTimestamp(new Date());
+  }
+
   function getCollection() {
     updateCollectionReaction.current?.();
     updateInventory();
+    updateLists();
     const p1 = updateCustomFields();
     const p2 = updateCollection();
     Promise.all([p1, p2]).then(() =>
@@ -589,6 +614,10 @@ export default function Elephant() {
 
   function updateInventory() {
     return client().getInventory().then(((r) => client().all("listings", r, addToInventory)), setError);
+  }
+
+  function updateLists() {
+    return client().getLists().then(((r) => client().all("lists", r, addToLists)), setError);
   }
 
   function updateCustomFields() {

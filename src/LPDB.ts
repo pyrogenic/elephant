@@ -1,7 +1,7 @@
 import { Discojs } from "discojs";
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { action, observable, reaction, toJS } from "mobx";
-import { Collection, Inventory } from "./Elephant";
+import { Collection, Inventory, List, Lists } from "./Elephant";
 import Worker from "./worker";
 
 const worker = new Worker();
@@ -10,6 +10,7 @@ const osync = action(sync);
 export default class LPDB {
   public readonly collection: Collection = observable(new Map());
   public readonly inventory: Inventory = observable(new Map());
+  public readonly lists: Lists = observable(new Map());
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
 
@@ -21,6 +22,16 @@ export default class LPDB {
     }
     return this.byTagCache.get(tag)!;
   };
+
+  public listsForRelease(id: number) {
+    const result: List[] = [];
+    for (const [, list] of this.lists) {
+      if (list.items.find(({ id: itemId }) => itemId === id)) {
+        result.push(list);
+      }
+    }
+    return result;
+  }
 
   constructor(public readonly client: Discojs) {
     reaction(() => {
