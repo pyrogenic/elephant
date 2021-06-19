@@ -61,6 +61,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     ];
     let globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = undefined;
     plugins.unshift(useGlobalFilter);
+    const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
     globalFilter = (rows, _columns, filterValue) => {
         if (!filterValue) {
             return rows;
@@ -211,7 +212,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     }
 }
 
-function deepSearchTargets(obj: object, result?: string[], visited?: Set<any>): string[] {
+function deepSearchTargetsImpl(obj: object, result?: string[], visited?: Set<any>): string[] {
     result = result ?? [];
     visited = visited ?? new Set();
     if (obj) {
@@ -232,7 +233,7 @@ function deepSearchTargets(obj: object, result?: string[], visited?: Set<any>): 
                     }
                     break;
                 case "object":
-                    deepSearchTargets(e, result, visited);
+                    deepSearchTargetsImpl(e, result, visited);
                     break;
             }
         });
