@@ -11,3 +11,17 @@
 td > img:only-child {
     margin: -0.5rem;
 }
+
+.badge {
+    &> .badge:first-child,
+    &> svg.icon:first-child {
+        margin-left: -2px;
+    }
+    &> .badge:last-child,
+    &> svg.icon:last-child {
+        margin-right: -2px;
+    }
+}
+svg.icon {
+    vertical-align: -20%;
+}

@@ -26,11 +26,11 @@ import Stars, { FILLED_STAR } from "./Stars";
 import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
 import InputGroup from "react-bootstrap/esm/InputGroup";
-import { FiMinus, FiPlus } from "react-icons/fi";
+import { FiList, FiMinus, FiPlus } from "react-icons/fi";
 import ExternalLink from "./shared/ExternalLink";
 import Masthead from "./Masthead";
 import LPDB from "./LPDB";
-import { Tag } from "./Tag";
+import Tag, { TagKind } from "./Tag";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -265,8 +265,11 @@ export default function Elephant() {
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
-  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }) =>
-    [...genres, ...styles], []);
+  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }: CollectionItem) =>
+    [
+      ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
+      ...styles.map((tag) => ({ tag, kind: TagKind.style })),
+    ], []);
 
   const sourceMnemonicFor = React.useCallback((item) => {
     if (!sourceId || !orderNumberId) {
@@ -505,13 +508,13 @@ export default function Elephant() {
     {
       Header: "Lists",
       accessor: listsForRelease,
-      Cell: ({ value }: { value: ReturnType<typeof listsForRelease> }) => value.get().map(([{ definition: { name } }, { comment }]) => <Badge title={comment}>{name}</Badge>),
+      Cell: ({ value }: { value: ReturnType<typeof listsForRelease> }) => value.get().map(ListEntryBadge),
     },
     {
       Header: "Tags",
       accessor: tagsFor,
-      Cell: ({ value }: { value: string[] }) => {
-        const badges = value.map((tag) => <><Tag tag={tag}/> </>)
+      Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => {
+        const badges = value.map((tag) => <><Tag {...tag} /> </>)
         return <div className="d-inline d-flex-column">{badges}</div>;
       },
       sortType: sortByTags,
@@ -786,4 +789,8 @@ function ArtistsCell({ artists }: { artists: Artist[] }) {
 
 function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
+}
+
+function ListEntryBadge({ list: { definition: { name }, items: { length } }, entry: { comment } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
+  return <Badge className="mr-1 ListEntryBadge" variant="secondary"><FiList /> {name} <Badge variant="light">{length}</Badge>{comment && <><br /><Badge variant="light">{comment}</Badge></>}</Badge>;
 }

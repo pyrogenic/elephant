@@ -25,11 +25,11 @@ export default class LPDB {
   };
 
   public listsForRelease(id: number) {
-    const result: [List, ElementType<List["items"]>][] = [];
+    const result: { list: List, entry: ElementType<List["items"]> }[] = [];
     for (const [, list] of this.lists) {
-      const item = list.items.find(({ id: itemId }) => itemId === id);
-      if (item) {
-        result.push([list, item]);
+      const entry = list.items.find(({ id: itemId }) => itemId === id);
+      if (entry) {
+        result.push({ list, entry });
       }
     }
     return result;
