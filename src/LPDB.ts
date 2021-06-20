@@ -3,6 +3,7 @@ import { sync } from "@pyrogenic/asset/lib/sync";
 import { action, observable, reaction, toJS } from "mobx";
 import { Collection, Inventory, List, Lists } from "./Elephant";
 import Worker from "./worker";
+import { ElementType } from "../../asset/lib";
 
 const worker = new Worker();
 const osync = action(sync);
@@ -24,10 +25,11 @@ export default class LPDB {
   };
 
   public listsForRelease(id: number) {
-    const result: List[] = [];
+    const result: [List, ElementType<List["items"]>][] = [];
     for (const [, list] of this.lists) {
-      if (list.items.find(({ id: itemId }) => itemId === id)) {
-        result.push(list);
+      const item = list.items.find(({ id: itemId }) => itemId === id);
+      if (item) {
+        result.push([list, item]);
       }
     }
     return result;

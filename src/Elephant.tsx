@@ -4,7 +4,7 @@ import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { CurrenciesEnum, Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, reaction, IComputedValue } from "mobx";
+import { action, computed, reaction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -505,7 +505,7 @@ export default function Elephant() {
     {
       Header: "Lists",
       accessor: listsForRelease,
-      Cell: ({ value }: { value: IComputedValue<List[]> }) => value.get().map(({ definition: { name } }) => name).join(", "),
+      Cell: ({ value }: { value: ReturnType<typeof listsForRelease> }) => value.get().map(([{ definition: { name } }, { comment }]) => <Badge title={comment}>{name}</Badge>),
     },
     {
       Header: "Tags",
