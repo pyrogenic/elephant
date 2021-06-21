@@ -2,7 +2,9 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import { FiDisc, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { ElephantContext } from "./Elephant";
+import "./Tag.scss";
 
 export enum TagKind {
     tag = "tag",
@@ -11,7 +13,23 @@ export enum TagKind {
     list = "list",
 }
 
-export default function Tag({ tag, kind, extra }: { tag: string, kind: TagKind, extra?: string }) {
+export default function Tag({
+    tag,
+    kind,
+    extra,
+    onClickIcon,
+    onClickTag,
+    onClickCount,
+    onClickExtra,
+}: {
+    tag: string,
+    kind: TagKind,
+    extra?: string,
+    onClickCount?: () => void,
+    onClickExtra?: () => void,
+    onClickIcon?: () => void,
+    onClickTag?: () => void,
+}) {
     const { lpdb } = React.useContext(ElephantContext);
     return <Observer render={content} />;
     function content() {
@@ -37,6 +55,35 @@ export default function Tag({ tag, kind, extra }: { tag: string, kind: TagKind, 
                 Icon = FiSquare;
                 break;
         }
-        return <Badge variant="secondary"><Icon className="icon" /> {tag}{count && <>&nbsp;<Badge variant="light"> {count} </Badge></>}{extra && <> <Badge variant="light">{extra}</Badge></>}</Badge>;
+        return <Badge
+            className={classConcat(kind, "tag")}
+            variant="secondary"
+            onClick={onClickTag}
+        >
+            <Icon
+                className="icon"
+                onClick={onClickIcon}
+            />
+            &nbsp;
+            {tag}
+            {count && <>
+                &nbsp;
+                <Badge
+                    className="count"
+                    variant="light"
+                    onClick={onClickCount}>
+                    {count}
+                </Badge>
+            </>}
+            {extra && <>
+                &nbsp;
+                <Badge
+                    className="extra"
+                    variant="light"
+                    onClick={onClickExtra}>
+                    {extra}
+                </Badge>
+            </>}
+        </Badge>;
     }
 }

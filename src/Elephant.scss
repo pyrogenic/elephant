@@ -91,3 +91,22 @@ td {
     align-content: space-between;
     text-align: left;
 }
+
+.spinner {
+    flex-wrap: nowrap;
+    &:not(:hover) * {
+        border-color: transparent;
+    }
+    button {
+        font-size: small;
+        padding: 0;
+    }
+    .count {
+        > span {
+            background: initial;
+            width:100%;
+            padding: 0 0.4rem;
+            text-align: center;
+        }
+    }
+}

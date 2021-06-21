@@ -404,7 +404,7 @@ export default function Elephant() {
                   <FiMinus />
                 </Button>
               </InputGroup.Prepend>
-              <InputGroup.Prepend>
+              <InputGroup.Prepend className="count">
                 <InputGroup.Text>{plays}</InputGroup.Text>
               </InputGroup.Prepend>
               <InputGroup.Append>
