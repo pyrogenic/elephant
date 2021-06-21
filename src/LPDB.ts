@@ -1,7 +1,7 @@
 import { Discojs } from "discojs";
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { action, observable, reaction, toJS } from "mobx";
-import { Collection, Inventory, List, Lists } from "./Elephant";
+import { Collection, CollectionItem, Inventory, List, Lists } from "./Elephant";
 import Worker from "./worker";
 import { ElementType } from "../../asset/lib";
 
@@ -24,12 +24,31 @@ export default class LPDB {
     return this.byTagCache.get(tag)!;
   };
 
+  public listByName(name: string) {
+    for (const list of this.lists.values()) {
+      if (list.definition.name === name) {
+        return list;
+      }
+    }
+    return undefined;
+  }
+
   public listsForRelease(id: number) {
     const result: { list: List, entry: ElementType<List["items"]> }[] = [];
     for (const [, list] of this.lists) {
       const entry = list.items.find(({ id: itemId }) => itemId === id);
       if (entry) {
         result.push({ list, entry });
+      }
+    }
+    return result;
+  }
+
+  public entriesForRelease(id: number) {
+    const result: CollectionItem[] = [];
+    for (const entry of this.collection.values()) {
+      if (entry.id === id) {
+        result.push(entry);
       }
     }
     return result;

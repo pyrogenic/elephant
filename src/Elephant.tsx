@@ -4,7 +4,7 @@ import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { CurrenciesEnum, Discojs } from "discojs";
 import isEmpty from "lodash/isEmpty";
-import { action, computed, reaction } from "mobx";
+import { action, computed, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -26,11 +26,12 @@ import Stars, { FILLED_STAR } from "./Stars";
 import Bootstrap from "react-bootstrap/esm/types";
 import omit from "lodash/omit";
 import InputGroup from "react-bootstrap/esm/InputGroup";
-import { FiList, FiMinus, FiPlus } from "react-icons/fi";
+import { FiMinus, FiPlus } from "react-icons/fi";
 import ExternalLink from "./shared/ExternalLink";
 import Masthead from "./Masthead";
 import LPDB from "./LPDB";
 import Tag, { TagKind } from "./Tag";
+import jsonpath from "jsonpath";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -216,6 +217,12 @@ const getNote = action("getNote", (notes: CollectionNote[], id: number) => {
   return noteById(notes, id)?.value;
 });
 
+const PATCH_LIST_PATTERN = /^Patch: /;
+
+function isPatch(list: List) {
+  return list.definition.name.match(PATCH_LIST_PATTERN);
+}
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
@@ -265,11 +272,12 @@ export default function Elephant() {
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
-  const tagsFor = React.useCallback(({ basic_information: { genres, styles } }: CollectionItem) =>
-    [
+  const tagsFor = React.useCallback(({ id, basic_information: { genres, styles } }: CollectionItem) =>
+    computed(() => [
+      ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(({ list: { definition: { name: tag } }, entry: { comment: extra } }) => ({ tag, kind: TagKind.list, extra })),
       ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
-    ], []);
+    ]), [lpdb]);
 
   const sourceMnemonicFor = React.useCallback((item) => {
     if (!sourceId || !orderNumberId) {
@@ -291,7 +299,7 @@ export default function Elephant() {
       case "Source":
         return sourceMnemonicFor(item);
       case "Tags":
-        return ["words", tagsFor(item).join(" ")];
+        return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
       default:
         return undefined;
     }
@@ -434,7 +442,30 @@ export default function Elephant() {
   }, [cache, client, notesId]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const collectionTableData = computed(() => Array.from(collection.values()));
+  const collectionTableData = computed(() => {
+    for (const list of lists.values()) {
+      if (isPatch(list)) {
+        const query = list.definition.description;
+        list.items.forEach((item) => {
+          const instruction = item.comment;
+          for (const entry of lpdb.entriesForRelease(item.id)) {
+            runInAction(jsonpath.apply.bind(jsonpath, entry, query, (src) => {
+              let value: any;
+              switch (instruction[0]) {
+                case "=":
+                  value = instruction.slice(1);
+                  break;
+                default:
+                  value = instruction;
+              }
+              return value;
+            }));
+          }
+        });
+      }
+    }
+    return Array.from(collection.values());
+  });
   const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
     const columns: Column<CollectionItem>[] = [];
     const handledFieldNames: string[] = [];
@@ -475,7 +506,6 @@ export default function Elephant() {
     const b = bc.values[columnId].join();
     return a.localeCompare(b);
   }, []);
-  const listsForRelease = React.useCallback(({ id }: CollectionItem) => computed(() => lpdb.listsForRelease(id)), [lpdb]);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -492,7 +522,7 @@ export default function Elephant() {
     },
     {
       Header: "Title",
-      accessor: ({ basic_information: { title } }) => title,
+      accessor: ({ basic_information: { title } }) => <>{title}</>,
     },
     {
       Header: "Rating",
@@ -506,20 +536,15 @@ export default function Elephant() {
       Cell: ({ value }: { value: number }) => folderName(value),
     },
     {
-      Header: "Lists",
-      accessor: listsForRelease,
-      Cell: ({ value }: { value: ReturnType<typeof listsForRelease> }) => value.get().map(ListEntryBadge),
-    },
-    {
       Header: "Tags",
       accessor: tagsFor,
-      Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => {
-        const badges = value.map((tag) => <><Tag {...tag} /> </>)
+      Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => <Observer render={() => {
+        const badges = value.get().map((tag) => <><Tag key={tag.tag} {...tag} /> </>)
         return <div className="d-inline d-flex-column">{badges}</div>;
-      },
+      }} />,
       sortType: sortByTags,
     },
-  ], [cache, client, fieldColumns, folderName, listsForRelease, sortByArtist, sortByRating, sortByTags, tagsFor]);
+  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags, tagsFor]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   return <ElephantContext.Provider value={{
@@ -633,6 +658,7 @@ export default function Elephant() {
   }
 
 }
+
 /*
 
 $ United States Dollar 
@@ -791,6 +817,3 @@ function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
 }
 
-function ListEntryBadge({ list: { definition: { name }, items: { length } }, entry: { comment } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
-  return <Badge className="mr-1 ListEntryBadge" variant="secondary"><FiList /> {name} <Badge variant="light">{length}</Badge>{comment && <><br /><Badge variant="light">{comment}</Badge></>}</Badge>;
-}

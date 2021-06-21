@@ -11,21 +11,24 @@ export enum TagKind {
     list = "list",
 }
 
-export default function Tag({ tag, kind }: { tag: string, kind: TagKind }) {
+export default function Tag({ tag, kind, extra }: { tag: string, kind: TagKind, extra?: string }) {
     const { lpdb } = React.useContext(ElephantContext);
     return <Observer render={content} />;
     function content() {
-        const count = lpdb?.byTag(tag).length;
+        var count: number | undefined;
         var Icon: typeof FiTag;
         switch (kind) {
             case "genre":
                 Icon = FiTarget;
+                count = lpdb?.byTag(tag).length
                 break;
             case "list":
                 Icon = FiList;
+                count = lpdb?.listByName(tag)?.items.length;
                 break;
             case "style":
                 Icon = FiDisc;
+                count = lpdb?.byTag(tag).length
                 break;
             case "tag":
                 Icon = FiTag;
@@ -34,6 +37,6 @@ export default function Tag({ tag, kind }: { tag: string, kind: TagKind }) {
                 Icon = FiSquare;
                 break;
         }
-        return <Badge variant="secondary"><Icon className="icon" /> {tag}{count && <>&nbsp;<Badge variant="light"> {count} </Badge></>}</Badge>;
+        return <Badge variant="secondary"><Icon className="icon" /> {tag}{count && <>&nbsp;<Badge variant="light"> {count} </Badge></>}{extra && <> <Badge variant="light">{extra}</Badge></>}</Badge>;
     }
 }
