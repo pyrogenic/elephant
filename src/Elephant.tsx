@@ -1,37 +1,35 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "popper.js/dist/popper";
-import "jquery/dist/jquery.slim";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
+import "jquery/dist/jquery.slim";
+import jsonpath from "jsonpath";
 import isEmpty from "lodash/isEmpty";
+import omit from "lodash/omit";
 import { action, computed, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
+import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
+import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
+import LPDB from "./LPDB";
+import Masthead from "./Masthead";
 import BootstrapTable, { ColumnSetItem } from "./shared/BootstrapTable";
+import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import "./shared/Shared.scss";
+import Spinner from "./shared/Spinner";
 import Stars, { FILLED_STAR } from "./Stars";
-import Bootstrap from "react-bootstrap/esm/types";
-import omit from "lodash/omit";
-import InputGroup from "react-bootstrap/esm/InputGroup";
-import { FiMinus, FiPlus } from "react-icons/fi";
-import ExternalLink from "./shared/ExternalLink";
-import Masthead from "./Masthead";
-import LPDB from "./LPDB";
 import Tag, { TagKind } from "./Tag";
-import jsonpath from "jsonpath";
 
 type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
 type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
@@ -272,6 +270,27 @@ export default function Elephant() {
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
 
+  const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
+  const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
+  const plays = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
+    if (playsId) {
+      const playsNote = noteById(notes, playsId)!;
+      let plays = Number(pendingValue(playsNote.value ?? "0"));
+      if (!plays) {
+        if (rating) {
+          plays = 1;
+        } else {
+          const media = mediaCondition(notes);
+          if (media) {
+            plays = 1;
+          }
+        }
+      }
+      return plays;
+    }
+    return undefined;
+  }, [mediaCondition, playsId]);
+
   const tagsFor = React.useCallback(({ id, basic_information: { genres, styles } }: CollectionItem) =>
     computed(() => [
       ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(({ list: { definition: { name: tag } }, entry: { comment: extra } }) => ({ tag, kind: TagKind.list, extra })),
@@ -298,15 +317,15 @@ export default function Elephant() {
         return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
       case "Source":
         return sourceMnemonicFor(item);
+      case "Plays":
+        return ["literal", `${plays(item)}`];
       case "Tags":
         return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
       default:
         return undefined;
     }
-  }, [sourceMnemonicFor, tagsFor]);
+  }, [plays, sourceMnemonicFor, tagsFor]);
 
-  const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
-  const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
   const sortByCondition = React.useCallback((ac, bc) => {
     const mca = mediaCondition(ac.original.notes);
     const sca = sleeveCondition(ac.original.notes);
@@ -380,6 +399,11 @@ export default function Elephant() {
     }
   }, [cache, client, orderNumberId, priceId, sourceId, sortBySource]);
 
+  const sortByPlays = React.useCallback((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
+    const a = plays(ac.original) ?? -1;
+    const b = plays(bc.original) ?? -1;
+    return a - b;
+  }, [plays]);
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
     if (playsId) {
       return [{
@@ -393,30 +417,7 @@ export default function Elephant() {
             if (!plays && media) {
               plays = 1;
             }
-            return <InputGroup className="spinner">
-              <InputGroup.Prepend>
-                <Button
-                  size="sm"
-                  variant="outline-secondary"
-                  disabled={plays <= 0}
-                  onClick={change.bind(null, plays - 1)}
-                >
-                  <FiMinus />
-                </Button>
-              </InputGroup.Prepend>
-              <InputGroup.Prepend className="count">
-                <InputGroup.Text>{plays}</InputGroup.Text>
-              </InputGroup.Prepend>
-              <InputGroup.Append>
-                <Button
-                  size="sm"
-                  variant="outline-secondary"
-                  onClick={change.bind(null, plays + 1)}
-                >
-                  <FiPlus />
-                </Button>
-              </InputGroup.Append>
-            </InputGroup>;
+            return <Spinner value={plays} min={0} onChange={change} />;
 
             function change(value: number) {
               const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
@@ -424,10 +425,11 @@ export default function Elephant() {
             }
           }} />;
         },
-      },
+        sortType: sortByPlays,
+      } as ColumnSetItem<CollectionItem>,
       [KnownFieldTitle.plays]];
     }
-  }, [client, mediaCondition, playsId]);
+  }, [client, mediaCondition, playsId, sortByPlays]);
 
   const notesColumn = React.useCallback((): ColumnFactoryResult => {
     if (notesId) {
