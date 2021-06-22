@@ -91,17 +91,17 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
     }, [setFilteredItems, filteredItems]);
 
     const { filteredTags, filteredTagCounts } = React.useMemo(() => {
-        const result: string[] = [];
+        const result: Set<string> = new Set();
         const counts: { [tag: string]: number } = {};
         openFilteredItems.forEach((item) => {
-            arraySetAddAll(result, tags(item), true);
             tags(item).forEach((tag) => {
+                result.add(tag);
                 ensure(counts, tag, { factory: Number });
                 counts[tag]++;
             });
         });
-        Object.keys(filters).forEach((tag) => arraySetRemove(result, tag));
-        const output = { filteredTags: result, filteredTagCounts: counts };
+        Object.keys(filters).forEach(result.delete);
+        const output = { filteredTags: Array.from(result), filteredTagCounts: counts };
         return output;
     }, [openFilteredItems, filters, tags]);
 
