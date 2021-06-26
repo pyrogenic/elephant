@@ -541,7 +541,7 @@ export default function Elephant() {
       Header: "Tags",
       accessor: tagsFor,
       Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => <Observer render={() => {
-        const badges = value.get().map((tag) => <><Tag key={tag.tag} {...tag} /> </>)
+        const badges = value.get().map((tag) => <span key={tag.tag}><Tag key={tag.tag} {...tag} /> </span>)
         return <div className="d-inline d-flex-column">{badges}</div>;
       }} />,
       sortType: sortByTags,
@@ -549,6 +549,7 @@ export default function Elephant() {
   ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags, tagsFor]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
+  const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
   return <ElephantContext.Provider value={{
     lpdb,
     collection,
@@ -580,7 +581,7 @@ export default function Elephant() {
       </Alert>}
       <BootstrapTable
         sessionKey={"Collection"}
-        search={{ search, ...filter }}
+        search={tableSearch}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
         mnemonic={mnemonic}
