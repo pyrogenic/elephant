@@ -26,7 +26,9 @@ import {
     useTable,
     UseTableOptions,
 } from "react-table";
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import Pager, { Spine } from "./Pager";
+import "./BootstrapTable.scss";
 
 export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TElement> & { id?: TColumnIds };
 
@@ -59,14 +61,15 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         useSortBy,
         usePagination,
     ];
-    let globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = undefined;
     plugins.unshift(useGlobalFilter);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
-    globalFilter = (rows, _columns, filterValue) => {
+    const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() => (
+        (rows, _columns, filterValue) => {
         if (!filterValue) {
             return rows;
         }
         if (filterValue.filter) {
+            console.log(filterValue.filter);
             rows = rows.filter(({ original }) => filterValue.filter(original));
         }
         if (filterValue.search) {
@@ -89,7 +92,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             });
         }
         return rows;
-    };
+        }), [deepSearchTargets]);
     const lastSearch = React.useRef<string>();
     const autoReset = lastSearch.current !== search;
     const {
@@ -123,7 +126,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
-        setGlobalFilter(search?.search);
+        setGlobalFilter(search);
     }, [search, setGlobalFilter]);
     const debouncedSetGlobalFilter = useAsyncDebounce(wrappedSetGlobalFilter, 200);
     React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
@@ -163,9 +166,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         pageSize={pageSize}
         spine={mnemonic && spine}
     />
+    const tableProps = getTableProps();
     return <>
         {pager}
-        <Table {...getTableProps()}>
+        <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>
                 {headerGroups.map(headerGroup => (
                     <tr {...headerGroup.getHeaderGroupProps()}>

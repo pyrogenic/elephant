@@ -1,6 +1,6 @@
 import Badge from "react-bootstrap/esm/Badge";
 import Dropdown from "react-bootstrap/esm/Dropdown";
-import { arraySetAddAll, arraySetRemove, ElementType, ensure } from "@pyrogenic/asset/lib";
+import { ElementType, ensure } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "./FilterBox.scss";
 import React from "react";
@@ -100,7 +100,7 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
                 counts[tag]++;
             });
         });
-        Object.keys(filters).forEach(result.delete);
+        Object.keys(filters).forEach(result.delete.bind(result));
         const output = { filteredTags: Array.from(result), filteredTagCounts: counts };
         return output;
     }, [openFilteredItems, filters, tags]);
