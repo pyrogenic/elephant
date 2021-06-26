@@ -541,7 +541,7 @@ export default function Elephant() {
       Header: "Tags",
       accessor: tagsFor,
       Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => <Observer render={() => {
-        const badges = value.get().map((tag) => <span key={tag.tag}><Tag key={tag.tag} {...tag} /> </span>)
+        const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>)
         return <div className="d-inline d-flex-column">{badges}</div>;
       }} />,
       sortType: sortByTags,
@@ -564,7 +564,6 @@ export default function Elephant() {
       setBypassCache={setBypassCache}
       setFilter={(newFilter) => {
         if (newFilter !== filter.filter) {
-          console.log({ newFilter, filter: filter.filter });
           setFilter({ ...filter, filter: newFilter });
         }
       }}

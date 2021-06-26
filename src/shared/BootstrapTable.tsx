@@ -1,4 +1,5 @@
 import minDiff from "@pyrogenic/perl/lib/minDiff";
+import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import { matchSorter } from "match-sorter";
@@ -10,7 +11,6 @@ import {
     HeaderGroup,
     PluginHook,
     TableInstance,
-    useAsyncDebounce,
     useGlobalFilter,
     UseGlobalFiltersInstanceProps,
     UseGlobalFiltersOptions,
@@ -32,10 +32,15 @@ import "./BootstrapTable.scss";
 
 export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TElement> & { id?: TColumnIds };
 
+type Search<TElement extends {}> = {
+    search?: string;
+    filter?: (item: TElement) => boolean | undefined;
+};
+
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
-    search?: { search?: string, filter?: (item: TElement) => boolean | undefined };
+    search?: Search<TElement>;
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Parameters<typeof minDiff>[0] | undefined;
 };
@@ -63,36 +68,36 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     ];
     plugins.unshift(useGlobalFilter);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
-    const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() => (
-        (rows, _columns, filterValue) => {
-        if (!filterValue) {
+    const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() =>
+    ((rows, _columns, filterValue: Search<TElement>) => {
+        if (filterValue === undefined) {
             return rows;
         }
-        if (filterValue.filter) {
-            console.log(filterValue.filter);
-            rows = rows.filter(({ original }) => filterValue.filter(original));
+        const { filter, search } = filterValue;
+        if (filter) {
+            rows = rows.filter(({ original }) => filter(original));
         }
-        if (filterValue.search) {
-            rows = matchSorter(rows, filterValue, {
+        if (search) {
+            rows = matchSorter(rows, search, {
                 keys: [(row) => {
                     return deepSearchTargets(row.original);
-                // const ch = (row.original as unknown as {deepSearchTargets: string[]});
-                // if (isObservable(ch) && ch.deepSearchTargets === undefined) {
-                //     console.log(`extending observable for row ${row.id}`);
-                //     extendObservable(ch, {
-                //         get deepSearchTargets() {
-                //             const targets = deepSearchTargets(this);
-                //             console.log(`dst row ${row.id}: ${targets.join()}`);
-                //             return targets;
-                //         },
-                //     });
-                // }
-                // return ch.deepSearchTargets;
+                    // const ch = (row.original as unknown as {deepSearchTargets: string[]});
+                    // if (isObservable(ch) && ch.deepSearchTargets === undefined) {
+                    //     console.log(`extending observable for row ${row.id}`);
+                    //     extendObservable(ch, {
+                    //         get deepSearchTargets() {
+                    //             const targets = deepSearchTargets(this);
+                    //             console.log(`dst row ${row.id}: ${targets.join()}`);
+                    //             return targets;
+                    //         },
+                    //     });
+                    // }
+                    // return ch.deepSearchTargets;
                 }],
             });
         }
         return rows;
-        }), [deepSearchTargets]);
+    }), [deepSearchTargets]);
     const lastSearch = React.useRef<string>();
     const autoReset = lastSearch.current !== search;
     const {
@@ -128,7 +133,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const wrappedSetGlobalFilter = React.useCallback(() => {
         setGlobalFilter(search);
     }, [search, setGlobalFilter]);
-    const debouncedSetGlobalFilter = useAsyncDebounce(wrappedSetGlobalFilter, 200);
+    const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 500 });
     React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
     React.useLayoutEffect(() => {
         lastSearch.current = search?.search;
