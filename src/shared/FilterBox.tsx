@@ -193,7 +193,7 @@ const FilteredChildren = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
         //                        (child) => !value || ((typeof child === "object") && ("props" in child) && child.props.children.toLocaleLowerCase().match(value)),
         return (
             <div
-                {...omit(props, "filter")}
+                {...omit(props, "filter", "show", "alignRight", "close")}
                 ref={ref}
             >
                 <ul className="list-unstyled">
