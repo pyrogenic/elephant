@@ -1,3 +1,4 @@
+import { compare } from "@pyrogenic/asset/lib/compare";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
@@ -84,6 +85,7 @@ enum KnownFieldTitle {
   notes = "Notes",
   price = "Price",
   plays = "Plays",
+  tasks = "Task",
 }
 
 enum Source {
@@ -204,11 +206,15 @@ function autoOrder(str: string | undefined): number {
 }
 
 const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
-  let result = notes.find(({ field_id }) => field_id === id);
-  if (result) { return result; }
-  result = { field_id: id, value: "" };
-  notes.push(result);
-  return result;
+  try {
+    let result = notes.find(({ field_id }) => field_id === id);
+    if (result) { return result; }
+    result = { field_id: id, value: "" };
+    notes.push(result);
+    return result;
+  } catch (e) {
+    return e.toString();
+  }
 });
 
 const getNote = action("getNote", (notes: CollectionNote[], id: number) => {
@@ -219,6 +225,13 @@ const PATCH_LIST_PATTERN = /^Patch: /;
 
 function isPatch(list: List) {
   return list.definition.name.match(PATCH_LIST_PATTERN);
+}
+
+function sortByTasks(ac: { values: { Tasks: string[] } }, bc: { values: { Tasks: string[] } }) {
+  const a = ac.values.Tasks;
+  const b = bc.values.Tasks;
+  const r = compare(a, b, { emptyLast: true });
+  return r;
 }
 
 export default function Elephant() {
@@ -269,7 +282,14 @@ export default function Elephant() {
   const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
   const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
   const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
+  const tasksId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.tasks)?.id, [fieldsByName]);
 
+  const tasks = React.useCallback(({ notes }: CollectionItem): string[] => {
+    if (!tasksId) { return []; }
+    const value = getNote(notes, tasksId);
+    if (!value) { return []; }
+    return value.split("\n").sort();
+  }, [tasksId]);
   const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
   const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
   const plays = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
@@ -293,7 +313,7 @@ export default function Elephant() {
 
   const tagsFor = React.useCallback(({ id, basic_information: { genres, styles } }: CollectionItem) =>
     computed(() => [
-      ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(({ list: { definition: { name: tag } }, entry: { comment: extra } }) => ({ tag, kind: TagKind.list, extra })),
+      ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(listEntryToTag),
       ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
     ]), [lpdb]);
@@ -319,12 +339,14 @@ export default function Elephant() {
         return sourceMnemonicFor(item);
       case "Plays":
         return ["literal", `${plays(item)}`];
+      case "Tasks":
+        return ["words", tasks(item).join(" ")];
       case "Tags":
         return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
       default:
         return undefined;
     }
-  }, [plays, sourceMnemonicFor, tagsFor]);
+  }, [plays, sourceMnemonicFor, tasks, tagsFor]);
 
   const sortByCondition = React.useCallback((ac, bc) => {
     const mca = mediaCondition(ac.original.notes);
@@ -443,6 +465,20 @@ export default function Elephant() {
     }
   }, [cache, client, notesId]);
 
+  const tasksColumn = React.useCallback((): ColumnFactoryResult => {
+    if (tasksId) {
+      return [{
+        Header: "Tasks",
+        accessor: tasks,
+        Cell({ value }: { value: ReturnType<typeof tasks> }) {
+          return value.map((task) => <Form.Check key={task} label={task} />);
+        },
+        sortType: sortByTasks,
+      } as ColumnSetItem<CollectionItem>,
+      [KnownFieldTitle.tasks]];
+    }
+  }, [tasks, tasksId]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const collectionTableData = computed(() => {
     for (const list of lists.values()) {
@@ -476,6 +512,7 @@ export default function Elephant() {
       conditionColumn(),
       sourceColumn(),
       notesColumn(),
+      tasksColumn(),
     ].forEach((e) => {
       if (e) {
         columns.push(e[0]);
@@ -488,7 +525,7 @@ export default function Elephant() {
       accessor: ({ notes }) => autoFormat(getNote(notes, id)),
     }));
     return columns;
-  }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn]);
+  }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
   const sortableString = React.useCallback((name: string) => autoFormat(name).replace(/\W/g, ""), []);
   const sortableArtistsString = React.useCallback((artists: Artist[]) => artists.map(({ name }) => sortableString(name)).join(" "), [sortableString]);
@@ -817,5 +854,9 @@ function ArtistsCell({ artists }: { artists: Artist[] }) {
 
 function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
+}
+
+function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
+  return { tag, kind: TagKind.list, extra };
 }
 

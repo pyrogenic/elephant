@@ -133,7 +133,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const wrappedSetGlobalFilter = React.useCallback(() => {
         setGlobalFilter(search);
     }, [search, setGlobalFilter]);
-    const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 500 });
+    const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 200, periodic: true });
     React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
     React.useLayoutEffect(() => {
         lastSearch.current = search?.search;
