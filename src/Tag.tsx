@@ -1,9 +1,10 @@
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { Observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
-import { FiDisc, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
-import classConcat from "@pyrogenic/perl/lib/classConcat";
+import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
 import { ElephantContext } from "./Elephant";
+import { Content, resolve } from "./shared/resolve";
 import "./Tag.scss";
 
 export enum TagKind {
@@ -11,9 +12,14 @@ export enum TagKind {
     genre = "genre",
     style = "style",
     list = "list",
+    box = "box",
+    shelf = "shelf",
+    bay = "bay",
+    unknown = "unknown",
 }
 
 export default function Tag({
+    className,
     tag,
     kind,
     extra,
@@ -22,9 +28,10 @@ export default function Tag({
     onClickCount,
     onClickExtra,
 }: {
+        className?: string,
     tag: string,
     kind: TagKind,
-    extra?: string,
+        extra?: Content,
     onClickCount?: () => void,
     onClickExtra?: () => void,
     onClickIcon?: () => void,
@@ -36,27 +43,39 @@ export default function Tag({
         var count: number | undefined;
         var Icon: typeof FiTag;
         switch (kind) {
-            case "genre":
+            case TagKind.genre:
                 Icon = FiTarget;
                 count = lpdb?.byTag(tag).length
                 break;
-            case "list":
+            case TagKind.list:
                 Icon = FiList;
                 count = lpdb?.listByName(tag)?.items.length;
                 break;
-            case "style":
+            case TagKind.style:
                 Icon = FiDisc;
                 count = lpdb?.byTag(tag).length
                 break;
-            case "tag":
+            case TagKind.tag:
                 Icon = FiTag;
+                break;
+            case TagKind.bay:
+                Icon = FiAlertTriangle;
+                break;
+            case TagKind.box:
+                Icon = FiArchive;
+                break;
+            case TagKind.shelf:
+                Icon = FiCreditCard;
+                break;
+            case TagKind.unknown:
+                Icon = FiHelpCircle;
                 break;
             default:
                 Icon = FiSquare;
                 break;
         }
         return <Badge
-            className={classConcat(kind, "tag")}
+            className={classConcat(kind, "tag", className)}
             variant="secondary"
             onClick={onClickTag}
         >
@@ -77,12 +96,14 @@ export default function Tag({
             </>}
             {extra && <>
                 &nbsp;
-                <Badge
-                    className="extra"
-                    variant="light"
-                    onClick={onClickExtra}>
-                    {extra}
-                </Badge>
+                {typeof extra === "function"
+                    ? resolve(extra)
+                    : <Badge
+                        className="extra"
+                        variant="light"
+                        onClick={onClickExtra}>
+                        {resolve(extra)}
+                    </Badge>}
             </>}
         </Badge>;
     }

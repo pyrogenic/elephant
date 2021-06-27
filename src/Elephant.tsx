@@ -18,6 +18,7 @@ import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
+import { FiCheck, FiDollarSign, FiNavigation } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
 import DiscogsCache from "./DiscogsCache";
@@ -27,6 +28,7 @@ import Masthead from "./Masthead";
 import BootstrapTable, { ColumnSetItem } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
+import { Content } from "./shared/resolve";
 import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import Stars, { FILLED_STAR } from "./Stars";
@@ -142,6 +144,77 @@ function autoFormat(str: string | undefined) {
     default:
       return str.replace(/ \(\d+\)$/, "");
   }
+}
+
+type Location = {
+  type: TagKind,
+  label: string;
+  status: "remain" | "leave" | "listed" | "sold" | "unknown",
+}
+
+function parseLocation(str: string): Location {
+  const [typeSrc, rest] = str.split(/- |, /, 2);
+  let type: Location["type"];
+  let label: Location["label"];
+  let status: Location["status"];
+  let labelSrc: string;
+  switch (typeSrc) {
+    case "Shelf":
+      type = TagKind.shelf;
+      labelSrc = rest;
+      break;
+    case "Box":
+    case "":
+      type = TagKind.box;
+      labelSrc = rest;
+      break;
+    case "Service Bay":
+      type = TagKind.bay;
+      labelSrc = "Remain (Service)";
+      break;
+    case "Sold":
+      type = TagKind.unknown;
+      labelSrc = "Sold";
+      break;
+    case "Uncategorized":
+      type = TagKind.unknown;
+      labelSrc = "";
+      break;
+    default:
+      type = TagKind.unknown;
+      labelSrc = str;
+      break;
+  }
+  const [statusSrc, boxNameSrc] = labelSrc.split(" ", 2);
+  const boxMatch = /\((?<label>.*)\)/.exec(boxNameSrc);
+  label = boxMatch?.groups?.label ?? boxNameSrc;
+  switch (statusSrc) {
+    case "Remain":
+    case "Top":
+    case "Bottom":
+      status = "remain";
+      break;
+    case "Leave":
+      status = "leave";
+      break;
+    case "Listed":
+      status = "listed";
+      break;
+    case "Sold":
+      status = "sold";
+      break;
+    case "":
+      status = "unknown";
+      break;
+    default:
+      status = statusSrc as any;
+      break;
+  }
+  return {
+    type,
+    label,
+    status,
+  };
 }
 
 function autoVariant(str: string | undefined): Bootstrap.Color | undefined {
@@ -571,8 +644,31 @@ export default function Elephant() {
     ...fieldColumns,
     {
       Header: "Location",
-      accessor: "folder_id",
-      Cell: ({ value }: { value: number }) => folderName(value),
+      accessor: ({ folder_id }) => folderName(folder_id),
+      Cell({ value }: { value: string }) {
+        let { label, status, type } = parseLocation(value);
+        let extra: Content = status;
+        let className: string | undefined = undefined;
+        switch (status) {
+          case "remain":
+            extra = false;
+            break;
+          case "leave":
+            extra = FiNavigation;
+            className = "badge-light listed";
+            break;
+          case "listed":
+            className = "badge-light listed";
+            extra = FiCheck;
+            break;
+          case "sold":
+            extra = FiDollarSign;
+            type = TagKind.tag;
+            className = "badge-success";
+            break;
+        }
+        return <Tag className={className} kind={type} tag={label} extra={extra} />;
+      },
     },
     {
       Header: "Tags",
