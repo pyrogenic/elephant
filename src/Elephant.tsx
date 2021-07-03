@@ -14,6 +14,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
+import Button from "react-bootstrap/esm/Button";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
@@ -25,7 +26,7 @@ import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
-import BootstrapTable, { ColumnSetItem } from "./shared/BootstrapTable";
+import BootstrapTable, { ColumnSetItem, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
@@ -307,6 +308,18 @@ function sortByTasks(ac: { values: { Tasks: string[] } }, bc: { values: { Tasks:
   return r;
 }
 
+function applyInstruction(instruction: string, _src: any) {
+  let value: any;
+  switch (instruction[0]) {
+    case "=":
+      value = instruction.slice(1);
+      break;
+    default:
+      value = instruction;
+  }
+  return value;
+};
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
@@ -340,11 +353,31 @@ export default function Elephant() {
 
   const { collection, inventory, lists } = lpdb;
 
+  const stale = React.useMemo(() => {
+    function s<T>(pattern: Parameters<DiscogsCache["clear"]>[0], result: T) {
+      cache.clear(pattern);
+      return result;
+    };
+    return s;
+  }, [cache]);
+
+  const getDetails = React.useCallback((item: CollectionItem) => {
+    client().getRelease(item.id).then((release) => {
+      console.log(release);
+      const masterId = release.master_id;
+      if (masterId) {
+        client().getMaster(masterId).then((master) => {
+          console.log(master);
+        });
+      }
+    });
+  }, [client]);
+
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
-  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? false, [folders?.folders]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ query: "folder" }, "Unknown"), [folders?.folders, stale]);
 
   type ColumnFactoryResult = [column: ColumnSetItem<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -391,7 +424,7 @@ export default function Elephant() {
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
     ]), [lpdb]);
 
-  const sourceMnemonicFor = React.useCallback((item) => {
+  const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
     if (!sourceId || !orderNumberId) {
       return undefined;
     }
@@ -402,7 +435,7 @@ export default function Elephant() {
     return ["literal", source];
   }, [sourceId, orderNumberId]);
 
-  const mnemonic = React.useCallback((sortedBy, item) => {
+  const mnemonic = React.useCallback((sortedBy, item: CollectionItem): Mnemonic => {
     switch (sortedBy) {
       case "Artist":
         return item.basic_information.artists[0].name;
@@ -410,16 +443,34 @@ export default function Elephant() {
         return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
       case "Source":
         return sourceMnemonicFor(item);
+      case "Location":
+        return ["literal", parseLocation(folderName(item.folder_id) || "Uncategorized").label];
       case "Plays":
         return ["literal", `${plays(item)}`];
       case "Tasks":
         return ["words", tasks(item).join(" ")];
       case "Tags":
         return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
+      case "Year":
+        return ["literal", (Number(item.basic_information.year) || "").toString()];
       default:
         return undefined;
     }
-  }, [plays, sourceMnemonicFor, tasks, tagsFor]);
+  }, [sourceMnemonicFor, folderName, plays, tasks, tagsFor]);
+
+  const autoSortBy = React.useCallback((column: string) => ((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
+    const aStr = mnemonicToString(mnemonic(column, ac.original));
+    const bStr = mnemonicToString(mnemonic(column, bc.original));
+    return compare(aStr, bStr);
+  }), [mnemonic]);
+
+  //const sortByArtist = autoSortBy("Artist");
+  //const sortByRating = autoSortBy("Rating");
+  const sortBySource = autoSortBy("Source");
+  const sortByLocation = autoSortBy("Location");
+  //const sortByPlays = autoSortBy("Plays");
+  //const sortByTasks = autoSortBy("Tasks");
+  //const sortByTags = autoSortBy("Tags");
 
   const sortByCondition = React.useCallback((ac, bc) => {
     const mca = mediaCondition(ac.original.notes);
@@ -464,12 +515,6 @@ export default function Elephant() {
       }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
     }
   }, [inventory, mediaCondition, sleeveCondition, sortByCondition, mediaConditionId, sleeveConditionId]);
-
-  const sortBySource = React.useCallback((ac, bc) => {
-    const [, aStr] = mnemonic("Source", ac.original);
-    const [, bStr] = mnemonic("Source", bc.original);
-    return aStr.localeCompare(bStr);
-  }, [mnemonic])
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
     if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
@@ -556,21 +601,12 @@ export default function Elephant() {
   const collectionTableData = computed(() => {
     for (const list of lists.values()) {
       if (isPatch(list)) {
-        const query = list.definition.description;
+        const queries = list.definition.description.split("\n");
         list.items.forEach((item) => {
           const instruction = item.comment;
+          const applyThisInstruction = applyInstruction.bind(null, instruction);
           for (const entry of lpdb.entriesForRelease(item.id)) {
-            runInAction(jsonpath.apply.bind(jsonpath, entry, query, (src) => {
-              let value: any;
-              switch (instruction[0]) {
-                case "=":
-                  value = instruction.slice(1);
-                  break;
-                default:
-                  value = instruction;
-              }
-              return value;
-            }));
+            runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
           }
         });
       }
@@ -600,23 +636,18 @@ export default function Elephant() {
     return columns;
   }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
-  const sortableString = React.useCallback((name: string) => autoFormat(name).replace(/\W/g, ""), []);
-  const sortableArtistsString = React.useCallback((artists: Artist[]) => artists.map(({ name }) => sortableString(name)).join(" "), [sortableString]);
   const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
-    // if (ac.id === "1") { console.log({ artistsA, artistsB }); }
-    const strA = sortableArtistsString(ac.values[columnId]);
-    const strB = sortableArtistsString(bc.values[columnId]);
-    return strA.localeCompare(strB);//, undefined, { numeric: true });
-  }, [sortableArtistsString]);
+    return compare(ac.values[columnId], bc.values[columnId], { toString: ({ name }: Artist) => name });
+  }, []);
   const sortByRating = React.useCallback((ac, bc) => {
     const a = pendingValue(ac.original.rating);
     const b = pendingValue(bc.original.rating);
     return a - b;
   }, []);
   const sortByTags = React.useCallback((ac, bc, columnId) => {
-    const a = ac.values[columnId].join();
-    const b = bc.values[columnId].join();
-    return a.localeCompare(b);
+    const a = ac.values[columnId];
+    const b = bc.values[columnId];
+    return compare(a, b);
   }, []);
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
@@ -636,6 +667,14 @@ export default function Elephant() {
       Header: "Title",
       accessor: ({ basic_information: { title } }) => <>{title}</>,
     },
+    {
+      Header: "Year",
+      accessor: ({ basic_information: { year } }) => year || undefined,
+      Cell: ({ value, row: { original } }: { value?: number, row: { original: CollectionItem } }) => value === undefined ? <Button onClick={() => {
+        getDetails(original);
+      }}>Get</Button> : value,
+      sortType: autoSortBy("Year"),
+    } as ColumnSetItem<CollectionItem>,
     {
       Header: "Rating",
       accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
@@ -669,6 +708,7 @@ export default function Elephant() {
         }
         return <Tag className={className} kind={type} tag={label} extra={extra} />;
       },
+      sortType: sortByLocation,
     },
     {
       Header: "Tags",
@@ -679,7 +719,7 @@ export default function Elephant() {
       }} />,
       sortType: sortByTags,
     },
-  ], [cache, client, fieldColumns, folderName, sortByArtist, sortByRating, sortByTags, tagsFor]);
+  ], [autoSortBy, cache, client, fieldColumns, folderName, getDetails, sortByArtist, sortByLocation, sortByRating, sortByTags, tagsFor]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
@@ -955,4 +995,3 @@ function releaseUrl({ id }: CollectionItem) {
 function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
   return { tag, kind: TagKind.list, extra };
 }
-

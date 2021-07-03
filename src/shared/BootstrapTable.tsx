@@ -1,4 +1,4 @@
-import minDiff from "@pyrogenic/perl/lib/minDiff";
+import minDiff, { MinDiffSrc } from "@pyrogenic/perl/lib/minDiff";
 import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
@@ -37,12 +37,25 @@ type Search<TElement extends {}> = {
     filter?: (item: TElement) => boolean | undefined;
 };
 
+export type Mnemonic = MinDiffSrc;
+
+export function mnemonicToString(src: Mnemonic): string {
+    switch (typeof src) {
+        case "undefined":
+            return "";
+        case "string":
+            return src;
+        default:
+            return src[1];
+    }
+}
+
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
     search?: Search<TElement>;
     sessionKey?: string;
-    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Parameters<typeof minDiff>[0] | undefined;
+    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
 };
 
 

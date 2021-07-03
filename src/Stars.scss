@@ -1,9 +1,23 @@
 .stars {
+    .star-zero {
+        color: grey;
+    }
+    .star-half::before {
+        color: grey;
+        z-index: -1;
+        position: absolute;
+        content: "☆";
+        pointer-events: none;
+    }
+    .star-half {
+        margin-right: 10%; // one-half of one-fifth of the star bar
+        overflow: hidden;
+    }
     display: flex;
     flex-wrap: nowrap;
     &:not(.disabled) {
         cursor: pointer;
-        &:hover .star.on {
+        &:hover .star.full {
             transform: scale(1.2);
         }
     }

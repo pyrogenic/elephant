@@ -13,15 +13,24 @@ function orUndef<T extends any[] = [], R = void> (v: Callback<T, R>) : ((...args
 
 export const FILLED_STAR = "★";
 export const OPEN_STAR = "☆";
-export function Star({ value, onEnter, onLeave, onClick }: { value: boolean, onEnter: Callback, onLeave: Callback, onClick: Callback }) {
+export function Star({ value, onEnter, onLeave, onClick }: { value: 0 | 0.5 | 1, onEnter: Callback, onLeave: Callback, onClick: Callback }) {
     return <div
-        className={`star ${value ? "on" : "off"}`}
+        className={`star ${value <= 0 ? "star-zero" : value >= 1 ? "star-full" : "star-half"}`}
         onMouseMove={orUndef(onEnter)}
         onMouseLeave={orUndef(onLeave)}
         onClick={orUndef(onClick)}
     >{value ? FILLED_STAR : OPEN_STAR}</div>;
 }
-
+function clip(value: number, thisBand: number) {
+    value = value - thisBand;
+    if (value <= -1) {
+        return 0;
+    }
+    if (value >= 0) {
+        return 1;
+    }
+    return 0.5;
+}
 export default function Stars({ disabled, value, count, setValue }: { disabled: boolean, value: number, count: number, setValue(value: number): void }) {
     const [floatingValue, setFloatingValue] = React.useState<number>();
     const handle = React.useRef<any>();
@@ -32,7 +41,7 @@ export default function Stars({ disabled, value, count, setValue }: { disabled: 
     >
         {range(1, count + 1).map((n) => <Star
             key={n}
-            value={n <= (floatingValue ?? value)}
+            value={clip((floatingValue ?? value), n)}
             onEnter={!disabled && onHover.bind(null, n, true)}
             onLeave={!disabled && onHover.bind(null, n, false)}
             onClick={!disabled && onClickStar.bind(null, n)}
