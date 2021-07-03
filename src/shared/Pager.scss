@@ -4,6 +4,11 @@ $grid-breakpoints-md: 768px;
 $grid-breakpoints-lg: 992px;
 $grid-breakpoints-xl: 1200px;
 
+@keyframes flash-animation {  
+    from { background: yellow; }
+    to   { background: inherit; }
+}
+
 .Pager {
     .input-group {
         flex-wrap: nowrap;
@@ -20,6 +25,9 @@ $grid-breakpoints-xl: 1200px;
             min-width: 6rem;
             height: unset;
         }
+    }
+    button.bad {
+        animation: flash-animation 200ms;
     }
 }
 

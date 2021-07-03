@@ -1,3 +1,4 @@
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import clamp from "lodash/clamp";
 import range from "lodash/range";
 import React from "react";
@@ -7,12 +8,13 @@ import Form from "react-bootstrap/esm/Form";
 import InputGroup from "react-bootstrap/esm/InputGroup";
 import Row from "react-bootstrap/esm/Row";
 import {
-    FiChevronsLeft,
-    FiChevronsRight,
     FiChevronLeft,
     FiChevronRight,
+    FiChevronsLeft,
+    FiChevronsRight,
     FiMoreHorizontal,
 } from "react-icons/fi";
+import KeyboardEventHandler from "react-keyboard-event-handler";
 import "./Pager.scss";
 
 const MAX_PAGES = 8;
@@ -23,6 +25,7 @@ export default function Pager({
     currentPage,
     gotoPage,
     spine,
+    keyboardNavigation,
     variant,
 }: {
     count: number,
@@ -30,6 +33,7 @@ export default function Pager({
     currentPage: number,
     gotoPage: (page: number) => void,
     spine?: SpineFactory,
+        keyboardNavigation?: "global",
     variant?: ButtonProps["variant"],
 }) {
     const { maxPage, minShownPage, minShownPageSm, maxShownPageSm, maxShownPage } = React.useMemo(() => {
@@ -50,23 +54,50 @@ export default function Pager({
     }, [count, currentPage, pageSize]);
     variant = variant || "outline-secondary";
     const currentPageSpine = React.useMemo(() => spine?.(currentPage), [spine, currentPage]);
-    return <Row className="Pager">
+    const [lastMove, setLastMove] = React.useState<{ op: "prev" | "next", bad: boolean }>();
+    const prevPage = React.useMemo(() => () => gotoPage(clamp(currentPage - 1, 0, maxPage)), [currentPage, gotoPage, maxPage]);
+    const nextPage = React.useMemo(() => () => gotoPage(clamp(currentPage + 1, 0, maxPage)), [currentPage, gotoPage, maxPage]);
+    const noPrev = React.useMemo(() => currentPage === 0, [currentPage]);
+    const noNext = React.useMemo(() => currentPage === maxPage, [currentPage, maxPage]);
+    const keyEventHandler = React.useMemo(() => (key: string, e: KeyboardEvent) => {
+        // console.log({ key, e, type: e.type, currentPage });
+        switch (key) {
+            case "left":
+                e.preventDefault();
+                prevPage();
+                setLastMove({ op: "prev", bad: noPrev });
+                break;
+            case "right":
+                e.preventDefault();
+                nextPage();
+                setLastMove({ op: "next", bad: noNext });
+                break;
+        };
+    }, [nextPage, noNext, noPrev, prevPage]);
+    return <Row className={classConcat("Pager", lastMove?.bad && "bad")}>
+        {keyboardNavigation === "global" && <KeyboardEventHandler
+            isExclusive={true}
+            handleEventType={"keydown"}
+            handleKeys={["left", "right"]}
+            onKeyEvent={keyEventHandler} />}
         <Col>
             <InputGroup>
                 <InputGroup.Prepend>
                     <Button
+                        className={classConcat("first", (lastMove?.bad && lastMove?.op === "prev") && "bad")}
                         key={"min page"}
                         variant={variant}
-                        disabled={currentPage === 0}
+                        disabled={noPrev}
                         onClick={() => gotoPage(0)}
                     >
                         <FiChevronsLeft />
                     </Button>
                     <Button
+                        className={"prev"}
                         key={"page - 1"}
                         variant={variant}
-                        disabled={currentPage === 0}
-                        onClick={() => gotoPage(clamp(currentPage - 1, 0, maxPage))}
+                        disabled={noPrev}
+                        onClick={prevPage}
                     >
                         <FiChevronLeft />
                     </Button>
@@ -93,17 +124,19 @@ export default function Pager({
                         <FiMoreHorizontal />
                     </InputGroup.Text>}
                     <Button
+                        className={"next"}
                         key={"page + 1"}
                         variant={variant}
-                        disabled={currentPage === maxPage}
-                        onClick={() => gotoPage(clamp(currentPage + 1, 0, maxPage))}
+                        disabled={noNext}
+                        onClick={nextPage}
                     >
                         <FiChevronRight />
                     </Button>
                     <Button
+                        className={classConcat("last", lastMove?.bad && lastMove?.op === "next" && "bad")}
                         key={"max page"}
                         variant={variant}
-                        disabled={currentPage === maxPage}
+                        disabled={noNext}
                         onClick={() => gotoPage(maxPage)}
                     >
                         <FiChevronsRight />

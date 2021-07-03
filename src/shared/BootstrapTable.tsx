@@ -177,15 +177,17 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         // console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
+    const keyRef = React.createRef<HTMLDivElement>();
     const pager = <Pager
         count={rows.length}
         currentPage={pageIndex}
         gotoPage={gotoPage}
         pageSize={pageSize}
+        keyboardNavigation={"global"}
         spine={mnemonic && spine}
     />
     const tableProps = getTableProps();
-    return <>
+    return <div ref={keyRef}>
         {pager}
         <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>
@@ -214,7 +216,6 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 })}
             </tbody>
         </Table>
-        {pager}
         <select
             value={pageSize}
             onChange={e => {
@@ -227,7 +228,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 </option>
             ))}
         </select>
-    </>;
+    </div>;
 
     function columnsFor(headerGroup: HeaderGroup<TElement>) {
         return headerGroup.headers as Array<HeaderGroup<TElement> & UseSortByColumnProps<TElement>>;
