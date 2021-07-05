@@ -98,13 +98,24 @@ export default function Tag({
                 &nbsp;
                 {typeof extra === "function"
                     ? resolve(extra)
-                    : <Badge
-                        className="extra"
-                        variant="light"
-                        onClick={onClickExtra}>
-                        {resolve(extra)}
-                    </Badge>}
+                    : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
             </>}
         </Badge>;
     }
 }
+function ExtraBadge({ onClick, extra }: { onClick?: () => void, extra: Content }) {
+    let title: string | undefined;
+    if (onClick === undefined && typeof extra === "string" && extra.match(/[.!?]$/)) {
+        title = extra;
+        extra = "…";
+    }
+    return <Badge
+        className="extra"
+        variant="light"
+        onClick={onClick}
+        title={title}
+    >
+        {extra}
+    </Badge>;
+}
+
