@@ -4,7 +4,7 @@ import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import { matchSorter } from "match-sorter";
-import React from "react";
+import React, { MouseEventHandler } from "react";
 import Table from "react-bootstrap/esm/Table";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import {
@@ -12,6 +12,7 @@ import {
     HeaderGroup,
     PluginHook,
     Row,
+    TableExpandedToggleProps,
     TableInstance,
     useExpanded,
     UseExpandedOptions,
@@ -217,8 +218,26 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 {page.map((plainRow) => {
                     const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
+                    const expanderProps: any = row.getToggleRowExpandedProps?.() ?? {};
+                    //console.log(expanderProps);
+                    if ("onClick" in expanderProps) {
+                        const ogOnClick = expanderProps.onClick;
+                        const onClick: MouseEventHandler = (e) => {
+                            const target: Element = e.target as Element;
+                            const currentTarget: Element = e.currentTarget as Element;
+                            const targetRoll = target.attributes.getNamedItem("role")?.value;
+                            const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
+                            console.log({ targetRoll, currentTargetRoll, target, currentTarget });
+                            if (targetRoll === "cell" || targetRoll === "row") {
+                                ogOnClick(e);
+                            }
+                        };
+                        expanderProps.onClick = onClick;
+                        expanderProps.style = undefined;
+                        expanderProps.title = undefined;
+                    }
                     return <>
-                        <tr {...row.getRowProps()} {...row.getToggleRowExpandedProps?.()}>
+                        <tr {...row.getRowProps()} {...expanderProps}>
                             {row.cells.map(cell => {
                                 return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
                             })}
