@@ -102,14 +102,14 @@ export default function Masthead({
                     onChange={() => setVerbose(!verbose)} />
                 <Observer render={() => {
                     const cacheSize = cache.size;
-                    return <Button
+                    return <><Button
                         className={formSpacing}
                         variant="outline-warning"
                         onClick={cache.clear.bind(cache, undefined)}
                         disabled={!cacheSize}
                     >
-                        Clear Cache{cacheSize ? <Badge variant="outline-warning">{cacheSize}</Badge> : null}
-                    </Button>;
+                        Refresh{cacheSize ? <> <Badge variant="warning">{cacheSize}</Badge></> : null}
+                    </Button></>;
                 }} />
                 <Form.Group>
                     <Form.Label className={formSpacing}>Discogs Token</Form.Label>

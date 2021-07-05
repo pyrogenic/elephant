@@ -95,3 +95,13 @@ td {
     align-content: space-between;
     text-align: left;
 }
+
+.master-year {
+    font-weight: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+.release-year {
+    font-weight: lighter;
+    font-variant-numeric: tabular-nums;
+}

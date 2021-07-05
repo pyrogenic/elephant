@@ -5,4 +5,11 @@ table.BootstrapTable {
             vertical-align: text-bottom;
         }
     }
+    tr, td {
+        border-bottom: none;
+    }
+    tr:not([role="row"]), td:not([role="cell"]) {
+        border-top: none;
+    }
 }
+    

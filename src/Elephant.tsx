@@ -12,16 +12,14 @@ import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
-import Button from "react-bootstrap/esm/Button";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
 import { FiCheck, FiDollarSign, FiNavigation } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
+import Details from "./Details";
 import DiscogsCache from "./DiscogsCache";
 import "./Elephant.scss";
 import LPDB from "./LPDB";
@@ -32,11 +30,9 @@ import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
 import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
+import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-
-type PromiseType<TPromise> = TPromise extends Promise<infer T> ? T : never;
-type ElementType<TArray> = TArray extends Array<infer T> ? T : never;
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -669,10 +665,26 @@ export default function Elephant() {
     },
     {
       Header: "Year",
-      accessor: ({ basic_information: { year } }) => year || undefined,
-      Cell: ({ value, row: { original } }: { value?: number, row: { original: CollectionItem } }) => value === undefined ? <Button onClick={() => {
-        getDetails(original);
-      }}>Get</Button> : value,
+      accessor: ({ basic_information: { year } }) => year,
+      Cell: ({ value: year, row: { original } }: { value?: number, row: { original: CollectionItem } }) => <Observer>{() => {
+        const masterYear = lpdb.masterDetail(original, "year", undefined).get();
+        const yearComp = year && <span className="release-year">{year}</span>;
+        if (masterYear.status === "ready") {
+          const masterYearComp = masterYear.value && <span className="master-year">{masterYear.value}</span>;
+          if (yearComp) {
+            if (masterYearComp) {
+              if (year !== masterYear.value) {
+                return <>{masterYearComp}<br />{yearComp}</>;
+              }
+              return masterYearComp;
+            }
+            return yearComp;
+          } else {
+            return masterYearComp || <span className="release-year">unknown</span>;
+          }
+        }
+        return yearComp || <span className="release-year">unknown</span>;
+      }}</Observer>,
       sortType: autoSortBy("Year"),
     } as ColumnSetItem<CollectionItem>,
     {
@@ -757,6 +769,7 @@ export default function Elephant() {
         columns={collectionTableColumns}
         data={collectionTableData.get()}
         mnemonic={mnemonic}
+        detail={(item) => <Details item={item} />}
       />
       {/* <Observer>{() => <>
         {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
@@ -768,11 +781,6 @@ export default function Elephant() {
       </>}
       </Observer> */}
     </Container>
-    <Row>
-      <Col>
-        {collectionTimestamp.toLocaleString()}
-      </Col>
-    </Row>
   </ElephantContext.Provider>;
 
   function updateMemoSettings() {

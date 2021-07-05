@@ -61,7 +61,6 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
 
     private cacheValue = action(<T>(key: string, newValue: T) => {
         this.storage.setItem(key, JSON.stringify(newValue));
-        this.version++;
     });
 
     public get size() {

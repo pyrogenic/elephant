@@ -1,3 +1,4 @@
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import minDiff, { MinDiffSrc } from "@pyrogenic/perl/lib/minDiff";
 import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
@@ -6,11 +7,17 @@ import { matchSorter } from "match-sorter";
 import React from "react";
 import Table from "react-bootstrap/esm/Table";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import ReactJson from "react-json-view";
 import {
     Column,
     HeaderGroup,
     PluginHook,
+    Row,
     TableInstance,
+    useExpanded,
+    UseExpandedOptions,
+    UseExpandedRowProps,
+    UseExpandedState,
     useGlobalFilter,
     UseGlobalFiltersInstanceProps,
     UseGlobalFiltersOptions,
@@ -22,13 +29,12 @@ import {
     useSortBy,
     UseSortByColumnOptions,
     UseSortByColumnProps,
-    UseSortByState,
-    useTable,
+    UseSortByState, useTable,
     UseTableOptions,
 } from "react-table";
-import classConcat from "@pyrogenic/perl/lib/classConcat";
-import Pager, { Spine } from "./Pager";
 import "./BootstrapTable.scss";
+import Pager, { Spine } from "./Pager";
+import { Content, resolve } from "./resolve";
 
 export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TElement> & { id?: TColumnIds };
 
@@ -56,7 +62,10 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     search?: Search<TElement>;
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
-};
+    detail?: (item: TElement) => Content;
+}
+    // & Pick<TableOptions<TElement>, "getSubRows">
+    ;
 
 
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
@@ -67,7 +76,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { mnemonic, sessionKey, search } = props;
+    const { detail, mnemonic, sessionKey, search } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -75,11 +84,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         pageIndex: initialPageIndex,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), []);
-    const plugins: PluginHook<TElement>[] = [
+    const plugins: PluginHook<TElement>[] = React.useMemo(() => compact([
+        useGlobalFilter,
         useSortBy,
+        detail && useExpanded,
         usePagination,
-    ];
-    plugins.unshift(useGlobalFilter);
+    ]), [detail]);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
     const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() =>
     ((rows, _columns, filterValue: Search<TElement>) => {
@@ -112,7 +122,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         return rows;
     }), [deepSearchTargets]);
     const lastSearch = React.useRef<string>();
-    const autoReset = lastSearch.current !== search;
+    const autoReset = React.useMemo(() => lastSearch.current !== search, [search]);
     const {
         getTableBodyProps,
         getTableProps,
@@ -123,14 +133,15 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         prepareRow,
         rows,
         setPageSize,
-        state: { pageIndex, pageSize, sortBy },
+        state: { expanded, pageIndex, pageSize, sortBy },
         setGlobalFilter,
+        visibleColumns,
     } = useTable(
         {
             ...props,
             initialState,
             autoResetPage: autoReset,
-            autoResetExpanded: autoReset,
+            autoResetExpanded: false,
             autoResetGroupBy: autoReset,
             autoResetSelectedRows: autoReset,
             autoResetSortBy: autoReset,
@@ -138,9 +149,9 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             autoResetRowState: autoReset,
             autoResetGlobalFilter: false,
             globalFilter,
-        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
+        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
-        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
+        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
@@ -178,17 +189,18 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
     const keyRef = React.createRef<HTMLDivElement>();
-    const pager = <Pager
+    const pager = React.useMemo(() => <Pager
         count={rows.length}
         currentPage={pageIndex}
         gotoPage={gotoPage}
         pageSize={pageSize}
         keyboardNavigation={"global"}
         spine={mnemonic && spine}
-    />
+    />, [gotoPage, mnemonic, pageIndex, pageSize, rows.length, spine]);
     const tableProps = getTableProps();
     return <div ref={keyRef}>
         {pager}
+        <ReactJson src={expanded} />
         <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>
                 {headerGroups.map(headerGroup => (
@@ -204,15 +216,26 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 ))}
             </thead>
             <tbody {...getTableBodyProps()}>
-                {page.map((row) => {
+                {page.map((plainRow) => {
+                    const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
-                    return (
-                        <tr {...row.getRowProps()}>
+                    return <>
+                        <tr {...row.getRowProps()} {...row.getToggleRowExpandedProps?.()}>
                             {row.cells.map(cell => {
                                 return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
                             })}
                         </tr>
-                    )
+                        {/*
+                    If the row is in an expanded state, render a row with a
+                    column that fills the entire length of the table.
+                  */}
+                        {row.isExpanded &&
+                            <tr>
+                                <td colSpan={visibleColumns.length}>
+                                    {resolve(detail?.(row.original))}
+                                </td>
+                            </tr>}
+                    </>
                 })}
             </tbody>
         </Table>
