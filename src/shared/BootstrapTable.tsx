@@ -7,7 +7,6 @@ import { matchSorter } from "match-sorter";
 import React from "react";
 import Table from "react-bootstrap/esm/Table";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import ReactJson from "react-json-view";
 import {
     Column,
     HeaderGroup,
@@ -133,7 +132,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         prepareRow,
         rows,
         setPageSize,
-        state: { expanded, pageIndex, pageSize, sortBy },
+        state: { pageIndex, pageSize, sortBy },
         setGlobalFilter,
         visibleColumns,
     } = useTable(
@@ -200,7 +199,6 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const tableProps = getTableProps();
     return <div ref={keyRef}>
         {pager}
-        <ReactJson src={expanded} />
         <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>
                 {headerGroups.map(headerGroup => (

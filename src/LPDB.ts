@@ -101,7 +101,7 @@ export default class LPDB {
     return result;
   }
 
-  public masterForColectionItem(item: CollectionItem): Remote<MasterRelease> {
+  public masterForColectionItemFancySlowWay(item: CollectionItem): Remote<MasterRelease> {
     let result = this.mastersByReleaseId.get(item.id);
     if (result) {
       return result;
@@ -140,7 +140,15 @@ export default class LPDB {
     return result;
   }
 
-  public masterForRelease({ master_id: masterId }: Release): Remote<MasterRelease> {
+  public masterForColectionItem(item: CollectionItem): Remote<MasterRelease> {
+    return this.master(item.basic_information.master_id);
+  }
+
+  public masterForRelease(item: Release): Remote<MasterRelease> {
+    return this.master(item.master_id);
+  }
+
+  public master(masterId: number | undefined): Remote<MasterRelease> {
     let refresh = () => { };
     if (masterId === undefined) {
       return {
