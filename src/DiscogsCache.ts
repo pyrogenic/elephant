@@ -32,7 +32,7 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
             return factory();
         }
         const { cache, bypass, log } = this;
-        const key = compact([this.name, props[0], props[1] && JSON.stringify(props[1])]).join("/");
+        const key = compact([this.name, props[0], props[1]?.body]).join("/");
         if (log) { console.log({ props, cache, bypass, log }); }
         const cachedValue = !bypass && this.storage.getItem(key);
         if (cachedValue) {
@@ -46,12 +46,12 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
         return newValue;
     }
 
-    public clear = ({ query, value }: { query?: string, value?: string } = {}) => {
-        this.keys.forEach((key) => {
-            if (query && !key.includes(query)) {
+    public clear = ({ query, value }: { query?: string | RegExp, value?: string | RegExp } = {}) => {
+        this.allKeys.forEach((key) => {
+            if (query && !test(query, key)) {
                 return;
             }
-            if (value && !this.storage.getItem(key)?.includes(value)) {
+            if (value && !test(value, this.storage.getItem(key))) {
                 return;
             }
             this.storage.removeItem(key);
@@ -61,15 +61,54 @@ export default class DiscogsCache implements ResultCache, Required<IMemoOptions>
 
     private cacheValue = action(<T>(key: string, newValue: T) => {
         this.storage.setItem(key, JSON.stringify(newValue));
+        this.version++;
     });
 
     public get size() {
-        return this.keys.length;
+        return this.allKeys.length;
     }
 
-    private get keys() {
-        const pattern = new RegExp(`^${this.name}/`);
+    public count = ({ query, value }: { query?: string | RegExp, value?: string | RegExp } = {}) => {
+        let result = 0;
+        this.allKeys.forEach((key) => {
+            if (query && !test(query, key)) {
+                return;
+            }
+            if (value && !test(value, this.storage.getItem(key))) {
+                return;
+            }
+            result++;
+        });
+        return result;
+    }
+
+    public keys = ({ query, value }: { query?: string | RegExp, value?: string | RegExp } = {}) => {
+        const result: string[] = [];
+        this.allKeys.forEach((key) => {
+            if (query && !test(query, key)) {
+                return;
+            }
+            if (value && !test(value, this.storage.getItem(key))) {
+                return;
+            }
+            result.push(key);
+        });
+        return result;
+    }
+
+    private get allKeys() {
         const allKeys = range(this.storage.length).map((i) => this.storage.key(i));
-        return { keys: compact(allKeys).filter((s) => pattern.test(s)), version: this.version }.keys;
+        return { keys: compact(allKeys).filter((s) => s.startsWith(this.name)), version: this.version }.keys;
     }
 }
+
+function test(query: string | RegExp, value: string | null) {
+    if (value === null) {
+        return true;
+    }
+    if (typeof query === "string") {
+        return value.includes(query);
+    }
+    return query.test(value);
+}
+

@@ -2,7 +2,7 @@ import pick from "lodash/pick";
 import { observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/esm/Badge";
-import { ButtonProps } from "react-bootstrap/esm/Button";
+import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
@@ -10,7 +10,7 @@ import { CollectionItem, ElephantContext } from "./Elephant";
 import LPDB from "./LPDB";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
-    const { lpdb } = React.useContext(ElephantContext);
+    const { cache, lpdb } = React.useContext(ElephantContext);
     const year = lpdb?.detail(item, "year", 0).get();
     const masterYear = lpdb?.masterDetail(item, "year", 0).get();
     const details = lpdb?.details(item);
@@ -39,7 +39,10 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [masterForItem?.status]);
     if (!lpdb || !year || !masterYear) { return null; }
-    return <Card>
+    const inCache = cache?.count({ value: `"instance_id":${item.instance_id}` });
+    return <>
+        <Button disabled={!inCache} onClick={() => cache?.clear({ value: `"instance_id":${item.instance_id}` })}>Refresh</Button>
+        <Card>
         <Card.Body>
             <Row>
                 Year: <span className={"text-" + variantFor(year.status)}>{year.value}</span>
@@ -59,6 +62,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             </Card.Body>
         </>}
     </Card>
+    </>;
 }
 
 const Details = observer(DetailsImpl);

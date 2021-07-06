@@ -257,9 +257,9 @@ export default class LPDB {
     return computed(() => {
       const master = this.masterForColectionItem(item);
       if (master.status === "ready" && master.value !== "no-master-release") {
-        return { status: master.status, value: master.value[key] };
+        return { status: master.status, value: master.value[key], refresh: master.refresh };
       }
-      return { status: master.status, value: def };
+      return { status: master.status, value: def, refresh: master.status !== "pending" && master.refresh };
     });
   }
 

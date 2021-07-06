@@ -1,10 +1,12 @@
 import { compare } from "@pyrogenic/asset/lib/compare";
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
 import isEmpty from "lodash/isEmpty";
+import kebabCase from "lodash/kebabCase";
 import omit from "lodash/omit";
 import { action, computed, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
@@ -14,9 +16,10 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Container from "react-bootstrap/Container";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
+import Row from "react-bootstrap/esm/Row";
 import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
-import { FiCheck, FiDollarSign, FiNavigation } from "react-icons/fi";
+import { FiCheck, FiDollarSign, FiNavigation, FiRefreshCw } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
 import Details from "./Details";
@@ -498,9 +501,10 @@ export default function Elephant() {
             <Observer render={() => {
               const listing = inventory.get(id);
               if (!listing) { return null; }
+              const status = pendingValue(listing.status);
               return <div className="d-flex d-flex-row">
                 <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
-                  <Badge as="div" variant="light" title={priceToString(listing.price)}>LISTED</Badge>
+                  <Badge as="div" variant="light" className={kebabCase(status)} title={priceToString(listing.price)}></Badge>
                 </ExternalLink>
                 </div>
               </div>;
@@ -633,7 +637,7 @@ export default function Elephant() {
   }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
   const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
-    return compare(ac.values[columnId], bc.values[columnId], { toString: ({ name }: Artist) => name });
+    return compare(ac.values[columnId].artists, bc.values[columnId].artists, { toString: ({ name }: Artist) => name });
   }, []);
   const sortByRating = React.useCallback((ac, bc) => {
     const a = pendingValue(ac.original.rating);
@@ -655,20 +659,21 @@ export default function Elephant() {
     },
     {
       Header: "Artist",
-      accessor: ({ basic_information: { artists } }) => artists,
-      Cell: ({ value: artists }: { value: Artist[] }) => <ArtistsCell artists={artists} />,
+      accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
+      Cell: ({ value }: { value: ArtistCellProps }) => <ArtistsCell {...value} />,
       sortType: sortByArtist,
     },
-    {
-      Header: "Title",
-      accessor: ({ basic_information: { title } }) => <>{title}</>,
-    },
+    // {
+    //   Header: "Title",
+    //   accessor: ({ basic_information: { title } }) => <>{title}</>,
+    // },
     {
       Header: "Year",
       accessor: ({ basic_information: { year } }) => year,
       Cell: ({ value: year, row: { original } }: { value?: number, row: { original: CollectionItem } }) => <Observer>{() => {
         const masterYear = lpdb.masterDetail(original, "year", undefined).get();
-        const yearComp = year && <span className="release-year">{year}</span>;
+        const yearClass = classConcat("release-year", STATUS_CLASSES[masterYear.status]);
+        const yearComp = year && <span className={yearClass}>{year}</span>;
         if (masterYear.status === "ready") {
           const masterYearComp = masterYear.value && <span className="master-year">{masterYear.value}</span>;
           if (yearComp) {
@@ -680,10 +685,10 @@ export default function Elephant() {
             }
             return yearComp;
           } else {
-            return masterYearComp || <span className="release-year">unknown</span>;
+            return masterYearComp || <span className={yearClass}>unknown</span>;
           }
         }
-        return yearComp || <span className="release-year">unknown</span>;
+        return <>{yearComp || <span className={yearClass}>unknown</span>}{masterYear.refresh && <> <FiRefreshCw onClick={masterYear.refresh} /></>}</>;
       }}</Observer>,
       sortType: autoSortBy("Year"),
     } as ColumnSetItem<CollectionItem>,
@@ -737,6 +742,7 @@ export default function Elephant() {
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
   return <ElephantContext.Provider value={{
     lpdb,
+    cache,
     collection,
   }}>
     <Masthead
@@ -982,8 +988,14 @@ function RatingEditor(props: {
   }} />;
 }
 
+const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } = {
+  ready: "remote-ready",
+  error: "remote-error",
+  pending: "remote-pending",
+};
 interface IElephantContext {
   lpdb?: LPDB,
+  cache?: DiscogsCache,
   collection: Collection,
 };
 
@@ -992,8 +1004,20 @@ export const ElephantContext = React.createContext<IElephantContext>({
 });
 
 
-function ArtistsCell({ artists }: { artists: Artist[] }) {
-  return <>{artists.map(({ name }) => autoFormat(name)).join(", ")}</>;
+type ArtistCellProps = {
+  artists: Artist[];
+  title: string;
+};
+
+function ArtistsCell({ artists, title }: ArtistCellProps) {
+  return <Container className="ArtistsCell">
+    <Row className="artist">
+      {artists.map(({ name }) => autoFormat(name)).join(", ")}
+    </Row>
+    <Row className="title">
+      {title}
+    </Row>
+  </Container>;
 }
 
 function releaseUrl({ id }: CollectionItem) {
