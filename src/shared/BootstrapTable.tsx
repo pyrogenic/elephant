@@ -133,7 +133,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         prepareRow,
         rows,
         setPageSize,
-        state: { pageIndex, pageSize, sortBy },
+        state: {
+            expanded,
+            pageIndex,
+            pageSize,
+            sortBy,
+        },
         setGlobalFilter,
         visibleColumns,
     } = useTable(
@@ -199,6 +204,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     />, [gotoPage, mnemonic, pageIndex, pageSize, rows.length, spine]);
     const tableProps = getTableProps();
     return <div ref={keyRef}>
+        {JSON.stringify(expanded)}
         {pager}
         <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>
@@ -218,26 +224,18 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 {page.map((plainRow) => {
                     const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
-                    const expanderProps: any = row.getToggleRowExpandedProps?.() ?? {};
-                    //console.log(expanderProps);
-                    if ("onClick" in expanderProps) {
-                        const ogOnClick = expanderProps.onClick;
-                        const onClick: MouseEventHandler = (e) => {
-                            const target: Element = e.target as Element;
-                            const currentTarget: Element = e.currentTarget as Element;
-                            const targetRoll = target.attributes.getNamedItem("role")?.value;
-                            const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
-                            console.log({ targetRoll, currentTargetRoll, target, currentTarget });
-                            if (targetRoll === "cell" || targetRoll === "row") {
-                                ogOnClick(e);
-                            }
-                        };
-                        expanderProps.onClick = onClick;
-                        expanderProps.style = undefined;
-                        expanderProps.title = undefined;
-                    }
+                    const onClick: MouseEventHandler = (e) => {
+                        const target: Element = e.target as Element;
+                        // const currentTarget: Element = e.currentTarget as Element;
+                        const targetRoll = target.attributes.getNamedItem("role")?.value;
+                        // const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
+                        // console.log({ targetRoll, currentTargetRoll, target, currentTarget });
+                        if (targetRoll === "cell" || targetRoll === "row") {
+                            row.toggleRowExpanded();
+                        }
+                    };
                     return <>
-                        <tr {...row.getRowProps()} {...expanderProps}>
+                        <tr {...row.getRowProps()} onClick={onClick}>
                             {row.cells.map(cell => {
                                 return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
                             })}

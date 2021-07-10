@@ -1,13 +1,17 @@
+import { arraySetAddAll } from "@pyrogenic/asset/lib/arraySetAddAll";
 import { compare } from "@pyrogenic/asset/lib/compare";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { CurrenciesEnum, Discojs } from "discojs";
+import { CurrenciesEnum, Discojs, ResultCache } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
+import compact from "lodash/compact";
 import isEmpty from "lodash/isEmpty";
 import kebabCase from "lodash/kebabCase";
+import merge from "lodash/merge";
 import omit from "lodash/omit";
+import uniq from "lodash/uniq";
 import { action, computed, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
@@ -21,10 +25,13 @@ import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
 import { FiCheck, FiDollarSign, FiNavigation, FiRefreshCw } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
+import ReactJson from "react-json-view";
 import { Column } from "react-table";
 import Details from "./Details";
 import DiscogsCache from "./DiscogsCache";
+import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
+import IDiscogsCache from "./IDiscogsCache";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import BootstrapTable, { ColumnSetItem, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
@@ -35,7 +42,7 @@ import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
-import Tag, { TagKind } from "./Tag";
+import Tag, { TagKind, TagProps } from "./Tag";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -319,10 +326,12 @@ function applyInstruction(instruction: string, _src: any) {
   return value;
 };
 
+const ARTIST_COLUMN_TITLE = "Release";
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
-  const cache = React.useMemo(() => new DiscogsCache("local", window.localStorage), []);
+  const cache = React.useMemo(() => new DiscogsIndexedCache(), []);
 
   const client = React.useCallback(() => {
     return new Discojs({
@@ -353,7 +362,7 @@ export default function Elephant() {
   const { collection, inventory, lists } = lpdb;
 
   const stale = React.useMemo(() => {
-    function s<T>(pattern: Parameters<DiscogsCache["clear"]>[0], result: T) {
+    function s<T>(pattern: Parameters<IDiscogsCache["clear"]>[0], result: T) {
       cache.clear(pattern);
       return result;
     };
@@ -376,7 +385,7 @@ export default function Elephant() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
-  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ query: "folder" }, "Unknown"), [folders?.folders, stale]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders?.folders, stale]);
 
   type ColumnFactoryResult = [column: ColumnSetItem<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -416,12 +425,13 @@ export default function Elephant() {
     return undefined;
   }, [mediaCondition, playsId]);
 
-  const tagsFor = React.useCallback(({ id, basic_information: { genres, styles } }: CollectionItem) =>
-    computed(() => [
+  const tagsFor = React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) =>
+    computed(() => compact([
+      ...formats(formatSrc).map(formatToTag),
       ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(listEntryToTag),
       ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
-    ]), [lpdb]);
+    ])), [lpdb]);
 
   const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
     if (!sourceId || !orderNumberId) {
@@ -436,8 +446,8 @@ export default function Elephant() {
 
   const mnemonic = React.useCallback((sortedBy, item: CollectionItem): Mnemonic => {
     switch (sortedBy) {
-      case "Artist":
-        return item.basic_information.artists[0].name;
+      case ARTIST_COLUMN_TITLE:
+        return `${item.basic_information.artists[0].name} ${item.basic_information.title}`;
       case "Rating":
         return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
       case "Source":
@@ -450,6 +460,8 @@ export default function Elephant() {
         return ["words", tasks(item).join(" ")];
       case "Tags":
         return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
+      case "Type":
+        return ["words", [...formats(item.basic_information.formats), item.basic_information.formats[0]?.name].join(" ")];
       case "Year":
         return ["literal", (Number(item.basic_information.year) || "").toString()];
       default:
@@ -649,6 +661,43 @@ export default function Elephant() {
     const b = bc.values[columnId];
     return compare(a, b);
   }, []);
+
+  const yearColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+    Header: "Year",
+    accessor: ({ basic_information: { year } }) => year,
+    Cell: ({ value: year, row: { original } }: { value?: number; row: { original: CollectionItem; }; }) => <Observer>{() => {
+      const masterYear = lpdb.masterDetail(original, "year", undefined).get();
+      const yearClass = classConcat("release-year", STATUS_CLASSES[masterYear.status]);
+      const yearComp = year && <span className={yearClass}>{year}</span>;
+      if (masterYear.status === "ready") {
+        const masterYearComp = masterYear.value && <span className="master-year">{masterYear.value}</span>;
+        if (yearComp) {
+          if (masterYearComp) {
+            if (year !== masterYear.value) {
+              return <>{masterYearComp}<br />{yearComp}</>;
+            }
+            return masterYearComp;
+          }
+          return yearComp;
+        } else {
+          return masterYearComp || <span className={yearClass}>unknown</span>;
+        }
+      }
+      return <>{yearComp || <span className={yearClass}>unknown</span>}{masterYear.refresh && <> <FiRefreshCw onClick={masterYear.refresh} /></>}</>;
+    }}</Observer>,
+    sortType: autoSortBy("Year"),
+  }), [autoSortBy, lpdb]);
+
+  const formatColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+    Header: "Type",
+    accessor: ({ basic_information: { formats } }) => formats,
+    Cell: ({ value }: { value: Formats }) => <>
+      {formats(value).join(" | ")}
+      <ReactJson src={value} collapsed={true} />
+    </>,
+    sortType: autoSortBy("Type"),
+  }), [autoSortBy]);
+
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
     {
       Header: <>&nbsp;</>,
@@ -658,7 +707,7 @@ export default function Elephant() {
       </ExternalLink>,
     },
     {
-      Header: "Artist",
+      Header: ARTIST_COLUMN_TITLE,
       accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
       Cell: ({ value }: { value: ArtistCellProps }) => <ArtistsCell {...value} />,
       sortType: sortByArtist,
@@ -667,31 +716,8 @@ export default function Elephant() {
     //   Header: "Title",
     //   accessor: ({ basic_information: { title } }) => <>{title}</>,
     // },
-    {
-      Header: "Year",
-      accessor: ({ basic_information: { year } }) => year,
-      Cell: ({ value: year, row: { original } }: { value?: number, row: { original: CollectionItem } }) => <Observer>{() => {
-        const masterYear = lpdb.masterDetail(original, "year", undefined).get();
-        const yearClass = classConcat("release-year", STATUS_CLASSES[masterYear.status]);
-        const yearComp = year && <span className={yearClass}>{year}</span>;
-        if (masterYear.status === "ready") {
-          const masterYearComp = masterYear.value && <span className="master-year">{masterYear.value}</span>;
-          if (yearComp) {
-            if (masterYearComp) {
-              if (year !== masterYear.value) {
-                return <>{masterYearComp}<br />{yearComp}</>;
-              }
-              return masterYearComp;
-            }
-            return yearComp;
-          } else {
-            return masterYearComp || <span className={yearClass}>unknown</span>;
-          }
-        }
-        return <>{yearComp || <span className={yearClass}>unknown</span>}{masterYear.refresh && <> <FiRefreshCw onClick={masterYear.refresh} /></>}</>;
-      }}</Observer>,
-      sortType: autoSortBy("Year"),
-    } as ColumnSetItem<CollectionItem>,
+    yearColumn,
+    formatColumn,
     {
       Header: "Rating",
       accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
@@ -736,7 +762,7 @@ export default function Elephant() {
       }} />,
       sortType: sortByTags,
     },
-  ], [autoSortBy, cache, client, fieldColumns, folderName, getDetails, sortByArtist, sortByLocation, sortByRating, sortByTags, tagsFor]);
+  ], [cache, client, fieldColumns, folderName, formatColumn, sortByArtist, sortByLocation, sortByRating, sortByTags, tagsFor, yearColumn]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
@@ -801,7 +827,14 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    items.forEach(action((item) => collection.set(item.instance_id, item)));
+    items.forEach(action((item) => {
+      const existing = collection.get(item.instance_id);
+      if (existing) {
+        merge(existing, item);
+      } else {
+        collection.set(item.instance_id, item);
+      }
+    }));
     setCollectionTimestamp(new Date());
   }
 
@@ -846,6 +879,52 @@ export default function Elephant() {
     client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
   }
 
+}
+
+const FORMATS: {
+  [key: string]: {
+    as: TagKind,
+    abbr?: string,
+  } | false
+} = {
+  "10\"": { as: TagKind.format },
+  "12\"": { as: TagKind.format },
+  "33 ⅓ RPM": { as: TagKind.format, abbr: "33⅓" },
+  "45 RPM": { as: TagKind.format, abbr: "45" },
+  "78 RPM": { as: TagKind.format, abbr: "78" },
+  "Album": false,
+  "Club Edition": { as: TagKind.tag, abbr: "Club" },
+  "Compilation": { as: TagKind.tag, abbr: "Comp" },
+  "Deluxe Edition": false,
+  "EP": false,
+  "Enhanced": false,
+  "LP": false,
+  "Limited Edition": { as: TagKind.tag },
+  "Misprint": { as: TagKind.tag },
+  "Mono": { as: TagKind.tag },
+  "Numbered": { as: TagKind.tag },
+  "Picture Disc": { as: TagKind.tag },
+  "Promo": { as: TagKind.tag },
+  "Quadraphonic": { as: TagKind.tag },
+  "Reissue": { as: TagKind.tag, abbr: "RI" },
+  "Remastered": { as: TagKind.tag },
+  "Repress": { as: TagKind.tag, abbr: "RE" },
+  "Single": { as: TagKind.format },
+  "Single Sided": { as: TagKind.tag },
+  "Stereo": { as: TagKind.tag },
+  "White Label": { as: TagKind.tag },
+};
+
+type Formats = CollectionItem["basic_information"]["formats"];
+
+const ALL_FORMATS: string[] = [];
+
+function formats(value: Formats) {
+  const result = uniq(value.flatMap(({ descriptions }) => descriptions ?? []));
+  if (arraySetAddAll(ALL_FORMATS, result)) {
+    console.log(ALL_FORMATS.sort());
+  }
+  return result;
 }
 
 /*
@@ -912,7 +991,7 @@ function FieldEditor<As = "text">(props: {
   row: CollectionItem,
   noteId: number,
   client: () => Discojs,
-  cache: DiscogsCache,
+  cache: IDiscogsCache,
   setError: React.Dispatch<any>,
 } & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> : As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
   const {
@@ -933,7 +1012,7 @@ function FieldEditor<As = "text">(props: {
         const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
         mutate(note, "value", floatingValue, promise).then(() => {
           setFloatingValue(undefined);
-          cache.clear({ value: row.instance_id.toString() });
+          //cache.clear({ value: row.instance_id.toString() });
         }, (e) => {
           setFloatingValue(undefined);
           setError(e);
@@ -962,7 +1041,7 @@ function FieldEditor<As = "text">(props: {
 function RatingEditor(props: {
   row: CollectionItem,
   client: () => Discojs,
-  cache: DiscogsCache,
+  cache: IDiscogsCache,
   setError: React.Dispatch<any>,
 } & FormControlProps): JSX.Element {
   const {
@@ -979,7 +1058,7 @@ function RatingEditor(props: {
       // console.log(`New value: ${floatingValue}`);
       const promise = client().editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
       mutate(row, "rating", newValue, promise).then(() => {
-        cache.clear({ value: row.instance_id.toString() });
+        cache.clear({ url: row.instance_id.toString() });
       }, (e) => {
         setError(e);
       });
@@ -995,7 +1074,7 @@ const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } 
 };
 interface IElephantContext {
   lpdb?: LPDB,
-  cache?: DiscogsCache,
+  cache?: ResultCache,
   collection: Collection,
 };
 
@@ -1022,6 +1101,14 @@ function ArtistsCell({ artists, title }: ArtistCellProps) {
 
 function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
+}
+
+function formatToTag(format: string): TagProps | undefined {
+  const formatData = FORMATS[format];
+  if (!formatData) {
+    return undefined;
+  }
+  return { tag: formatData.abbr ?? format, kind: formatData.as, title: formatData.abbr ? format : undefined };
 }
 
 function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {

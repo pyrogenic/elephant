@@ -2,7 +2,7 @@ import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { Observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
-import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
+import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiCircle, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
 import { ElephantContext } from "./Elephant";
 import { Content, resolve } from "./shared/resolve";
 import "./Tag.scss";
@@ -10,6 +10,7 @@ import "./Tag.scss";
 export enum TagKind {
     tag = "tag",
     genre = "genre",
+    format = "format",
     style = "style",
     list = "list",
     box = "box",
@@ -18,38 +19,45 @@ export enum TagKind {
     unknown = "unknown",
 }
 
+export type TagProps = {
+    className?: string;
+    tag: string;
+    kind: TagKind;
+    extra?: Content;
+    title?: string;
+    onClickCount?: () => void;
+    onClickExtra?: () => void;
+    onClickIcon?: () => void;
+    onClickTag?: () => void;
+};
+
 export default function Tag({
     className,
     tag,
     kind,
     extra,
+    title,
     onClickIcon,
     onClickTag,
     onClickCount,
     onClickExtra,
-}: {
-        className?: string,
-    tag: string,
-    kind: TagKind,
-        extra?: Content,
-    onClickCount?: () => void,
-    onClickExtra?: () => void,
-    onClickIcon?: () => void,
-    onClickTag?: () => void,
-}) {
+}: TagProps) {
     const { lpdb } = React.useContext(ElephantContext);
     return <Observer render={content} />;
     function content() {
         var count: number | undefined;
         var Icon: typeof FiTag;
         switch (kind) {
-            case TagKind.genre:
-                Icon = FiTarget;
-                count = lpdb?.byTag(tag).length
+            case TagKind.format:
+                Icon = FiCircle;
                 break;
             case TagKind.list:
                 Icon = FiList;
                 count = lpdb?.listByName(tag)?.items.length;
+                break;
+            case TagKind.genre:
+                Icon = FiTarget;
+                count = lpdb?.byTag(tag).length
                 break;
             case TagKind.style:
                 Icon = FiDisc;
@@ -78,6 +86,7 @@ export default function Tag({
             className={classConcat(kind, "tag", className)}
             variant="secondary"
             onClick={onClickTag}
+            title={title}
         >
             <Icon
                 className="icon"

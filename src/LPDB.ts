@@ -150,7 +150,7 @@ export default class LPDB {
 
   public master(masterId: number | undefined): Remote<MasterRelease> {
     let refresh = () => { };
-    if (masterId === undefined) {
+    if (masterId === undefined || masterId === 0) {
       return {
         status: "ready",
         value: "no-master-release",
@@ -253,7 +253,7 @@ export default class LPDB {
     });
   }
 
-  public masterDetail<K extends keyof Exclude<MasterRelease, "no-master-release">, TDefault = Exclude<MasterRelease, "no-master-release">[K]>(item: CollectionItem, key: K, def: TDefault) {
+  public masterDetail<K extends keyof Exclude<MasterRelease, "no-master-release">, TDefault>(item: CollectionItem, key: K, def: TDefault) {
     return computed(() => {
       const master = this.masterForColectionItem(item);
       if (master.status === "ready" && master.value !== "no-master-release") {

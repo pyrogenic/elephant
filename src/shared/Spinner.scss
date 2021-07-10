@@ -1,5 +1,7 @@
 .spinner {
     flex-wrap: nowrap;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
     &:not(:hover) * {
         border-color: transparent;
     }

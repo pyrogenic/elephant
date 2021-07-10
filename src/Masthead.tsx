@@ -10,10 +10,11 @@ import logo from "./elephant.svg";
 import { Collection, CollectionItem, ElephantContext } from "./Elephant";
 import SearchBox from "./shared/SearchBox";
 import FilterBox from "./shared/FilterBox";
-import { computed } from "mobx";
+import { action, computed, observable } from "mobx";
 import { pendingValue } from "./shared/Pendable";
 import InputGroup from "react-bootstrap/esm/InputGroup";
-
+import { ResultCache } from "discojs";
+import IDiscogsCache from "./IDiscogsCache";
 const tagsForItem = (item: CollectionItem): string[] => {
     if (!item?.basic_information) {
         return [];
@@ -23,11 +24,12 @@ const tagsForItem = (item: CollectionItem): string[] => {
 };
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
-const FOLDER_NAMES_QUERY = { query: /\/collection\/folders\/?$/ };
-const COLLECTION_QUERY = { query: /\/collection\/folders\/0\// };
-const MASTERS_QUERY = { query: /discogs\.com\/masters\// };
-const RELEASES_QUERY = { query: /discogs\.com\/releases\// };
-const LISTS_QUERY = { query: /discogs\.com\/lists\// };
+const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
+const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
+const INVENTORY_QUERY = { url: /\/inventory\?/ };
+const MASTERS_QUERY = { url: /discogs\.com\/masters\// };
+const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
+const LISTS_QUERY = { url: /discogs\.com\/lists\// };
 
 export default function Masthead({
     avatarUrl,
@@ -55,7 +57,7 @@ export default function Masthead({
         setBypassCache: SetState<boolean>,
         verbose: boolean,
         setVerbose: SetState<boolean>,
-        cache: DiscogsCache,
+        cache: IDiscogsCache,
         token: string,
         setToken: SetState<string>,
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
@@ -75,7 +77,7 @@ export default function Masthead({
             search={search}
             setSearch={setSearch}
         />
-        <Observer render={() => {
+        {/* <Observer render={() => {
             const items = computed(() => Array.from(collection.values()));
             if (!items.get() || !lpdb?.tags) {
                 return null;
@@ -87,7 +89,7 @@ export default function Masthead({
                     setFilter={setFilter}
                 />
             </>;
-        }} />
+        }} /> */}
         <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-end">
             <Form inline>
@@ -109,77 +111,7 @@ export default function Masthead({
                     id="Verbose"
                     label="Verbose"
                     onChange={() => setVerbose(!verbose)} />
-                <Observer render={() => {
-                    const collectionCount = cache.count(COLLECTION_QUERY);
-                    const folderNamesCount = cache.count(FOLDER_NAMES_QUERY);
-                    const mastersCount = cache.count(MASTERS_QUERY);
-                    const releasesCount = cache.count(RELEASES_QUERY);
-                    const listsCount = cache.count(LISTS_QUERY);
-                    const allCount = cache.size;
-                    return <InputGroup>
-                        <InputGroup.Prepend>
-                            <InputGroup.Text onClick={setShowCacheButtons.bind(null, !showCacheButtons)}>
-                                Cache
-                            </InputGroup.Text>
-                        </InputGroup.Prepend>
-                        {showCacheButtons && <>
-                            <InputGroup.Prepend>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, COLLECTION_QUERY)}
-                                >
-                                    Collection
-                                    {collectionCount ? <> <Badge variant="warning">{collectionCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Prepend>
-                            <InputGroup.Prepend>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY)}
-                                >
-                                    Folders
-                                    {folderNamesCount ? <> <Badge variant="warning">{folderNamesCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Prepend>
-                            <InputGroup.Prepend>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, MASTERS_QUERY)}
-                                >
-                                    Masters
-                                    {mastersCount ? <> <Badge variant="warning">{mastersCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Prepend>
-                            <InputGroup.Append>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, RELEASES_QUERY)}
-                                >
-                                    Releases
-                                    {releasesCount ? <> <Badge variant="warning">{releasesCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Append>
-                            <InputGroup.Append>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, LISTS_QUERY)}
-                                >
-                                    Lists
-                                    {listsCount ? <> <Badge variant="warning">{listsCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Append>
-                            <InputGroup.Append>
-                                <Button
-                                    variant="outline-warning"
-                                    onClick={cache.clear.bind(cache, undefined)}
-                                >
-                                    All
-                                    {allCount ? <> <Badge variant="warning">{allCount}</Badge></> : null}
-                                </Button>
-                            </InputGroup.Append>
-                        </>}
-                    </InputGroup>;
-                }} />
+                {CacheControl(cache, setShowCacheButtons, showCacheButtons)}
                 <Form.Group>
                     <Form.Label className={formSpacing}>Discogs Token</Form.Label>
                     <Form.Control
@@ -200,5 +132,113 @@ export default function Masthead({
                     padding: 0,
                 }}>&nbsp;</span>}
     </Navbar>;
+}
+
+function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<React.SetStateAction<boolean>>, showCacheButtons: boolean) {
+    const counts: {
+        collectionCount: number,
+        inventoryCount: number,
+        folderNamesCount: number,
+        mastersCount: number,
+        releasesCount: number,
+        listsCount: number,
+        allCount: number,
+    } = React.useMemo(() => observable({
+        collectionCount: 0,
+        inventoryCount: 0,
+        folderNamesCount: 0,
+        mastersCount: 0,
+        releasesCount: 0,
+        listsCount: 0,
+        allCount: 0,
+    }), []);
+    cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
+    cache.count(INVENTORY_QUERY).then(action((result) => counts.inventoryCount = result));
+    cache.count(FOLDER_NAMES_QUERY).then(action((result) => counts.folderNamesCount = result));
+    cache.count(MASTERS_QUERY).then(action((result) => counts.mastersCount = result));
+    cache.count(RELEASES_QUERY).then(action((result) => counts.releasesCount = result));
+    cache.count(LISTS_QUERY).then(action((result) => counts.listsCount = result));
+    cache.count().then(action((result) => counts.allCount = result));
+    return <Observer render={() => {
+        const {
+            collectionCount,
+            inventoryCount,
+            folderNamesCount,
+            mastersCount,
+            releasesCount,
+            listsCount,
+            allCount,
+        } = counts;
+        const allBadge = allCount ? <> <Badge variant="warning">{allCount}</Badge></> : null;
+        const toggleCacheView = setShowCacheButtons.bind(null, !showCacheButtons);
+        if (!showCacheButtons) {
+            return <Button onClick={toggleCacheView}>Cache{allBadge}</Button>;
+        }
+        return <InputGroup>
+            <InputGroup.Prepend>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, COLLECTION_QUERY)}
+                >
+                    Collection
+                    {collectionCount ? <> <Badge variant="warning">{collectionCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Prepend>
+            <InputGroup.Prepend>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, INVENTORY_QUERY)}
+                >
+                    Inventory
+                    {inventoryCount ? <> <Badge variant="warning">{inventoryCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Prepend>
+            <InputGroup.Prepend>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY)}
+                >
+                    Folders
+                    {folderNamesCount ? <> <Badge variant="warning">{folderNamesCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Prepend>
+            <InputGroup.Prepend>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, MASTERS_QUERY)}
+                >
+                    Masters
+                    {mastersCount ? <> <Badge variant="warning">{mastersCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Prepend>
+            <InputGroup.Append>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, RELEASES_QUERY)}
+                >
+                    Releases
+                    {releasesCount ? <> <Badge variant="warning">{releasesCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Append>
+            <InputGroup.Append>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, LISTS_QUERY)}
+                >
+                    Lists
+                    {listsCount ? <> <Badge variant="warning">{listsCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Append>
+            <InputGroup.Append>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, undefined)}
+                >
+                    All
+                    {allBadge}
+                </Button>
+            </InputGroup.Append>
+        </InputGroup>;
+    }} />;
 }
 

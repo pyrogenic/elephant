@@ -39,9 +39,9 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [masterForItem?.status]);
     if (!lpdb || !year || !masterYear) { return null; }
-    const inCache = cache?.count({ value: `"instance_id":${item.instance_id}` });
+    // const inCache = cache?.count({ value: `"instance_id":${item.instance_id}` });
     return <>
-        <Button disabled={!inCache} onClick={() => cache?.clear({ value: `"instance_id":${item.instance_id}` })}>Refresh</Button>
+        {/* <Button disabled={!inCache} onClick={() => cache?.clear({ value: `"instance_id":${item.instance_id}` })}>Refresh</Button> */}
         <Card>
         <Card.Body>
             <Row>
