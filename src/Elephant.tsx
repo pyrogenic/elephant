@@ -6,19 +6,21 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
+import { flatten, flattenDeep } from "lodash";
 import compact from "lodash/compact";
 import isEmpty from "lodash/isEmpty";
 import kebabCase from "lodash/kebabCase";
 import merge from "lodash/merge";
 import omit from "lodash/omit";
 import uniq from "lodash/uniq";
-import { action, computed, reaction, runInAction } from "mobx";
-import { Observer } from "mobx-react";
+import { action, computed, observable, reaction, runInAction } from "mobx";
+import { observer, Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Container from "react-bootstrap/Container";
+import Card from "react-bootstrap/esm/Card";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Row from "react-bootstrap/esm/Row";
 import Bootstrap from "react-bootstrap/esm/types";
@@ -149,7 +151,11 @@ function autoFormat(str: string | undefined) {
     case undefined:
       return "";
     default:
-      return str.replace(/ \(\d+\)$/, "");
+      // collapse all the ways weights are written
+      str = str.replace(/(\d+)\s*gr?a?m?$/i, "$1g");
+      // remove trailing numeric disambiguators from artist names
+      str = str.replace(/ \(\d+\)$/, "")
+      return str;
   }
 }
 
@@ -680,8 +686,7 @@ export default function Elephant() {
     Header: "Type",
     accessor: ({ basic_information: { formats } }) => formats,
     Cell: ({ value }: { value: Formats }) => <>
-      {formats(value).join(" | ")}
-      <ReactJson src={value} collapsed={true} />
+      {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind }) => kind === TagKind.format).map(({ tag }) => tag).join(" ")}
     </>,
     sortType: autoSortBy("Type"),
   }), [autoSortBy]);
@@ -800,6 +805,8 @@ export default function Elephant() {
         {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
       </>}
       </Observer> */}
+      <hr />
+      <Tuning />
     </Container>
   </ElephantContext.Provider>;
 
@@ -878,9 +885,15 @@ const FORMATS: {
 } = {
   "10\"": { as: TagKind.format },
   "12\"": { as: TagKind.format },
+
   "33 ⅓ RPM": { as: TagKind.format, name: "33⅓" },
   "45 RPM": { as: TagKind.format, name: "45rpm", abbr: "45" },
   "78 RPM": { as: TagKind.format, name: "78rpm", abbr: "78" },
+
+  "140g": { as: TagKind.format },
+  "180g": { as: TagKind.format },
+  "200g": { as: TagKind.format },
+
   "Album": false,
   "Club Edition": { as: TagKind.tag, abbr: "Club" },
   "Compilation": { as: TagKind.tag, abbr: "Comp" },
@@ -906,15 +919,29 @@ const FORMATS: {
 
 type Formats = CollectionItem["basic_information"]["formats"];
 
-const ALL_FORMATS: string[] = [];
+const ALL_FORMATS: string[] = observable([]);
 
 function formats(value: Formats) {
-  const result = uniq(value.flatMap(({ descriptions }) => descriptions ?? []));
+  const result = uniq(value.flatMap(({ descriptions, name, text }) => flattenDeep(compact([descriptions, name, text?.split(", ").map(autoFormat)]))));
   if (arraySetAddAll(ALL_FORMATS, result)) {
     console.log(ALL_FORMATS.sort());
   }
   return result;
 }
+
+const novelFormats = computed(() => ALL_FORMATS.filter((k) => !(k in FORMATS)));
+
+const Tuning = observer(() => {
+  return <Card>
+    <Card.Header>Tuning</Card.Header>
+    <Card.Body>
+      <dl>
+        <dt>Novel Formats</dt>
+        <dd>{novelFormats.get().join(", ")}</dd>
+      </dl>
+    </Card.Body>
+  </Card>;
+})
 
 /*
 
@@ -1106,7 +1133,8 @@ function formatToTag(format: string, abbr?: boolean): TagProps | undefined {
   if (!formatData) {
     return undefined;
   }
-  return { tag: (abbr ? formatData.abbr : formatData.name) ?? format, kind: formatData.as, title: formatData.abbr ? format : undefined };
+  const tag = (abbr ? formatData.abbr : formatData.name) ?? formatData.name ?? format;
+  return { tag, kind: formatData.as, title: tag === formatData.abbr ? format : undefined };
 }
 
 function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {

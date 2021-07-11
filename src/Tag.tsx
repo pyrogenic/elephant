@@ -94,7 +94,7 @@ export default function Tag({
             />
             &nbsp;
             {tag}
-            {count && <>
+            {count ? <>
                 &nbsp;
                 <Badge
                     className="count"
@@ -102,13 +102,13 @@ export default function Tag({
                     onClick={onClickCount}>
                     {count}
                 </Badge>
-            </>}
-            {extra && <>
+            </> : null}
+            {extra ? <>
                 &nbsp;
                 {typeof extra === "function"
                     ? resolve(extra)
                     : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
-            </>}
+            </> : null}
         </Badge>;
     }
 }
