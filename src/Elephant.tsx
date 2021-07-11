@@ -74,8 +74,8 @@ export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 export type Collection = OrderedMap<number, CollectionItem>;
 type DiscogsInventoryItem = ElementType<InventoryItems>;
 export type InventoryItem = DeepPendable<DiscogsInventoryItem>;
-export type Inventory = Map<number, InventoryItem>;
-export type Lists = Map<number, List>;
+export type Inventory = OrderedMap<number, InventoryItem>;
+export type Lists = OrderedMap<number, List>;
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 

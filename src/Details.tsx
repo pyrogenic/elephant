@@ -1,19 +1,25 @@
+import sortBy from "lodash/sortBy";
+import uniqBy from "lodash/uniqBy";
 import pick from "lodash/pick";
 import { observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/esm/Badge";
 import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
+import Col from "react-bootstrap/esm/Col";
+import Figure from "react-bootstrap/esm/Figure";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
 import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";
-import LPDB from "./LPDB";
+import LPDB, { Label } from "./LPDB";
+import { ElementType } from "./shared/TypeConstraints";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
     const year = lpdb?.detail(item, "year", 0).get();
     const masterYear = lpdb?.masterDetail(item, "year", 0).get();
     const details = lpdb?.details(item);
+    const labels = uniqBy(item.basic_information.labels, "id").map(({ id }) => lpdb?.label(id));
     const masterForItem = lpdb?.masterForColectionItem(item);
     const masterForRelease = details?.status === "ready" ? lpdb?.masterForRelease(details.value) : undefined;
     const pickedRelease = React.useMemo(() => {
@@ -61,6 +67,16 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 Master Year: <span className={"text-" + variantFor(masterYear.status)}>{masterYear.value}</span>
             </Row>
         </Card.Body>
+            {labels.map((label, i) => <Row key={i}>
+                {label?.status === "ready" ? <>
+                    <Col>
+                        <MusicLabel label={label.value} />
+                    </Col>
+                    <Col>
+                        <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
+                    </Col>
+                </> : label?.status}
+            </Row>)}
         {details && <>
             <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge></Card.Header>
             <Card.Body>
@@ -91,3 +107,18 @@ function variantFor(status: ReturnType<LPDB["details"]>["status"]): ButtonProps[
     }
 }
 
+function MusicLabel({ label }: { label: Label }) {
+    let images = label.images;
+    images = sortBy(images, factor);
+    //const image = label.images.find(({ type }) => type === "primary");
+    return <>{images.map((image, index) => {
+        const { type, uri150 } = image;
+        return <Figure key={index}>
+            <Figure.Image className="music-label-logo-inline" src={uri150} alt="logo" />
+            <Figure.Caption>#{label.images.findIndex(({ uri150: u2 }) => u2 === uri150)} ({type}, factor = {factor(image)})</Figure.Caption>
+        </Figure>;
+    })}</>;
+    function factor({ height, width }: ElementType<Label["images"]>) {
+        return Math.round(10 * Math.abs((width / height) - 1));
+    }
+}

@@ -69,7 +69,8 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
 
 
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
-    type InitialState = UseTableOptions<TElement>["initialState"] & Partial<UsePaginationState<TElement>>;
+    type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement>;
+    type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
 
     // const { skipPageResetRef } = props;   
     // React.useEffect(() => {
@@ -83,11 +84,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const [initialSortBy, setInitialSortBy] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<UseSortByState<TElement>["sortBy"]>("session", [sessionKey, "sortBy"].join(), []) : React.useState<UseSortByState<TElement>["sortBy"]>([]);
-    const initialState = React.useMemo<InitialState & UseSortByState<TElement>>(() => ({
+    const firstLoad = React.useRef(true);
+    const initialState: InitialState = firstLoad.current ? {
         pageIndex: initialPageIndex,
         sortBy: initialSortBy,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), []);
+    } : {};
+    firstLoad.current = false;
     const plugins: PluginHook<TElement>[] = React.useMemo(() => compact([
         useGlobalFilter,
         useSortBy,
@@ -126,7 +128,8 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         return rows;
     }), [deepSearchTargets]);
     const lastSearch = React.useRef<string>();
-    const autoReset = React.useMemo(() => lastSearch.current !== search, [search]);
+
+    const autoReset = false;//React.useMemo(() => lastSearch.current !== search, [search]);
     const {
         getTableBodyProps,
         getTableProps,
@@ -160,7 +163,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             globalFilter,
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
-        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
+        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
@@ -168,10 +171,14 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     }, [search, setGlobalFilter]);
     const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 200, periodic: true });
     React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
-    React.useLayoutEffect(() => {
+    React.useEffect(() => {
+        if (lastSearch.current !== undefined && lastSearch.current !== search?.search) {
+            setInitialPageIndex(0);
+            gotoPage(0);
+        }
         lastSearch.current = search?.search;
         return () => { };
-    }, [search]);
+    }, [gotoPage, search, setInitialPageIndex]);
     const spine = React.useCallback((page: number) => {
         if (!mnemonic) {
             throw new Error("missing mnemonic");
