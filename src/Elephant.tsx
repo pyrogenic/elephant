@@ -6,7 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
-import { flatten, flattenDeep } from "lodash";
+import { flattenDeep } from "lodash";
 import compact from "lodash/compact";
 import isEmpty from "lodash/isEmpty";
 import kebabCase from "lodash/kebabCase";
@@ -27,7 +27,6 @@ import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
 import { FiCheck, FiDollarSign, FiNavigation, FiRefreshCw } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
-import ReactJson from "react-json-view";
 import { Column } from "react-table";
 import Details from "./Details";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
@@ -296,6 +295,16 @@ function autoOrder(str: string | undefined): number {
   }
 }
 
+function autoFormatLabel({ name }: ElementType<Labels>) {
+  name = name.replace(" Records", "");
+  name = name.replace(/\batco\b/i, "ATCO");
+  return autoFormat(name);
+}
+
+function labelNames(labels: Labels) {
+  return uniq(labels.map(autoFormatLabel));
+}
+
 const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
   try {
     let result = notes.find(({ field_id }) => field_id === id);
@@ -449,6 +458,8 @@ export default function Elephant() {
         return `${item.basic_information.artists[0].name} ${item.basic_information.title}`;
       case "Rating":
         return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
+      case "Label":
+        return labelNames(item.basic_information.labels).join(" ");
       case "Source":
         return sourceMnemonicFor(item);
       case "Location":
@@ -696,71 +707,90 @@ export default function Elephant() {
     sortType: autoSortBy("Type"),
   }), [autoSortBy]);
 
+  const labelColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+    Header: "Label",
+    accessor: ({ basic_information: { labels } }) => labelNames(labels).map((s) => <span className="label-name">{s}</span>),
+    sortType: autoSortBy("Label"),
+  }), [autoSortBy]);
+
+  const coverColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+    Header: <>&nbsp;</>,
+    id: "Cover",
+    accessor: (row) => <ExternalLink href={releaseUrl(row)}>
+      <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
+    </ExternalLink>,
+  }), []);
+
+  const releaseColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+    Header: ARTIST_COLUMN_TITLE,
+    accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
+    Cell: ({ value }: { value: ArtistCellProps; }) => <ArtistsCell {...value} />,
+    sortType: sortByArtist,
+  }), [sortByArtist]);
+
+  // const titleColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  //   Header: "Title",
+  //   accessor: ({ basic_information: { title } }) => <>{title}</>,
+  // }), []);
+
+  const ratingColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+    Header: "Rating",
+    accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
+    sortType: sortByRating,
+  }), [cache, client, sortByRating]);
+
+  const locationColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+    Header: "Location",
+    accessor: ({ folder_id }) => folderName(folder_id),
+    Cell({ value }: { value: string; }) {
+      let { label, status, type } = parseLocation(value);
+      let extra: Content = status;
+      let className: string | undefined = undefined;
+      switch (status) {
+        case "remain":
+          extra = false;
+          break;
+        case "leave":
+          extra = FiNavigation;
+          className = "badge-light listed";
+          break;
+        case "listed":
+          className = "badge-light listed";
+          extra = FiCheck;
+          break;
+        case "sold":
+          extra = FiDollarSign;
+          type = TagKind.tag;
+          className = "badge-success";
+          break;
+      }
+      return <Tag className={className} kind={type} tag={label} extra={extra} />;
+    },
+    sortType: sortByLocation,
+  }), [folderName, sortByLocation]);
+
+  const tagsColumn = React.useMemo(() => ({
+    Header: "Tags",
+    accessor: tagsFor,
+    Cell: ({ value }: { value: ReturnType<typeof tagsFor>; }) => <Observer render={() => {
+      const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>);
+      return <div className="d-inline d-flex-column">{badges}</div>;
+    }} />,
+    sortType: sortByTags,
+  }), [sortByTags, tagsFor]);
+
   const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
-    {
-      Header: <>&nbsp;</>,
-      id: "Cover",
-      accessor: (row) => <ExternalLink href={releaseUrl(row)}>
-        <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
-      </ExternalLink>,
-    },
-    {
-      Header: ARTIST_COLUMN_TITLE,
-      accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
-      Cell: ({ value }: { value: ArtistCellProps }) => <ArtistsCell {...value} />,
-      sortType: sortByArtist,
-    },
-    // {
-    //   Header: "Title",
-    //   accessor: ({ basic_information: { title } }) => <>{title}</>,
-    // },
+    coverColumn,
+    releaseColumn,
+    //titleColumn,
     yearColumn,
+    labelColumn,
     formatColumn,
-    {
-      Header: "Rating",
-      accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
-      sortType: sortByRating,
-    },
+    ratingColumn,
     ...fieldColumns,
-    {
-      Header: "Location",
-      accessor: ({ folder_id }) => folderName(folder_id),
-      Cell({ value }: { value: string }) {
-        let { label, status, type } = parseLocation(value);
-        let extra: Content = status;
-        let className: string | undefined = undefined;
-        switch (status) {
-          case "remain":
-            extra = false;
-            break;
-          case "leave":
-            extra = FiNavigation;
-            className = "badge-light listed";
-            break;
-          case "listed":
-            className = "badge-light listed";
-            extra = FiCheck;
-            break;
-          case "sold":
-            extra = FiDollarSign;
-            type = TagKind.tag;
-            className = "badge-success";
-            break;
-        }
-        return <Tag className={className} kind={type} tag={label} extra={extra} />;
-      },
-      sortType: sortByLocation,
-    },
-    {
-      Header: "Tags",
-      accessor: tagsFor,
-      Cell: ({ value }: { value: ReturnType<typeof tagsFor> }) => <Observer render={() => {
-        const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>)
-        return <div className="d-inline d-flex-column">{badges}</div>;
-      }} />,
-      sortType: sortByTags,
-    },
-  ], [cache, client, fieldColumns, folderName, formatColumn, sortByArtist, sortByLocation, sortByRating, sortByTags, tagsFor, yearColumn]);
+    locationColumn,
+    tagsColumn,
+  ], [coverColumn, fieldColumns, formatColumn, labelColumn, locationColumn, ratingColumn, releaseColumn, tagsColumn, yearColumn]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
@@ -932,6 +962,7 @@ const FORMATS: {
 };
 
 type Formats = CollectionItem["basic_information"]["formats"];
+type Labels = CollectionItem["basic_information"]["labels"];
 
 const ALL_FORMATS: string[] = observable([]);
 

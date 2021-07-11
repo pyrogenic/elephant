@@ -26,7 +26,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             "uri",
         ])!;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [masterForItem?.status]);
+    }, [details?.status]);
     const pickedMaster = React.useMemo(() => {
         if (masterForItem?.status !== "ready" || masterForItem.value === "no-master-release") {
             return {};
@@ -65,8 +65,9 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge></Card.Header>
             <Card.Body>
                 <ReactJson src={item} name="item" collapsed={true} />
+                    <ReactJson src={pickedRelease} name="picked-release" collapsed={false} />
                 <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} />
-                <ReactJson src={pickedMaster} name="picked" collapsed={false} />
+                    <ReactJson src={pickedMaster} name="picked-master" collapsed={false} />
                 <ReactJson src={masterForItem?.status === "ready" ? masterForItem.value : masterForItem?.status === "error" ? masterForItem.error : {}} name="masterForItem" collapsed={true} />
                 <ReactJson src={masterForRelease?.status === "ready" ? masterForRelease.value : masterForRelease?.status === "error" ? masterForRelease?.error : {}} name="masterForRelease" collapsed={true} />
             </Card.Body>

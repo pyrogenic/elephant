@@ -7,7 +7,7 @@ import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/esm/InputGroup";
 import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
-import { Collection, CollectionItem, ElephantContext } from "./Elephant";
+import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
 import IDiscogsCache from "./IDiscogsCache";
 import SearchBox from "./shared/SearchBox";
@@ -52,7 +52,7 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "mr-2";
-    const { lpdb } = React.useContext(ElephantContext);
+    // const { lpdb } = React.useContext(ElephantContext);
     const [showCacheButtons, setShowCacheButtons] = React.useState(false);
     return <Navbar bg="light">
         <Navbar.Brand className="pl-5" style={{

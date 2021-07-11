@@ -12,7 +12,6 @@ import {
     HeaderGroup,
     PluginHook,
     Row,
-    TableExpandedToggleProps,
     TableInstance,
     useExpanded,
     UseExpandedOptions,
@@ -81,8 +80,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
-    const initialState = React.useMemo<InitialState>(() => ({
+    const [initialSortBy, setInitialSortBy] =
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        sessionKey ? useStorageState<UseSortByState<TElement>["sortBy"]>("session", [sessionKey, "sortBy"].join(), []) : React.useState<UseSortByState<TElement>["sortBy"]>([]);
+    const initialState = React.useMemo<InitialState & UseSortByState<TElement>>(() => ({
         pageIndex: initialPageIndex,
+        sortBy: initialSortBy,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), []);
     const plugins: PluginHook<TElement>[] = React.useMemo(() => compact([
@@ -135,7 +138,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         rows,
         setPageSize,
         state: {
-            expanded,
+            // expanded,
             pageIndex,
             pageSize,
             sortBy,
@@ -158,8 +161,8 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
         ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex]);
+    React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
+    React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
         setGlobalFilter(search);
     }, [search, setGlobalFilter]);
