@@ -3,7 +3,7 @@ import { compare } from "@pyrogenic/asset/lib/compare";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { CurrenciesEnum, Discojs, ResultCache } from "discojs";
+import { CurrenciesEnum, Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
 import compact from "lodash/compact";
@@ -28,12 +28,12 @@ import { SiAmazon, SiDiscogs } from "react-icons/si";
 import ReactJson from "react-json-view";
 import { Column } from "react-table";
 import Details from "./Details";
-import DiscogsCache from "./DiscogsCache";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
 import IDiscogsCache from "./IDiscogsCache";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
+import OrderedMap from "./OrderedMap";
 import BootstrapTable, { ColumnSetItem, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
@@ -70,7 +70,7 @@ export type List = DeepPendable<{
 
 type DiscogsCollectionItem = ElementType<CollectionItems>;
 export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
-export type Collection = Map<number, CollectionItem>;
+export type Collection = OrderedMap<number, CollectionItem>;
 type DiscogsInventoryItem = ElementType<InventoryItems>;
 export type InventoryItem = DeepPendable<DiscogsInventoryItem>;
 export type Inventory = Map<number, InventoryItem>;
@@ -357,7 +357,7 @@ export default function Elephant() {
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
   const lpdb = React.useMemo<LPDB>(() => new LPDB(client()), [client]);
-  const [collectionTimestamp, setCollectionTimestamp] = React.useState<Date>(new Date());
+  const [, setCollectionTimestamp] = React.useState<Date>(new Date());
 
   const { collection, inventory, lists } = lpdb;
 
@@ -368,18 +368,6 @@ export default function Elephant() {
     };
     return s;
   }, [cache]);
-
-  const getDetails = React.useCallback((item: CollectionItem) => {
-    client().getRelease(item.id).then((release) => {
-      console.log(release);
-      const masterId = release.master_id;
-      if (masterId) {
-        client().getMaster(masterId).then((master) => {
-          console.log(master);
-        });
-      }
-    });
-  }, [client]);
 
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -427,7 +415,7 @@ export default function Elephant() {
 
   const tagsFor = React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) =>
     computed(() => compact([
-      ...formats(formatSrc).map(formatToTag),
+      ...formats(formatSrc).map((format) => formatToTag(format, false)),
       ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(listEntryToTag),
       ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
@@ -623,7 +611,7 @@ export default function Elephant() {
         });
       }
     }
-    return Array.from(collection.values());
+    return collection.values();
   });
   const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
     const columns: Column<CollectionItem>[] = [];
@@ -885,13 +873,14 @@ const FORMATS: {
   [key: string]: {
     as: TagKind,
     abbr?: string,
+    name?: string,
   } | false
 } = {
   "10\"": { as: TagKind.format },
   "12\"": { as: TagKind.format },
-  "33 ⅓ RPM": { as: TagKind.format, abbr: "33⅓" },
-  "45 RPM": { as: TagKind.format, abbr: "45" },
-  "78 RPM": { as: TagKind.format, abbr: "78" },
+  "33 ⅓ RPM": { as: TagKind.format, name: "33⅓" },
+  "45 RPM": { as: TagKind.format, name: "45rpm", abbr: "45" },
+  "78 RPM": { as: TagKind.format, name: "78rpm", abbr: "78" },
   "Album": false,
   "Club Edition": { as: TagKind.tag, abbr: "Club" },
   "Compilation": { as: TagKind.tag, abbr: "Comp" },
@@ -901,17 +890,17 @@ const FORMATS: {
   "LP": false,
   "Limited Edition": { as: TagKind.tag },
   "Misprint": { as: TagKind.tag },
-  "Mono": { as: TagKind.tag },
+  "Mono": false,
   "Numbered": { as: TagKind.tag },
   "Picture Disc": { as: TagKind.tag },
   "Promo": { as: TagKind.tag },
-  "Quadraphonic": { as: TagKind.tag },
+  "Quadraphonic": false,
   "Reissue": { as: TagKind.tag, abbr: "RI" },
   "Remastered": { as: TagKind.tag },
   "Repress": { as: TagKind.tag, abbr: "RE" },
   "Single": { as: TagKind.format },
   "Single Sided": { as: TagKind.tag },
-  "Stereo": { as: TagKind.tag },
+  "Stereo": false,
   "White Label": { as: TagKind.tag },
 };
 
@@ -986,6 +975,15 @@ function priceUnit(currency: CurrenciesEnum | undefined) {
   return unit;
 }
 
+
+export function collectionItemCacheQuery({ instance_id }: CollectionItem): { data: string; } {
+  return { data: `$..[?(@.instance_id === ${instance_id})]` };
+}
+
+export function clearCacheForCollectionItem(cache: IDiscogsCache, item: CollectionItem) {
+  cache.clear(collectionItemCacheQuery(item));
+}
+
 function FieldEditor<As = "text">(props: {
   as?: As,
   row: CollectionItem,
@@ -1012,7 +1010,7 @@ function FieldEditor<As = "text">(props: {
         const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
         mutate(note, "value", floatingValue, promise).then(() => {
           setFloatingValue(undefined);
-          //cache.clear({ value: row.instance_id.toString() });
+          clearCacheForCollectionItem(cache, row);
         }, (e) => {
           setFloatingValue(undefined);
           setError(e);
@@ -1058,7 +1056,7 @@ function RatingEditor(props: {
       // console.log(`New value: ${floatingValue}`);
       const promise = client().editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
       mutate(row, "rating", newValue, promise).then(() => {
-        cache.clear({ url: row.instance_id.toString() });
+        clearCacheForCollectionItem(cache, row);
       }, (e) => {
         setError(e);
       });
@@ -1074,12 +1072,12 @@ const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } 
 };
 interface IElephantContext {
   lpdb?: LPDB,
-  cache?: ResultCache,
+  cache?: IDiscogsCache,
   collection: Collection,
 };
 
 export const ElephantContext = React.createContext<IElephantContext>({
-  collection: new Map(),
+  collection: new OrderedMap(),
 });
 
 
@@ -1103,12 +1101,12 @@ function releaseUrl({ id }: CollectionItem) {
   return `https://www.discogs.com/release/${id}`;
 }
 
-function formatToTag(format: string): TagProps | undefined {
+function formatToTag(format: string, abbr?: boolean): TagProps | undefined {
   const formatData = FORMATS[format];
   if (!formatData) {
     return undefined;
   }
-  return { tag: formatData.abbr ?? format, kind: formatData.as, title: formatData.abbr ? format : undefined };
+  return { tag: (abbr ? formatData.abbr : formatData.name) ?? format, kind: formatData.as, title: formatData.abbr ? format : undefined };
 }
 
 function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {

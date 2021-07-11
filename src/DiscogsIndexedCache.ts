@@ -1,8 +1,9 @@
 import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import { action, makeObservable, observable, runInAction } from "mobx";
 import * as idb from "idb";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { PromiseType } from "./shared/TypeConstraints";
+import jsonpath from "jsonpath";
 
 type CachedRequest = {
     url: string;
@@ -63,7 +64,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         }
         const tx = (await this.storage).transaction(["get"], "readwrite");
         const doomed = await this.keys(query, tx.db);
-        return Promise.all(doomed.map((url) => tx.db.delete("get", url))).then(() => { });
+        await Promise.all(doomed.map((url) => tx.db.delete("get", url).then(() => console.log(`cleared ${url}`))));
+        await tx.done;
+        runInAction(() => this.version++);
     }
 
     private cacheValue = async <T>(key: string, newValue: T) => {
@@ -89,31 +92,65 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     }
 
     public keys = async ({ url, data }: CacheQuery = {}, storage?: PromiseType<DiscogsIndexedCache["storage"]>) => {
-        const db = (storage ?? await this.storage);
-        if (data) {
+        try {
+            const db = (storage ?? await this.storage);
+            if (data) {
+                return ((await db.getAll("get")).filter((item) => {
+                    if (url && !test(url, item.url)) {
+                        return false;
+                    }
+                    return test(data, item.data);
+                }).map(({ url }) => url));
+            }
+            if (url) {
+                let results = await db.getAllKeys("get");
+                results = results.filter(test.bind(null, url));
+                return results;
+            }
+            return db.getAllKeys("get")
+        } catch (e) {
+            console.error(e);
+            return [];
+        }
+    }
+
+    public entries = async ({ url, data }: CacheQuery = {}, storage?: PromiseType<DiscogsIndexedCache["storage"]>) => {
+        try {
+            const db = (storage ?? await this.storage);
             return ((await db.getAll("get")).filter((item) => {
                 if (url && !test(url, item.url)) {
                     return false;
                 }
-                return test(data, item.data);
-            }).map(({ url }) => url));
+                if (data && !test(data, item.data)) {
+                    return false;
+                }
+                return true;
+            }).map(({ url, data }) => [url, data] as [string, object]));
+        } catch (e) {
+            console.error(e);
+            return [];
         }
-        if (url) {
-            let results = await db.getAllKeys("get");
-            results = results.filter(test.bind(null, url));
-            return results;
-        }
-        return db.getAllKeys("get")
     }
 }
 
-function test(query: string | RegExp, value: string | null) {
-    if (value === null) {
-        return true;
+function test(query: string | RegExp, value: string | object | null): boolean {
+    try {
+        if (value === null) {
+            return true;
+        }
+        if (typeof value === "string") {
+            if (typeof query === "string") {
+                return value.includes(query);
+            }
+            return query.test(value);
+        } else if (typeof query === "string") {
+            const result = jsonpath.query(value, query, 1);
+            return result.length > 0;
+        } else {
+            return test(query, JSON.stringify(value));
+        }
+    } catch (e) {
+        console.error(e);
+        return false;
     }
-    if (typeof query === "string") {
-        return value.includes(query);
-    }
-    return query.test(value);
 }
-

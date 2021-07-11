@@ -204,7 +204,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     />, [gotoPage, mnemonic, pageIndex, pageSize, rows.length, spine]);
     const tableProps = getTableProps();
     return <div ref={keyRef}>
-        {JSON.stringify(expanded)}
+        {/* {JSON.stringify(expanded)} */}
         {pager}
         <Table {...tableProps} className={classConcat(tableProps, "BootstrapTable")}>
             <thead>

@@ -1,27 +1,16 @@
+import { SetState } from "@pyrogenic/perl/lib/useStorageState";
+import { action, observable } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
-import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import InputGroup from "react-bootstrap/esm/InputGroup";
 import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
-import DiscogsCache from "./DiscogsCache";
-import logo from "./elephant.svg";
 import { Collection, CollectionItem, ElephantContext } from "./Elephant";
-import SearchBox from "./shared/SearchBox";
-import FilterBox from "./shared/FilterBox";
-import { action, computed, observable } from "mobx";
-import { pendingValue } from "./shared/Pendable";
-import InputGroup from "react-bootstrap/esm/InputGroup";
-import { ResultCache } from "discojs";
+import logo from "./elephant.svg";
 import IDiscogsCache from "./IDiscogsCache";
-const tagsForItem = (item: CollectionItem): string[] => {
-    if (!item?.basic_information) {
-        return [];
-    }
-    const { basic_information: { genres, styles } } = item;
-    return [...genres, ...styles].map(pendingValue);
-};
+import SearchBox from "./shared/SearchBox";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };

@@ -8,5 +8,6 @@ export type CacheQuery = {
 export default interface IDiscogsCache extends ResultCache {
     count(query?: CacheQuery): Promise<number>;
     keys(query?: CacheQuery): Promise<string[]>;
+    entries(query?: CacheQuery): Promise<[string, object][]>;
     clear(query?: CacheQuery): Promise<void>;
 }

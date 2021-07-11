@@ -6,7 +6,7 @@ import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
-import { CollectionItem, ElephantContext } from "./Elephant";
+import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";
 import LPDB from "./LPDB";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
@@ -38,10 +38,20 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         ])!;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [masterForItem?.status]);
+    const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
+    // const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
+    // const [result, setResult] = React.useState<object>({});
+    const [cacheCount, setCacheCount] = React.useState(0);
+    React.useEffect(() => {
+        // cache?.entries(cacheQuery).then(setResult);
+        cache?.count(cacheQuery).then(setCacheCount);
+    }, [cache, cacheQuery, details, item, masterForItem]);
     if (!lpdb || !year || !masterYear) { return null; }
-    // const inCache = cache?.count({ value: `"instance_id":${item.instance_id}` });
     return <>
-        {/* <Button disabled={!inCache} onClick={() => cache?.clear({ value: `"instance_id":${item.instance_id}` })}>Refresh</Button> */}
+        <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
+        {/* <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
+        <ReactJson src={result} collapsed={2} />
+        {"error" in result ? <pre>{(result as any).error}</pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card>
         <Card.Body>
             <Row>

@@ -5,6 +5,7 @@ import { Collection, CollectionItem, Inventory, List, Lists } from "./Elephant";
 import Worker from "./worker";
 import { ElementType } from "../../asset/lib";
 import { PromiseType } from "./shared/TypeConstraints";
+import OrderedMap from "./OrderedMap";
 
 const worker = new Worker();
 const osync = action(sync);
@@ -28,7 +29,7 @@ export type MasterRelease = PromiseType<ReturnType<Discojs["getMaster"]>> | "no-
 export type MasterReleases = Map<number, Remote<MasterRelease>>;
 
 export default class LPDB {
-  public readonly collection: Collection = observable(new Map());
+  public readonly collection: Collection = observable(new OrderedMap<number, CollectionItem>());
   public readonly releases: Releases = observable(new Map());
   public readonly masters: MasterReleases = observable(new Map());
   public readonly mastersByReleaseId: MasterReleases = observable(new Map());
