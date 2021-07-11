@@ -1,4 +1,4 @@
-import classConcat from "@pyrogenic/perl/lib/classConcat";
+import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import minDiff, { MinDiffSrc } from "@pyrogenic/perl/lib/minDiff";
 import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
@@ -63,6 +63,7 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
     detail?: (item: TElement) => Content;
+    rowClassName?: (item: TElement) => ClassNames;
 }
     // & Pick<TableOptions<TElement>, "getSubRows">
     ;
@@ -76,7 +77,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { detail, mnemonic, sessionKey, search } = props;
+    const { detail, mnemonic, rowClassName, sessionKey, search } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -234,8 +235,9 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                             row.toggleRowExpanded();
                         }
                     };
+                    const rowProps = row.getRowProps();
                     return <>
-                        <tr {...row.getRowProps()} onClick={onClick}>
+                        <tr {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original))} onClick={onClick}>
                             {row.cells.map(cell => {
                                 return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
                             })}

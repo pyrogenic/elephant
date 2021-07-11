@@ -154,7 +154,12 @@ function autoFormat(str: string | undefined) {
       // collapse all the ways weights are written
       str = str.replace(/(\d+)\s*gr?a?m?$/i, "$1g");
       // remove trailing numeric disambiguators from artist names
-      str = str.replace(/ \(\d+\)$/, "")
+      str = str.replace(/ \(\d+\)$/, "");
+      // smarten-up quotes
+      str = str.replace(/(in|s)'(\s|$)/, "$1’$2");
+      str = str.replace(/'s(\s|$)/, "’s$1");
+      str = str.replace(/n't(\s|$)/, "n’t$1");
+      str = str.replace(/ 'n(\s|$)/i, " ’n$1");
       return str;
   }
 }
@@ -759,6 +764,14 @@ export default function Elephant() {
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
+
+  const rowClassName = React.useCallback((item: CollectionItem) => {
+    if (parseLocation(folderName(item.folder_id)).status === "sold") {
+      return "sold";
+    }
+    return undefined;
+  }, [folderName]);
+
   return <ElephantContext.Provider value={{
     lpdb,
     cache,
@@ -795,6 +808,7 @@ export default function Elephant() {
         data={collectionTableData.get()}
         mnemonic={mnemonic}
         detail={(item) => <Details item={item} />}
+        rowClassName={rowClassName}
       />
       {/* <Observer>{() => <>
         {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
@@ -931,6 +945,10 @@ function formats(value: Formats) {
 
 const novelFormats = computed(() => ALL_FORMATS.filter((k) => !(k in FORMATS)));
 
+const IDIOMS = [
+  "№",
+];
+
 const Tuning = observer(() => {
   return <Card>
     <Card.Header>Tuning</Card.Header>
@@ -938,6 +956,8 @@ const Tuning = observer(() => {
       <dl>
         <dt>Novel Formats</dt>
         <dd>{novelFormats.get().join(", ")}</dd>
+        <dt>Idioms</dt>
+        <dd>{IDIOMS.map((s) => <code>{s}</code>)}</dd>
       </dl>
     </Card.Body>
   </Card>;
@@ -1119,7 +1139,7 @@ function ArtistsCell({ artists, title }: ArtistCellProps) {
       {artists.map(({ name }) => autoFormat(name)).join(", ")}
     </Row>
     <Row className="title">
-      {title}
+      {autoFormat(title)}
     </Row>
   </Container>;
 }
