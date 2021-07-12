@@ -6,14 +6,15 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum, Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
-import { flattenDeep } from "lodash";
 import compact from "lodash/compact";
+import flattenDeep from "lodash/flattenDeep";
 import isEmpty from "lodash/isEmpty";
 import kebabCase from "lodash/kebabCase";
-import uniqBy from "lodash/uniqBy";
 import merge from "lodash/merge";
 import omit from "lodash/omit";
+import sortBy from "lodash/sortBy";
 import uniq from "lodash/uniq";
+import uniqBy from "lodash/uniqBy";
 import { action, computed, observable, reaction, runInAction } from "mobx";
 import { observer, Observer } from "mobx-react";
 import "popper.js/dist/popper";
@@ -33,6 +34,7 @@ import Details from "./Details";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
 import IDiscogsCache from "./IDiscogsCache";
+import LazyMusicLabel from "./LazyMusicLabel";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import OrderedMap from "./OrderedMap";
@@ -45,7 +47,6 @@ import Spinner from "./shared/Spinner";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind, TagProps } from "./Tag";
-import LazyMusicLabel from "./LazyMusicLabel";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -323,7 +324,7 @@ const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
   }
 });
 
-const getNote = action("getNote", (notes: CollectionNote[], id: number) => {
+const getNote = action("getNote", (notes: CollectionNote[], id: number): string | undefined => {
   return noteById(notes, id)?.value;
 });
 
@@ -418,6 +419,7 @@ export default function Elephant() {
     if (!value) { return []; }
     return value.split("\n").sort();
   }, [tasksId]);
+
   const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
   const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
   const plays = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
@@ -455,7 +457,7 @@ export default function Elephant() {
     if (source === "PFC") {
       source = `${source} ${getNote(item.notes, orderNumberId)}`;
     }
-    return ["literal", source];
+    return ["literal", source ?? ""];
   }, [sourceId, orderNumberId]);
 
   const mnemonic = React.useCallback((sortedBy, item: CollectionItem): Mnemonic => {
@@ -617,15 +619,12 @@ export default function Elephant() {
     if (tasksId) {
       return [{
         Header: "Tasks",
-        accessor: tasks,
-        Cell({ value }: { value: ReturnType<typeof tasks> }) {
-          return value.map((task) => <Form.Check key={task} label={task} />);
-        },
+        accessor: (row) => <TasksEditor cache={cache} client={client} noteId={tasksId} row={row} setError={setError} />,
         sortType: sortByTasks,
       } as BootstrapTableColumn<CollectionItem>,
       [KnownFieldTitle.tasks]];
     }
-  }, [tasks, tasksId]);
+  }, [cache, client, tasksId]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const collectionTableData = computed(() => {
@@ -1126,6 +1125,82 @@ function FieldEditor<As = "text">(props: {
         onChange={({ target: { value } }) => setFloatingValue(value)}
         onBlur={commit} />
     </div>;
+  }} />;
+}
+
+function TasksEditor(props: {
+  row: CollectionItem,
+  noteId: number,
+  client: () => Discojs,
+  cache: IDiscogsCache,
+  setError: React.Dispatch<any>,
+}): JSX.Element {
+  const {
+    row,
+    noteId,
+    client,
+    cache,
+    setError,
+  } = props;
+  //const [floatingValue, setFloatingValue] = React.useState<string>();
+  const tasks = React.useMemo<Array<{ checked: boolean, task: string }>>(() => {
+    if (!noteId) { return []; }
+    let value = getNote(row.notes, noteId);
+    if (!value) { return []; }
+    value = pendingValue(value);
+    return observable(sortBy(value.split("\n").map((src) => {
+      const match = src.match(/^\[(?<checked>[ X])\] (?<task>.*)$/);
+      let task = src;
+      let checked = false;
+      if (match?.groups) {
+        task = match.groups.task;
+        checked = match.groups.checked === "X";
+      }
+      return { task, checked };
+    }), "task"));
+  }, [noteId, row.notes]);
+  const { folder_id, id: release_id, instance_id, notes } = row;
+  const note = noteById(notes, noteId)!;
+  React.useMemo(() => {
+    console.log(`Building reaction for ${row.basic_information.title}`);
+    return reaction(() => tasks.map(({ checked, task }) => `[${checked ? "X" : " "}] ${task}`).join("\n"), async (floatingValue) => {
+      console.log({ folder_id, release_id, instance_id, notes });
+      console.log(`New value: ${floatingValue}`);
+      if (floatingValue !== undefined) {
+        const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
+        mutate(note, "value", floatingValue, promise).then(() => {
+          // setFloatingValue(undefined);
+          clearCacheForCollectionItem(cache, row);
+        }, (e) => {
+          // setFloatingValue(undefined);
+          setError(e);
+        });
+      }
+    });
+  }, [cache, client, folder_id, instance_id, note, noteId, notes, release_id, row, setError, tasks]);
+  return <Observer render={() => {
+    const pendable = note.value ?? "";
+    return <>
+      {tasks.map((taskObj) => {
+        const { task, checked } = taskObj;
+        return <Form.Check key={task} disabled={pending(pendable)} label={task} checked={checked} onChange={action(() => taskObj.checked = !taskObj.checked)} />;
+      })}
+      {/* <div className={"flex flex-column"}>
+        <Form.Control
+          as={"textarea"}
+          {...omit(
+            props,
+            "row",
+            "noteId",
+            "client",
+            "cache",
+            "setError",
+          )}
+          disabled={pending(pendable)}
+          value={floatingValue}
+          onBlur={commit} />
+      </div> */}
+    </>;
   }} />;
 }
 
