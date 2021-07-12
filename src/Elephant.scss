@@ -174,8 +174,9 @@ tr.sold {
 .music-label-logo-inline {
     // border: 1px solid #00000043;
     border-radius: 4px;
-    height: 2em;
     vertical-align: auto;
+    max-height: 2em;
+    max-width: 4em;
 }
 
 a.quiet {

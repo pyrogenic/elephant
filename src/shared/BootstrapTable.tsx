@@ -87,10 +87,14 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const [initialSortBy, setInitialSortBy] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<UseSortByState<TElement>["sortBy"]>("session", [sessionKey, "sortBy"].join(), []) : React.useState<UseSortByState<TElement>["sortBy"]>([]);
+    const [initialPageSize, setInitialPageSize] =
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        sessionKey ? useStorageState<UsePaginationState<TElement>["pageSize"]>("session", [sessionKey, "pageSize"].join(), 10) : React.useState<UsePaginationState<TElement>["pageSize"]>(10);
     const firstLoad = React.useRef(true);
     const initialState: InitialState = firstLoad.current ? {
         pageIndex: initialPageIndex,
         sortBy: initialSortBy,
+        pageSize: initialPageSize,
     } : {};
     firstLoad.current = false;
     const plugins: PluginHook<TElement>[] = React.useMemo(() => compact([
@@ -169,6 +173,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
+    React.useEffect(() => setInitialPageSize(pageSize), [setInitialPageSize, pageSize]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
         setGlobalFilter(search);
     }, [search, setGlobalFilter]);
