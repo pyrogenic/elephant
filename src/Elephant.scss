@@ -199,7 +199,6 @@ th.centered-column {
     text-align: center;
 
     // https://stackoverflow.com/a/43615091/4607986
-    white-space: nowrap;
     width: 1px;
 }
 
@@ -215,4 +214,10 @@ a.music-label {
         margin-right: 2px;
         margin-bottom: 2px;
     }
+}
+.dropdown-toggle.no-toggle::after {
+    content: none;
+}
+.dropdown-toggle.no-toggle:hover::after {
+    content: inherit;
 }

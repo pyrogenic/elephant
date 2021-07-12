@@ -6,7 +6,6 @@ import Badge from "react-bootstrap/esm/Badge";
 import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
 import Col from "react-bootstrap/esm/Col";
-import Figure from "react-bootstrap/esm/Figure";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
 import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";

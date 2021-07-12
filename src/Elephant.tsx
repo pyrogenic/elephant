@@ -23,11 +23,12 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/esm/Card";
+import Dropdown from "react-bootstrap/esm/Dropdown";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
 import Row from "react-bootstrap/esm/Row";
 import Bootstrap from "react-bootstrap/esm/types";
 import Form from "react-bootstrap/Form";
-import { FiCheck, FiDollarSign, FiNavigation, FiRefreshCw } from "react-icons/fi";
+import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import { Column } from "react-table";
 import Details from "./Details";
@@ -1128,6 +1129,13 @@ function FieldEditor<As = "text">(props: {
   }} />;
 }
 
+const KNOWN_TASKS = [
+  "Clean",
+  "Entry",
+  "Sleeve",
+  "Spine",
+];
+
 function TasksEditor(props: {
   row: CollectionItem,
   noteId: number,
@@ -1178,6 +1186,7 @@ function TasksEditor(props: {
       }
     });
   }, [cache, client, folder_id, instance_id, note, noteId, notes, release_id, row, setError, tasks]);
+  const availableTasks = KNOWN_TASKS.filter((t) => !tasks.find(({ task }) => task === t));
   return <Observer render={() => {
     const pendable = note.value ?? "";
     return <>
@@ -1185,21 +1194,12 @@ function TasksEditor(props: {
         const { task, checked } = taskObj;
         return <Form.Check key={task} disabled={pending(pendable)} label={task} checked={checked} onChange={action(() => taskObj.checked = !taskObj.checked)} />;
       })}
-      {/* <div className={"flex flex-column"}>
-        <Form.Control
-          as={"textarea"}
-          {...omit(
-            props,
-            "row",
-            "noteId",
-            "client",
-            "cache",
-            "setError",
-          )}
-          disabled={pending(pendable)}
-          value={floatingValue}
-          onBlur={commit} />
-      </div> */}
+      {availableTasks && <Dropdown onSelect={action((task) => task && tasks.push({ task, checked: false }))}>
+        <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
+        <Dropdown.Menu>
+          {availableTasks.map((task) => <Dropdown.Item eventKey={task}>{task}</Dropdown.Item>)}
+        </Dropdown.Menu>
+      </Dropdown>}
     </>;
   }} />;
 }
