@@ -10,6 +10,7 @@ import { flattenDeep } from "lodash";
 import compact from "lodash/compact";
 import isEmpty from "lodash/isEmpty";
 import kebabCase from "lodash/kebabCase";
+import uniqBy from "lodash/uniqBy";
 import merge from "lodash/merge";
 import omit from "lodash/omit";
 import uniq from "lodash/uniq";
@@ -35,7 +36,7 @@ import IDiscogsCache from "./IDiscogsCache";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import OrderedMap from "./OrderedMap";
-import BootstrapTable, { ColumnSetItem, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
+import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
@@ -44,6 +45,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind, TagProps } from "./Tag";
+import LazyMusicLabel from "./LazyMusicLabel";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -305,6 +307,10 @@ function labelNames(labels: Labels) {
   return uniq(labels.map(autoFormatLabel));
 }
 
+function uniqueLabels(labels: Labels) {
+  return uniqBy(labels, "id");
+}
+
 const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
   try {
     let result = notes.find(({ field_id }) => field_id === id);
@@ -395,7 +401,7 @@ export default function Elephant() {
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
   const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders?.folders, stale]);
 
-  type ColumnFactoryResult = [column: ColumnSetItem<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
+  type ColumnFactoryResult = [column: BootstrapTableColumn<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
   const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
   const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
@@ -508,6 +514,7 @@ export default function Elephant() {
     if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
       return [{
         Header: "Cond.",
+        className: "centered-column",
         accessor({ id, notes }) {
           const media = mediaCondition(notes);
           const sleeve = sleeveCondition(notes);
@@ -556,7 +563,7 @@ export default function Elephant() {
           return <><Icon />{price}</>;
         },
         sortType: sortBySource,
-      } as ColumnSetItem<CollectionItem>,
+      } as BootstrapTableColumn<CollectionItem>,
         [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
     }
   }, [cache, client, orderNumberId, priceId, sourceId, sortBySource]);
@@ -570,6 +577,7 @@ export default function Elephant() {
     if (playsId) {
       return [{
         Header: "Plays",
+        className: "centered-column",
         accessor(row) {
           return <Observer render={() => {
             const { folder_id, id: release_id, instance_id, notes } = row;
@@ -588,7 +596,7 @@ export default function Elephant() {
           }} />;
         },
         sortType: sortByPlays,
-      } as ColumnSetItem<CollectionItem>,
+      } as BootstrapTableColumn<CollectionItem>,
       [KnownFieldTitle.plays]];
     }
   }, [client, mediaCondition, playsId, sortByPlays]);
@@ -614,7 +622,7 @@ export default function Elephant() {
           return value.map((task) => <Form.Check key={task} label={task} />);
         },
         sortType: sortByTasks,
-      } as ColumnSetItem<CollectionItem>,
+      } as BootstrapTableColumn<CollectionItem>,
       [KnownFieldTitle.tasks]];
     }
   }, [tasks, tasksId]);
@@ -672,8 +680,9 @@ export default function Elephant() {
     return compare(a, b);
   }, []);
 
-  const yearColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+  const yearColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
     Header: "Year",
+    className: "centered-column",
     accessor: ({ basic_information: { year } }) => year,
     Cell: ({ value: year, row: { original } }: { value?: number; row: { original: CollectionItem; }; }) => <Observer>{() => {
       const masterYear = lpdb.masterDetail(original, "year", undefined).get();
@@ -698,7 +707,7 @@ export default function Elephant() {
     sortType: autoSortBy("Year"),
   }), [autoSortBy, lpdb]);
 
-  const formatColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+  const formatColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
     Header: "Type",
     accessor: ({ basic_information: { formats } }) => formats,
     Cell: ({ value }: { value: Formats }) => <>
@@ -707,13 +716,18 @@ export default function Elephant() {
     sortType: autoSortBy("Type"),
   }), [autoSortBy]);
 
-  const labelColumn = React.useMemo<ColumnSetItem<CollectionItem>>(() => ({
+  const labelColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
     Header: "Label",
-    accessor: ({ basic_information: { labels } }) => labelNames(labels).map((s) => <span className="label-name">{s}</span>),
+    className: "centered-column",
+    accessor: ({ basic_information: { labels } }) => uniqueLabels(labels),
+    Cell: ({ value }: { value: Labels }) => {
+      return value.map((label) => <LazyMusicLabel label={label} hq={true} alwaysShowName={false} />);
+      //return labelNames(value).map((s) => <span className="label-name">{s}</span>)
+    },
     sortType: autoSortBy("Label"),
   }), [autoSortBy]);
 
-  const coverColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  const coverColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: <>&nbsp;</>,
     id: "Cover",
     accessor: (row) => <ExternalLink href={releaseUrl(row)}>
@@ -721,25 +735,26 @@ export default function Elephant() {
     </ExternalLink>,
   }), []);
 
-  const releaseColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  const releaseColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: ARTIST_COLUMN_TITLE,
     accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
     Cell: ({ value }: { value: ArtistCellProps; }) => <ArtistsCell {...value} />,
     sortType: sortByArtist,
   }), [sortByArtist]);
 
-  // const titleColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  // const titleColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
   //   Header: "Title",
   //   accessor: ({ basic_information: { title } }) => <>{title}</>,
   // }), []);
 
-  const ratingColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  const ratingColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: "Rating",
+    className: "minimal-column",
     accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
     sortType: sortByRating,
   }), [cache, client, sortByRating]);
 
-  const locationColumn: ColumnSetItem<CollectionItem, any> = React.useMemo(() => ({
+  const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: "Location",
     accessor: ({ folder_id }) => folderName(folder_id),
     Cell({ value }: { value: string; }) {
@@ -779,7 +794,7 @@ export default function Elephant() {
     sortType: sortByTags,
   }), [sortByTags, tagsFor]);
 
-  const collectionTableColumns = React.useMemo<ColumnSetItem<CollectionItem>[]>(() => [
+  const collectionTableColumns = React.useMemo<BootstrapTableColumn<CollectionItem>[]>(() => [
     coverColumn,
     releaseColumn,
     //titleColumn,

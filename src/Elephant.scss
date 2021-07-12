@@ -172,6 +172,47 @@ tr.sold {
 }
   
 .music-label-logo-inline {
+    // border: 1px solid #00000043;
+    border-radius: 4px;
     height: 2em;
-    vertical-align: baseline;
+    vertical-align: auto;
+}
+
+a.quiet {
+    color: initial;
+    &:hover {
+        text-decoration: initial;
+    }
+}
+
+
+
+td.minimal-column,
+th.minimal-column {
+    // https://stackoverflow.com/a/43615091/4607986
+    white-space: nowrap;
+    width: 1px;
+}
+
+td.centered-column,
+th.centered-column {
+    text-align: center;
+
+    // https://stackoverflow.com/a/43615091/4607986
+    white-space: nowrap;
+    width: 1px;
+}
+
+a.music-label {
+    .name {
+        margin-left: 0.2rem;
+        opacity: 30%;
+        &:hover {
+            opacity: inherit;
+        }
+    }
+    &:not(:last-of-type) {
+        margin-right: 2px;
+        margin-bottom: 2px;
+    }
 }

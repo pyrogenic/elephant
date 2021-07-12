@@ -1,4 +1,3 @@
-import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
 import pick from "lodash/pick";
 import { observer } from "mobx-react";
@@ -11,8 +10,8 @@ import Figure from "react-bootstrap/esm/Figure";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
 import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";
-import LPDB, { Label } from "./LPDB";
-import { ElementType } from "./shared/TypeConstraints";
+import LPDB from "./LPDB";
+import { MusicLabelLogo } from "./LazyMusicLabel";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -70,7 +69,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             {labels.map((label, i) => <Row key={i}>
                 {label?.status === "ready" ? <>
                     <Col>
-                        <MusicLabel label={label.value} />
+                        <MusicLabelLogo {...label.value} />
                     </Col>
                     <Col>
                         <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
@@ -104,21 +103,5 @@ function variantFor(status: ReturnType<LPDB["details"]>["status"]): ButtonProps[
             return "success";
         case "error":
             return "danger";
-    }
-}
-
-function MusicLabel({ label }: { label: Label }) {
-    let images = label.images;
-    images = sortBy(images, factor);
-    //const image = label.images.find(({ type }) => type === "primary");
-    return <>{images.map((image, index) => {
-        const { type, uri150 } = image;
-        return <Figure key={index}>
-            <Figure.Image className="music-label-logo-inline" src={uri150} alt="logo" />
-            <Figure.Caption>#{label.images.findIndex(({ uri150: u2 }) => u2 === uri150)} ({type}, factor = {factor(image)})</Figure.Caption>
-        </Figure>;
-    })}</>;
-    function factor({ height, width }: ElementType<Label["images"]>) {
-        return Math.round(10 * Math.abs((width / height) - 1));
     }
 }

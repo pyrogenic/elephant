@@ -35,7 +35,10 @@ import "./BootstrapTable.scss";
 import Pager, { Spine } from "./Pager";
 import { Content, resolve } from "./resolve";
 
-export type ColumnSetItem<TElement extends {}, TColumnIds = any> = Column<TElement> & { id?: TColumnIds };
+export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column<TElement> & {
+    id?: TColumnIds,
+    className?: ClassNames,
+};
 
 type Search<TElement extends {}> = {
     search?: string;
@@ -56,7 +59,7 @@ export function mnemonicToString(src: Mnemonic): string {
 }
 
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
-    columns: Column<TElement>[];//ColumnSetItem<TElement, TColumnIds>[];
+    columns: BootstrapTableColumn<TElement, TColumnIds>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
     search?: Search<TElement>;
     sessionKey?: string;
@@ -221,13 +224,15 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             <thead>
                 {headerGroups.map(headerGroup => (
                     <tr {...headerGroup.getHeaderGroupProps()}>
-                        {columnsFor(headerGroup).map((column) => (
-                            <th {...column.getHeaderProps(column.getSortByToggleProps)}>
+                        {columnsFor(headerGroup).map((column) => {
+                            const col = column as BootstrapTableColumn<TElement>;
+                            const columnProps = column.getHeaderProps(column.getSortByToggleProps);
+                            return <th {...columnProps} className={classConcat(columnProps, col.className)}>
                                 {column.render("Header")}
                                 {/* Add a sort direction indicator */}
                                 {column.isSorted && (column.isSortedDesc ? <FiChevronDown /> : <FiChevronUp />)}
-                            </th>
-                        ))}
+                            </th>;
+                        })}
                     </tr>
                 ))}
             </thead>
@@ -249,7 +254,9 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     return <>
                         <tr {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original))} onClick={onClick}>
                             {row.cells.map(cell => {
-                                return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
+                                const cellProps = cell.getCellProps();
+                                const column = cell.column as BootstrapTableColumn<TElement>;
+                                return <td {...cellProps} className={classConcat(cellProps, column.className)}>{cell.render("Cell")}</td>
                             })}
                         </tr>
                         {/*
