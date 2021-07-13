@@ -8,9 +8,10 @@ import Card from "react-bootstrap/esm/Card";
 import Col from "react-bootstrap/esm/Col";
 import Row from "react-bootstrap/esm/Row";
 import ReactJson from "react-json-view";
-import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";
+import { CollectionItem, collectionItemCacheQuery, ElephantContext, trackTuning } from "./Elephant";
 import LPDB from "./LPDB";
 import { MusicLabelLogo } from "./LazyMusicLabel";
+import Tag, { TagKind } from "./Tag";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -25,9 +26,9 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             return {};
         }
         return pick(details.value, [
-            "id",
-            "year",
             "uri",
+            "artists_sort",
+            "extraartists",
         ])!;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [details?.status]);
@@ -52,35 +53,48 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     }, [cache, cacheQuery, details, item, masterForItem]);
     if (!lpdb || !year || !masterYear) { return null; }
     return <>
-        <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
         {/* <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
         <ReactJson src={result} collapsed={2} />
-        {"error" in result ? <pre>{(result as any).error}</pre> : <ReactJson src={result} collapsed={true} />} */}
+    {"error" in result ? <pre>{(result as any).error}</pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card>
-        <Card.Body>
+            {/* <Card.Body>
             <Row>
-                Year: <span className={"text-" + variantFor(year.status)}>{year.value}</span>
+            Year: <span className={"text-" + variantFor(year.status)}>{year.value}</span>
             </Row>
             <Row>
-                Master Year: <span className={"text-" + variantFor(masterYear.status)}>{masterYear.value}</span>
+            Master Year: <span className={"text-" + variantFor(masterYear.status)}>{masterYear.value}</span>
             </Row>
-        </Card.Body>
+            </Card.Body>
             {labels.map((label, i) => <Row key={i}>
-                {label?.status === "ready" ? <>
-                    <Col>
-                        <MusicLabelLogo {...label.value} />
-                    </Col>
-                    <Col>
-                        <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
-                    </Col>
-                </> : label?.status}
-            </Row>)}
-        {details && <>
-            <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge></Card.Header>
+            {label?.status === "ready" ? <>
+            <Col>
+            <MusicLabelLogo {...label.value} />
+            </Col>
+            <Col>
+            <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
+            </Col>
+            </> : label?.status}
+        </Row>)} */}
+            <Card.Header>
+                <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
+            </Card.Header>
+            <Card.Body>
+                {pickedRelease.extraartists?.map(({ name, role }) => {
+                    trackTuning("roles", role);
+                    return <Tag kind={TagKind.box} tag={name} extra={role} />;
+                })}
+            </Card.Body>
+            {details && <>
             <Card.Body>
                 <ReactJson src={item} name="item" collapsed={true} />
+                    <p>
+                        Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge>
+                    </p>
                     <ReactJson src={pickedRelease} name="picked-release" collapsed={false} />
                 <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} />
+                    <p>
+                        Master {item.basic_information.master_id} <Badge variant={variantFor(masterForItem?.status ?? "pending")}>{masterForItem?.status ?? "not requested"}</Badge>
+                    </p>
                     <ReactJson src={pickedMaster} name="picked-master" collapsed={false} />
                 <ReactJson src={masterForItem?.status === "ready" ? masterForItem.value : masterForItem?.status === "error" ? masterForItem.error : {}} name="masterForItem" collapsed={true} />
                 <ReactJson src={masterForRelease?.status === "ready" ? masterForRelease.value : masterForRelease?.status === "error" ? masterForRelease?.error : {}} name="masterForRelease" collapsed={true} />

@@ -976,20 +976,40 @@ const FORMATS: {
   "White Label": { as: TagKind.tag },
 };
 
+const ROLES: {
+  [key: string]: {
+    as: TagKind,
+    abbr?: string,
+    name?: string,
+  } | false
+} = {
+};
+
 type Formats = CollectionItem["basic_information"]["formats"];
 type Labels = CollectionItem["basic_information"]["labels"];
 
-const ALL_FORMATS: string[] = observable([]);
+const TUNING_TRACKER = observable({
+  formats: [] as string[],
+  roles: [] as string[],
+});
+
+export function trackTuning(key: keyof typeof TUNING_TRACKER, ...items: string[]) {
+  runInAction(() => {
+    if (arraySetAddAll(TUNING_TRACKER, key, items, true)) {
+      console.log(TUNING_TRACKER[key]);
+    }
+  });
+}
 
 function formats(value: Formats) {
   const result = uniq(value.flatMap(({ descriptions, name, text }) => flattenDeep(compact([descriptions, name, text?.split(", ").map(autoFormat)]))));
-  if (arraySetAddAll(ALL_FORMATS, result)) {
-    console.log(ALL_FORMATS.sort());
-  }
+  const key = "formats";
+  trackTuning(key, ...result);
   return result;
 }
 
-const novelFormats = computed(() => ALL_FORMATS.filter((k) => !(k in FORMATS)));
+const novelFormats = computed(() => TUNING_TRACKER.formats.filter((k) => !(k in FORMATS)));
+const novelRoles = computed(() => TUNING_TRACKER.roles.filter((k) => !(k in ROLES)));
 
 const IDIOMS = [
   "№",
@@ -1000,6 +1020,8 @@ const Tuning = observer(() => {
     <Card.Header>Tuning</Card.Header>
     <Card.Body>
       <dl>
+        <dt>Novel Roles</dt>
+        <dd>{novelRoles.get().join(", ")}</dd>
         <dt>Novel Formats</dt>
         <dd>{novelFormats.get().join(", ")}</dd>
         <dt>Idioms</dt>
@@ -1008,6 +1030,7 @@ const Tuning = observer(() => {
     </Card.Body>
   </Card>;
 })
+
 
 /*
 
