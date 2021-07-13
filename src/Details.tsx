@@ -14,7 +14,7 @@ import { MusicLabelLogo } from "./LazyMusicLabel";
 import LPDB from "./LPDB";
 import { Content } from "./shared/resolve";
 import Tag, { TagKind } from "./Tag";
-p
+
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
     const year = lpdb?.detail(item, "year", 0).get();
