@@ -1,5 +1,5 @@
-import uniqBy from "lodash/uniqBy";
 import pick from "lodash/pick";
+import uniqBy from "lodash/uniqBy";
 import { observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/esm/Badge";
@@ -7,12 +7,14 @@ import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
 import Col from "react-bootstrap/esm/Col";
 import Row from "react-bootstrap/esm/Row";
+import { FiRefreshCw } from "react-icons/fi";
 import ReactJson from "react-json-view";
 import { CollectionItem, collectionItemCacheQuery, ElephantContext, trackTuning } from "./Elephant";
-import LPDB from "./LPDB";
 import { MusicLabelLogo } from "./LazyMusicLabel";
+import LPDB from "./LPDB";
+import { Content } from "./shared/resolve";
 import Tag, { TagKind } from "./Tag";
-
+p
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
     const year = lpdb?.detail(item, "year", 0).get();
@@ -57,24 +59,31 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         <ReactJson src={result} collapsed={2} />
     {"error" in result ? <pre>{(result as any).error}</pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card>
-            {/* <Card.Body>
-            <Row>
-            Year: <span className={"text-" + variantFor(year.status)}>{year.value}</span>
-            </Row>
-            <Row>
-            Master Year: <span className={"text-" + variantFor(masterYear.status)}>{masterYear.value}</span>
-            </Row>
+            <Card.Header>Labels for {item.basic_information.title}</Card.Header>
+            <Card.Body>
+                {labels.map((label, i) => {
+                    if (!label) { return false; }
+                    let content: Content;
+                    if (label.status === "ready") {
+                        content = <>
+                            <Col>
+                                <MusicLabelLogo {...label.value} />
+                            </Col>
+                            <Col>
+                                <ReactJson src={label.value} collapsed={true} collapseStringsAfterLength={32} />
+                            </Col>
+                        </>;
+                    } else {
+                        content = <Col>{label.status}</Col>;
+                    }
+                    if ("refresh" in label) {
+                        content = <>{content}<Col><FiRefreshCw onClick={label.refresh} /></Col></>;
+                    }
+                    return <Row key={i}>
+                        {content}
+                    </Row>;
+                })}
             </Card.Body>
-            {labels.map((label, i) => <Row key={i}>
-            {label?.status === "ready" ? <>
-            <Col>
-            <MusicLabelLogo {...label.value} />
-            </Col>
-            <Col>
-            <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
-            </Col>
-            </> : label?.status}
-        </Row>)} */}
             <Card.Header>
                 <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
             </Card.Header>
@@ -85,22 +94,23 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 })}
             </Card.Body>
             {details && <>
-            <Card.Body>
-                <ReactJson src={item} name="item" collapsed={true} />
+                <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}{"refresh" in details && <>&nbsp;<FiRefreshCw onClick={details.refresh} /></>}</Badge></Card.Header>
+                <Card.Body>
+                    <ReactJson src={item} name="item" collapsed={true} />
                     <p>
                         Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge>
                     </p>
                     <ReactJson src={pickedRelease} name="picked-release" collapsed={false} />
-                <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} />
+                    <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} />
                     <p>
                         Master {item.basic_information.master_id} <Badge variant={variantFor(masterForItem?.status ?? "pending")}>{masterForItem?.status ?? "not requested"}</Badge>
                     </p>
                     <ReactJson src={pickedMaster} name="picked-master" collapsed={false} />
-                <ReactJson src={masterForItem?.status === "ready" ? masterForItem.value : masterForItem?.status === "error" ? masterForItem.error : {}} name="masterForItem" collapsed={true} />
-                <ReactJson src={masterForRelease?.status === "ready" ? masterForRelease.value : masterForRelease?.status === "error" ? masterForRelease?.error : {}} name="masterForRelease" collapsed={true} />
-            </Card.Body>
-        </>}
-    </Card>
+                    <ReactJson src={masterForItem?.status === "ready" ? masterForItem.value : masterForItem?.status === "error" ? masterForItem.error : {}} name="masterForItem" collapsed={true} />
+                    <ReactJson src={masterForRelease?.status === "ready" ? masterForRelease.value : masterForRelease?.status === "error" ? masterForRelease?.error : {}} name="masterForRelease" collapsed={true} />
+                </Card.Body>
+            </>}
+        </Card>
     </>;
 }
 
