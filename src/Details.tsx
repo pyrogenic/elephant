@@ -11,6 +11,8 @@ import ReactJson from "react-json-view";
 import { CollectionItem, collectionItemCacheQuery, ElephantContext } from "./Elephant";
 import LPDB from "./LPDB";
 import { MusicLabelLogo } from "./LazyMusicLabel";
+import { FiRefreshCw } from "react-icons/fi";
+import { Content } from "./shared/resolve";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -57,26 +59,33 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         <ReactJson src={result} collapsed={2} />
         {"error" in result ? <pre>{(result as any).error}</pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card>
+            <Card.Header>Labels for {item.basic_information.title}</Card.Header>
         <Card.Body>
-            <Row>
-                Year: <span className={"text-" + variantFor(year.status)}>{year.value}</span>
-            </Row>
-            <Row>
-                Master Year: <span className={"text-" + variantFor(masterYear.status)}>{masterYear.value}</span>
-            </Row>
-        </Card.Body>
-            {labels.map((label, i) => <Row key={i}>
-                {label?.status === "ready" ? <>
-                    <Col>
-                        <MusicLabelLogo {...label.value} />
-                    </Col>
-                    <Col>
-                        <ReactJson src={label.value} collapsed={1} collapseStringsAfterLength={32} />
-                    </Col>
-                </> : label?.status}
-            </Row>)}
+                {labels.map((label, i) => {
+                    if (!label) { return false; }
+                    let content: Content;
+                    if (label.status === "ready") {
+                        content = <>
+                            <Col>
+                                <MusicLabelLogo {...label.value} />
+                            </Col>
+                            <Col>
+                                <ReactJson src={label.value} collapsed={true} collapseStringsAfterLength={32} />
+                            </Col>
+                        </>;
+                    } else {
+                        content = <Col>{label.status}</Col>;
+                    }
+                    if ("refresh" in label) {
+                        content = <>{content}<Col><FiRefreshCw onClick={label.refresh} /></Col></>;
+                    }
+                    return <Row key={i}>
+                        {content}
+                    </Row>;
+                })}
+            </Card.Body>
         {details && <>
-            <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge></Card.Header>
+                <Card.Header>Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}{"refresh" in details && <>&nbsp;<FiRefreshCw onClick={details.refresh} /></>}</Badge></Card.Header>
             <Card.Body>
                 <ReactJson src={item} name="item" collapsed={true} />
                     <ReactJson src={pickedRelease} name="picked-release" collapsed={false} />
