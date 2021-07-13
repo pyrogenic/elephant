@@ -28,6 +28,7 @@ import {
     useSortBy,
     UseSortByColumnOptions,
     UseSortByColumnProps,
+    UseSortByInstanceProps,
     UseSortByState, useTable,
     UseTableOptions,
 } from "react-table";
@@ -147,6 +148,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         prepareRow,
         rows,
         setPageSize,
+        setSortBy,
         state: {
             // expanded,
             pageIndex,
@@ -170,7 +172,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             globalFilter,
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
         ...plugins,
-        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
+        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     React.useEffect(() => setInitialPageSize(pageSize), [setInitialPageSize, pageSize]);
@@ -183,6 +185,8 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         if (lastSearch.current !== undefined && lastSearch.current !== search?.search) {
             setInitialPageIndex(0);
             gotoPage(0);
+            setInitialSortBy([]);
+            setSortBy([]);
         }
         lastSearch.current = search?.search;
         return () => { };
