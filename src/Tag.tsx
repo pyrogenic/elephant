@@ -1,7 +1,7 @@
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { Observer } from "mobx-react";
 import React from "react";
-import Badge from "react-bootstrap/Badge";
+import Badge, { BadgeProps } from "react-bootstrap/Badge";
 import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiCircle, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
 import { ElephantContext } from "./Elephant";
 import { Content, resolve } from "./shared/resolve";
@@ -25,6 +25,7 @@ export type TagProps = {
     kind: TagKind;
     extra?: Content;
     title?: string;
+    variant?: BadgeProps["variant"];
     onClickCount?: () => void;
     onClickExtra?: () => void;
     onClickIcon?: () => void;
@@ -37,6 +38,7 @@ export default function Tag({
     kind,
     extra,
     title,
+    variant,
     onClickIcon,
     onClickTag,
     onClickCount,
@@ -84,7 +86,7 @@ export default function Tag({
         }
         return <Badge
             className={classConcat(kind, "tag", className)}
-            variant="secondary"
+            variant={variant ?? "secondary"}
             onClick={onClickTag}
             title={title}
         >

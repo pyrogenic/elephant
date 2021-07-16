@@ -2,18 +2,29 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import * as idb from "idb";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
-import { PromiseType } from "./shared/TypeConstraints";
+import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import jsonpath from "jsonpath";
+import { Release } from "./LPDB";
+import { Discojs } from "discojs";
 
 type CachedRequest = {
     url: string;
     data: any;
 }
+
+type Artist = PromiseType<ReturnType<Discojs["getArtist"]>>;
 interface MyDB extends idb.DBSchema {
     get: {
         key: string;
         value: CachedRequest;
     };
+    artists: {
+        key: number;
+        value: Artist;
+        indexes: {
+            "by-name": string,
+        };
+    }
 }
 
 export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMemoOptions> {
@@ -27,6 +38,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 1, {
             upgrade(db) {
                 db.createObjectStore("get", { keyPath: "url" });
+                const artists = db.createObjectStore("artists", { keyPath: "id" });
+                artists.createIndex("by-name", "profile");
             },
         });
         makeObservable(this, {
