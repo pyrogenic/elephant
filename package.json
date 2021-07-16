@@ -29,7 +29,7 @@
     "gh-pages": "~3.1.0",
     "idb": "~6.1.2",
     "jquery": "*",
-    "jsonpath": "~1.1.1",
+    "jsonpath": "~1.2.1",
     "lodash": "~4.17.21",
     "match-sorter": "~6.3.0",
     "mobx-react-devtools": "~6.1.1",
