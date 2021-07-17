@@ -15,11 +15,14 @@ import Form from "react-bootstrap/esm/Form";
 import Row from "react-bootstrap/esm/Row";
 import { FiRefreshCw } from "react-icons/fi";
 import ReactJson from "react-json-view";
-import { CollectionItem, collectionItemCacheQuery, ElephantContext, trackTuning } from "./Elephant";
+import { collectionItemCacheQuery } from "./collectionItemCache";
+import { CollectionItem } from "./Elephant";
+import ElephantContext from "./ElephantContext";
 import { MusicLabelLogo } from "./LazyMusicLabel";
 import LPDB from "./LPDB";
 import { Content } from "./shared/resolve";
 import Tag, { TagKind } from "./Tag";
+import { trackTuning } from "./Tuning";
 
 // artists query
 // $..extraartists..*['name','id','role']

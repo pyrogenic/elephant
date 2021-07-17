@@ -3,7 +3,7 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Badge, { BadgeProps } from "react-bootstrap/Badge";
 import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiCircle, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
-import { ElephantContext } from "./Elephant";
+import ElephantContext from "./ElephantContext";
 import { Content, resolve } from "./shared/resolve";
 import "./Tag.scss";
 

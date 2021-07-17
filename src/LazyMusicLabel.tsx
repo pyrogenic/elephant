@@ -1,7 +1,8 @@
 import sortBy from "lodash/sortBy";
 import { Observer } from "mobx-react";
 import React from "react";
-import { CollectionItem, ElephantContext } from "./Elephant";
+import { CollectionItem } from "./Elephant";
+import ElephantContext from "./ElephantContext";
 import { Label } from "./LPDB";
 import { ElementType } from "./shared/TypeConstraints";
 import ExternalLink from "./shared/ExternalLink";
