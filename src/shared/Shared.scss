@@ -22,6 +22,21 @@ td > img:only-child {
         margin-right: -2px;
     }
 }
+.badge {
+    .badge {
+        position: relative;
+        top: -1px;
+        margin-bottom: -1em;
+        border-radius: calc(0.25rem * 0.75);
+    }
+    .badge:not(:last-of-type) {
+        margin-right: inherit;
+    }
+}
+.badge:not(:last-of-type) {
+    margin-right: 0.2rem;
+}
+
 svg.icon {
     vertical-align: -20%;
 }

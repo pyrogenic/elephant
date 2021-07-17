@@ -4,6 +4,7 @@ import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
 import pick from "lodash/pick";
 import uniqBy from "lodash/uniqBy";
+import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/esm/Badge";
@@ -24,8 +25,9 @@ import Tag, { TagKind } from "./Tag";
 // $..extraartists..*['name','id','role']
 // result is single array, needs to be split into 3-tuples
 
-const MUSICAL_ARTISTS = /(Bass|Celesta|Drums|Guitar|Horn|Piano|Saxophone|Scratches|Trumpet|Trombone|Vocals)/;
-const TECHNICAL_ARTISTS = /(Lacquer|Producer|Master)/;
+const MUSICAL_ARTISTS = /\b((?<_instrument>(?<strings>(?<guitar>((Acoustic|Electric|Bass) )?Guitar)|Bass\b|Celesta|Cello|Harp|Mandolin|Sitar|Viol(|a|in)\b)|(?<percussion>Bongo|Conga|Drum|Percussion|Glock|Tabla\b|Tambourine|Timbales|Vibes|Vibraphone|Xylo)|(?<keys>Keys\b|Keyboard|Harmonium|Mellotron|Piano|Organ|Synth)|(?<brass>Horn|Flugelhorn|Trumpet|Trombone|Tuba)|(?<wind>Clarinet|Flute|Kazoo|Harmonica|Oboe|Sax(|ophone)\b|Woodwind)|(?<group>Choir$|Chorus$|Orchestra))|Scratches|Vocal|Voice)/;
+const CREATIVE_ARTISTS = /\b(Arrange|Conduct|Master\b|(?<originator>Compos|Lyric|Music|Writ|Words))/;
+const TECHNICAL_ARTISTS = /\b(Lacquer|Produce|Recorded|Mastered|Remaster)/;
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -58,12 +60,12 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [masterForItem?.status]);
 
-    const artistInfo = React.useMemo(() => {
-        if (details?.status != "ready") { return []; }
+    const artistInfo = React.useMemo(() => computed(() => {
+        if (details?.status !== "ready") { return []; }
         const query = "$..extraartists..*['name','id','role']";
         const tuples: [name: string, id: number, role: string][] =
             chunk(jsonpath.query(details.value, query), 3) as any;
-        return flatten(tuples.map(([name, id, role]) => {
+        return uniqBy(flatten(tuples.map(([name, id, role]) => {
             // Ignore any [flavor text]
             role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
             // Split up comma, separated, roles
@@ -76,8 +78,8 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 role = role.replace("-By", " By");
                 return ({ name, id, role });
             });
-        }));
-    }, [details?.status]);
+        })), JSON.stringify.bind(JSON));
+    }), [details]);
 
     const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
     const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
@@ -132,16 +134,27 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
             </Card.Header>
             <Card.Body>
-                {artistInfo.map(({ name, role }) => {
-                    trackTuning("roles", role);
-                    const musicalArtist = MUSICAL_ARTISTS.test(role);
+                {artistInfo.get().map(({ name, role }) => {
+                    const musicalArtist = MUSICAL_ARTISTS.exec(role);
+                    const createArtist = CREATIVE_ARTISTS.test(role);
                     const techArtist = TECHNICAL_ARTISTS.test(role);
+                    if (musicalArtist?.groups) {
+                        const tags = Object.entries(musicalArtist.groups).filter(([k, v]) => k[0] !== "_" && v).map(([k]) => k).join(", ");
+                        if (tags) {
+                            role = `${role} (${tags})`;
+                        }
+                    }
+                    if (!musicalArtist && !createArtist && !techArtist) {
+                        trackTuning("roles", role);
+                    }
                     return <Tag
                         variant={
                             musicalArtist ? "primary" :
+                                createArtist ? "secondary" :
                                 techArtist ? "warning" : "light"}
                         kind={
                             musicalArtist ? TagKind.genre :
+                                createArtist ? TagKind.style :
                                 techArtist ? TagKind.tag : TagKind.box}
                         tag={name}
                         extra={role}

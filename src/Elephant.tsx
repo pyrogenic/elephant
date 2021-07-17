@@ -39,7 +39,7 @@ import LazyMusicLabel from "./LazyMusicLabel";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import OrderedMap from "./OrderedMap";
-import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
+import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable, mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
@@ -361,7 +361,7 @@ export default function Elephant() {
 
   const cache = React.useMemo(() => new DiscogsIndexedCache(), []);
 
-  const client = React.useCallback(() => {
+  const client = React.useMemo(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
       userToken: token,
@@ -384,26 +384,158 @@ export default function Elephant() {
     return result;
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
-  const lpdb = React.useMemo<LPDB>(() => new LPDB(client()), [client]);
+  const lpdb = React.useMemo(() => new LPDB(client), [client]);
   const [, setCollectionTimestamp] = React.useState<Date>(new Date());
 
   const { collection, inventory, lists } = lpdb;
-
-  const stale = React.useMemo(() => {
-    function s<T>(pattern: Parameters<IDiscogsCache["clear"]>[0], result: T) {
-      cache.clear(pattern);
-      return result;
-    };
-    return s;
-  }, [cache]);
 
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
   React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
-  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders?.folders, stale]);
+  const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
+  const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
+
+  return <ElephantContext.Provider value={{
+    cache,
+    client,
+    collection,
+    fieldsByName,
+    fieldsById,
+    folders,
+    inventory,
+    lists,
+    lpdb,
+    setError,
+  }}>
+    <Masthead
+      bypassCache={bypassCache}
+      cache={cache}
+      collection={collection}
+      fluid={fluid}
+      avatarUrl={profile?.avatar_url}
+      search={search}
+      setBypassCache={setBypassCache}
+      setFilter={(newFilter) => {
+        if (newFilter !== filter.filter) {
+          setFilter({ ...filter, filter: newFilter });
+        }
+      }}
+      setFluid={setFluid}
+      setSearch={setSearch}
+      setToken={setToken}
+      setVerbose={setVerbose}
+      token={token}
+      verbose={verbose}
+    />
+    <Container fluid={fluid}>
+      {!isEmpty(error) && <Alert variant="warning">
+        <code>{error.toString()}</code>
+      </Alert>}
+      <CollectionTable tableSearch={tableSearch} />
+      {/* <Observer>{() => <>
+        {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
+        {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
+        {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
+        {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
+        {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
+        {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
+      </>}
+      </Observer> */}
+      <hr />
+      <Tuning />
+    </Container>
+  </ElephantContext.Provider>;
+
+  function updateMemoSettings() {
+    cache.bypass = bypassCache;
+    cache.log = verbose;
+  }
+
+  function getIdentity() {
+    client.getProfile().then(setProfile, setError);
+    client.listFolders().then(setFolders, setError);
+    // client.getIdentity().then(setIdentity, setError);
+  }
+
+  function addToCollection(items: CollectionItems) {
+    items.forEach(action((item) => {
+      const existing = collection.get(item.instance_id);
+      if (existing) {
+        merge(existing, item);
+      } else {
+        collection.set(item.instance_id, item);
+      }
+    }));
+    setCollectionTimestamp(new Date());
+  }
+
+  function addToInventory(items: InventoryItems) {
+    items.forEach(action((item) => inventory.set(item.release.id, item)));
+    setCollectionTimestamp(new Date());
+  }
+
+  function addToLists(items: DiscogsLists["lists"]) {
+    items.forEach((item) => client.getListItems(item.id).then(({ items }) => items).then(action((items) => lists.set(item.id, { definition: item, items }))));
+    setCollectionTimestamp(new Date());
+  }
+
+  function getCollection() {
+    updateCollectionReaction.current?.();
+    updateInventory();
+    updateLists();
+    const p1 = updateCustomFields();
+    const p2 = updateCollection();
+    Promise.all([p1, p2]).then(() =>
+      updateCollectionReaction.current = reaction(
+        () => cache.version,
+        updateCollection,
+        { delay: 1000 },
+      ))
+  }
+
+  function updateInventory() {
+    return client.getInventory().then(((r) => client.all("listings", r, addToInventory)), setError);
+  }
+
+  function updateLists() {
+    return client.getLists().then(((r) => client.all("lists", r, addToLists)), setError);
+  }
+
+  function updateCustomFields() {
+    return client.listCustomFields().then(({ fields }) =>
+      setFieldsById(new Map(fields.map((field) => [field.id, field]))), setError);
+  }
+
+  function updateCollection() {
+    client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
+  }
+}
+
+function CollectionTable({ tableSearch }: { tableSearch: TableSearch<CollectionItem> }) {
   type ColumnFactoryResult = [column: BootstrapTableColumn<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
+
+  const {
+    cache,
+    client,
+    collection,
+    fieldsById,
+    fieldsByName,
+    folders,
+    inventory,
+    lists,
+    lpdb,
+  } = React.useContext(ElephantContext);
+
+  const stale = React.useMemo(() => {
+    function s<T>(pattern: Parameters<IDiscogsCache["clear"]>[0], result: T) {
+      cache?.clear(pattern);
+      return result;
+    };
+    return s;
+  }, [cache]);
+  const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders?.folders, stale]);
 
   const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
   const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
@@ -445,7 +577,7 @@ export default function Elephant() {
   const tagsFor = React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) =>
     computed(() => compact([
       ...formats(formatSrc).map((format) => formatToTag(format, false)),
-      ...lpdb.listsForRelease(id).filter((list) => !isPatch(list.list)).map(listEntryToTag),
+      ...(lpdb?.listsForRelease(id) ?? []).filter((list) => !isPatch(list.list)).map(listEntryToTag),
       ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
       ...styles.map((tag) => ({ tag, kind: TagKind.style })),
     ])), [lpdb]);
@@ -549,7 +681,7 @@ export default function Elephant() {
   }, [inventory, mediaCondition, sleeveCondition, sortByCondition, mediaConditionId, sleeveConditionId]);
 
   const sourceColumn = React.useCallback((): ColumnFactoryResult => {
-    if (sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
+    if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
       return [{
         Header: "Source",
         accessor(row) {
@@ -557,7 +689,7 @@ export default function Elephant() {
           const source = autoFormat(getNote(notes, sourceId));
           const orderNumber = autoFormat(getNote(notes, orderNumberId));
           const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
-          const price = <div className="flex flex-row d-inline-flex price">{unit}<FieldEditor cache={cache} client={client} noteId={priceId} row={row} setError={setError} /></div>;
+          const price = cache && client && <div className="flex flex-row d-inline-flex price">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
           let { uri, Icon } = orderUri(source as Source, orderNumber);
           Icon = Icon ?? (() => <div><Badge variant="dark">{source}</Badge> {orderNumber}</div>);
           if (uri) {
@@ -577,7 +709,7 @@ export default function Elephant() {
     return a - b;
   }, [plays]);
   const playCountColumn = React.useCallback((): ColumnFactoryResult => {
-    if (playsId) {
+    if (client && playsId) {
       return [{
         Header: "Plays",
         className: "centered-column",
@@ -593,7 +725,7 @@ export default function Elephant() {
             return <Spinner value={plays} min={0} onChange={change} />;
 
             function change(value: number) {
-              const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
+              const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
               mutate(playsNote, "value", value, promise);
             }
           }} />;
@@ -605,11 +737,11 @@ export default function Elephant() {
   }, [client, mediaCondition, playsId, sortByPlays]);
 
   const notesColumn = React.useCallback((): ColumnFactoryResult => {
-    if (notesId) {
+    if (client && cache && notesId) {
       return [{
         Header: "Notes",
         accessor(row) {
-          return <FieldEditor as={"textarea"} row={row} rows={3} noteId={notesId} client={client} cache={cache} setError={setError} />;
+          return <FieldEditor as={"textarea"} row={row} rows={3} noteId={notesId} />;
         },
       },
       [KnownFieldTitle.notes]];
@@ -617,10 +749,10 @@ export default function Elephant() {
   }, [cache, client, notesId]);
 
   const tasksColumn = React.useCallback((): ColumnFactoryResult => {
-    if (tasksId) {
+    if (client && cache && tasksId) {
       return [{
         Header: "Tasks",
-        accessor: (row) => <TasksEditor cache={cache} client={client} noteId={tasksId} row={row} setError={setError} />,
+        accessor: (row) => <TasksEditor noteId={tasksId} row={row} />,
         sortType: sortByTasks,
       } as BootstrapTableColumn<CollectionItem>,
       [KnownFieldTitle.tasks]];
@@ -635,7 +767,7 @@ export default function Elephant() {
         list.items.forEach((item) => {
           const instruction = item.comment;
           const applyThisInstruction = applyInstruction.bind(null, instruction);
-          for (const entry of lpdb.entriesForRelease(item.id)) {
+          for (const entry of lpdb!.entriesForRelease(item.id)) {
             runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
           }
         });
@@ -685,7 +817,7 @@ export default function Elephant() {
     className: "centered-column",
     accessor: ({ basic_information: { year } }) => year,
     Cell: ({ value: year, row: { original } }: { value?: number; row: { original: CollectionItem; }; }) => <Observer>{() => {
-      const masterYear = lpdb.masterDetail(original, "year", undefined).get();
+      const masterYear = lpdb!.masterDetail(original, "year", undefined).get();
       const yearClass = classConcat("release-year", STATUS_CLASSES[masterYear.status]);
       const yearComp = year && <span className={yearClass}>{year}</span>;
       if (masterYear.status === "ready") {
@@ -750,9 +882,9 @@ export default function Elephant() {
   const ratingColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: "Rating",
     className: "minimal-column",
-    accessor: (row) => <RatingEditor row={row} client={client} cache={cache} setError={setError} />,
+    accessor: (row) => <RatingEditor row={row} />,
     sortType: sortByRating,
-  }), [cache, client, sortByRating]);
+  }), [sortByRating]);
 
   const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
     Header: "Location",
@@ -806,9 +938,6 @@ export default function Elephant() {
     locationColumn,
     tagsColumn,
   ], [coverColumn, fieldColumns, formatColumn, labelColumn, locationColumn, ratingColumn, releaseColumn, tagsColumn, yearColumn]);
-  const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
-
-  const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
 
   const rowClassName = React.useCallback((item: CollectionItem) => {
     if (parseLocation(folderName(item.folder_id)).status === "sold") {
@@ -817,122 +946,14 @@ export default function Elephant() {
     return undefined;
   }, [folderName]);
 
-  return <ElephantContext.Provider value={{
-    lpdb,
-    cache,
-    collection,
-  }}>
-    <Masthead
-      bypassCache={bypassCache}
-      cache={cache}
-      collection={collection}
-      fluid={fluid}
-      avatarUrl={profile?.avatar_url}
-      search={search}
-      setBypassCache={setBypassCache}
-      setFilter={(newFilter) => {
-        if (newFilter !== filter.filter) {
-          setFilter({ ...filter, filter: newFilter });
-        }
-      }}
-      setFluid={setFluid}
-      setSearch={setSearch}
-      setToken={setToken}
-      setVerbose={setVerbose}
-      token={token}
-      verbose={verbose}
-    />
-    <Container fluid={fluid}>
-      {!isEmpty(error) && <Alert variant="warning">
-        <code>{error.toString()}</code>
-      </Alert>}
-      <BootstrapTable
+  return <BootstrapTable
         sessionKey={"Collection"}
-        search={tableSearch}
+    searchAndFilter={tableSearch}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
         mnemonic={mnemonic}
         detail={(item) => <Details item={item} />}
-        rowClassName={rowClassName}
-      />
-      {/* <Observer>{() => <>
-        {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
-        {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
-        {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
-        {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
-        {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
-        {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
-      </>}
-      </Observer> */}
-      <hr />
-      <Tuning />
-    </Container>
-  </ElephantContext.Provider>;
-
-  function updateMemoSettings() {
-    cache.bypass = bypassCache;
-    cache.log = verbose;
-  }
-
-  function getIdentity() {
-    client().getProfile().then(setProfile, setError);
-    client().listFolders().then(setFolders, setError);
-    // client().getIdentity().then(setIdentity, setError);
-  }
-
-  function addToCollection(items: CollectionItems) {
-    items.forEach(action((item) => {
-      const existing = collection.get(item.instance_id);
-      if (existing) {
-        merge(existing, item);
-      } else {
-        collection.set(item.instance_id, item);
-      }
-    }));
-    setCollectionTimestamp(new Date());
-  }
-
-  function addToInventory(items: InventoryItems) {
-    items.forEach(action((item) => inventory.set(item.release.id, item)));
-    setCollectionTimestamp(new Date());
-  }
-
-  function addToLists(items: DiscogsLists["lists"]) {
-    items.forEach((item) => client().getListItems(item.id).then(({ items }) => items).then(action((items) => lists.set(item.id, { definition: item, items }))));
-    setCollectionTimestamp(new Date());
-  }
-
-  function getCollection() {
-    updateCollectionReaction.current?.();
-    updateInventory();
-    updateLists();
-    const p1 = updateCustomFields();
-    const p2 = updateCollection();
-    Promise.all([p1, p2]).then(() =>
-      updateCollectionReaction.current = reaction(
-        () => cache.version,
-        updateCollection,
-        { delay: 1000 },
-      ))
-  }
-
-  function updateInventory() {
-    return client().getInventory().then(((r) => client().all("listings", r, addToInventory)), setError);
-  }
-
-  function updateLists() {
-    return client().getLists().then(((r) => client().all("lists", r, addToLists)), setError);
-  }
-
-  function updateCustomFields() {
-    return client().listCustomFields().then(({ fields }) =>
-      setFieldsById(new Map(fields.map((field) => [field.id, field]))), setError);
-  }
-
-  function updateCollection() {
-    client().listItemsInFolder(0).then(((r) => client().all("releases", r, addToCollection)), setError);
-  }
-
+    rowClassName={rowClassName} />;
 }
 
 const FORMATS: {
@@ -1104,17 +1125,16 @@ function FieldEditor<As = "text">(props: {
   as?: As,
   row: CollectionItem,
   noteId: number,
-  client: () => Discojs,
-  cache: IDiscogsCache,
-  setError: React.Dispatch<any>,
 } & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> : As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
   const {
     row,
     noteId,
+  } = props;
+  const {
     client,
     cache,
     setError,
-  } = props;
+  } = React.useContext(ElephantContext);
   const [floatingValue, setFloatingValue] = React.useState<string>();
   return <Observer render={() => {
     const { folder_id, id: release_id, instance_id, notes } = row;
@@ -1123,10 +1143,10 @@ function FieldEditor<As = "text">(props: {
       // console.log({ folder_id, release_id, instance_id, notes });
       // console.log(`New value: ${floatingValue}`);
       if (floatingValue !== undefined) {
-        const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
+        const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
         mutate(note, "value", floatingValue, promise).then(() => {
           setFloatingValue(undefined);
-          clearCacheForCollectionItem(cache, row);
+          clearCacheForCollectionItem(cache!, row);
         }, (e) => {
           setFloatingValue(undefined);
           setError(e);
@@ -1162,18 +1182,16 @@ const KNOWN_TASKS = [
 function TasksEditor(props: {
   row: CollectionItem,
   noteId: number,
-  client: () => Discojs,
-  cache: IDiscogsCache,
-  setError: React.Dispatch<any>,
 }): JSX.Element {
   const {
     row,
     noteId,
+  } = props;
+  const {
     client,
     cache,
     setError,
-  } = props;
-  //const [floatingValue, setFloatingValue] = React.useState<string>();
+  } = React.useContext(ElephantContext);
   const tasks = React.useMemo<Array<{ checked: boolean, task: string }>>(() => {
     if (!noteId) { return []; }
     let value = getNote(row.notes, noteId);
@@ -1198,10 +1216,10 @@ function TasksEditor(props: {
       console.log({ folder_id, release_id, instance_id, notes });
       console.log(`New value: ${floatingValue}`);
       if (floatingValue !== undefined) {
-        const promise = client().editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
+        const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
         mutate(note, "value", floatingValue, promise).then(() => {
           // setFloatingValue(undefined);
-          clearCacheForCollectionItem(cache, row);
+          clearCacheForCollectionItem(cache!, row);
         }, (e) => {
           // setFloatingValue(undefined);
           setError(e);
@@ -1229,23 +1247,21 @@ function TasksEditor(props: {
 
 function RatingEditor(props: {
   row: CollectionItem,
-  client: () => Discojs,
-  cache: IDiscogsCache,
-  setError: React.Dispatch<any>,
 } & FormControlProps): JSX.Element {
   const {
     row,
+  } = props;
+  const {
     client,
     cache,
     setError,
-  } = props;
+  } = React.useContext(ElephantContext);
+  if (!client || !cache) { return <></>; }
   return <Observer render={() => {
     const { folder_id, id: release_id, instance_id, rating } = row;
     const value = pendingValue(rating);
     const commit = async (newValue: number) => {
-      // console.log({ folder_id, release_id, instance_id, notes });
-      // console.log(`New value: ${floatingValue}`);
-      const promise = client().editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
+      const promise = client.editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
       mutate(row, "rating", newValue, promise).then(() => {
         clearCacheForCollectionItem(cache, row);
       }, (e) => {
@@ -1264,11 +1280,22 @@ const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } 
 interface IElephantContext {
   lpdb?: LPDB,
   cache?: IDiscogsCache,
+  client?: Discojs,
   collection: Collection,
+  fieldsById?: FieldsById,
+  fieldsByName: FieldsByName,
+  folders?: Folders,
+  inventory: Inventory,
+  lists: Lists,
+  setError: React.Dispatch<any>,
 };
 
 export const ElephantContext = React.createContext<IElephantContext>({
   collection: new OrderedMap(),
+  fieldsByName: new Map(),
+  inventory: new OrderedMap(),
+  lists: new OrderedMap(),
+  setError: console.error,
 });
 
 

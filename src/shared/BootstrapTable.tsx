@@ -41,7 +41,7 @@ export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column
     className?: ClassNames,
 };
 
-type Search<TElement extends {}> = {
+export type TableSearch<TElement extends {}> = {
     search?: string;
     filter?: (item: TElement) => boolean | undefined;
 };
@@ -62,7 +62,7 @@ export function mnemonicToString(src: Mnemonic): string {
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: BootstrapTableColumn<TElement, TColumnIds>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
-    search?: Search<TElement>;
+    searchAndFilter?: TableSearch<TElement>;
     sessionKey?: string;
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
     detail?: (item: TElement) => Content;
@@ -81,7 +81,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { detail, mnemonic, rowClassName, sessionKey, search } = props;
+    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -106,7 +106,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     ]), [detail]);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
     const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() =>
-    ((rows, _columns, filterValue: Search<TElement>) => {
+    ((rows, _columns, filterValue: TableSearch<TElement>) => {
         if (filterValue === undefined) {
             return rows;
         }
@@ -177,20 +177,20 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     React.useEffect(() => setInitialPageSize(pageSize), [setInitialPageSize, pageSize]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
-        setGlobalFilter(search);
-    }, [search, setGlobalFilter]);
+        setGlobalFilter(searchAndFilter);
+    }, [searchAndFilter, setGlobalFilter]);
     const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 200, periodic: true });
-    React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
+    React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, searchAndFilter]);
     React.useEffect(() => {
-        if (lastSearch.current !== undefined && lastSearch.current !== search?.search) {
+        if (lastSearch.current !== undefined && lastSearch.current !== searchAndFilter?.search) {
             setInitialPageIndex(0);
             gotoPage(0);
             setInitialSortBy([]);
             setSortBy([]);
         }
-        lastSearch.current = search?.search;
+        lastSearch.current = searchAndFilter?.search;
         return () => { };
-    }, [gotoPage, search, setInitialPageIndex]);
+    }, [gotoPage, searchAndFilter, setInitialPageIndex, setInitialSortBy, setSortBy]);
     const spine = React.useCallback((page: number) => {
         if (!mnemonic) {
             throw new Error("missing mnemonic");

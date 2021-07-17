@@ -2,9 +2,8 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import * as idb from "idb";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
-import { ElementType, PromiseType } from "./shared/TypeConstraints";
+import { PromiseType } from "./shared/TypeConstraints";
 import jsonpath from "jsonpath";
-import { Release } from "./LPDB";
 import { Discojs } from "discojs";
 
 type CachedRequest = {

@@ -15,16 +15,16 @@ export default function LazyMusicLabel({ label: { name, id }, alwaysShowName, hq
     }} />;
 }
 
-export function MusicLabelLogo({ uri: discogsUri, name, images, alwaysShowName, hq }: { uri?: string; name: string; images?: Label["images"], alwaysShowName?: boolean, hq?: boolean }) {
+export function MusicLabelLogo({ uri, name, images, alwaysShowName, hq }: { uri?: string; name: string; images?: Label["images"], alwaysShowName?: boolean, hq?: boolean }) {
     images = images && sortBy(images, factor);
     const image = images?.shift();
     if (image) {
         const { uri, uri150 } = image;
-        return <ExternalLink href={discogsUri} className="quiet music-label">
+        return <ExternalLink href={uri} className="quiet music-label">
             <img className="music-label-logo-inline" src={hq ? uri : uri150} alt="logo" title={name} />{alwaysShowName && <span className="name">{name}</span>}
         </ExternalLink>;
     } else {
-        return <ExternalLink href={discogsUri} className="quiet music-label">{name}</ExternalLink>;
+        return <ExternalLink href={uri} className="quiet music-label">{name}</ExternalLink>;
     }
 
     // //const image = label.images.find(({ type }) => type === "primary");
