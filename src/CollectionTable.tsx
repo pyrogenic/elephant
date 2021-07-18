@@ -38,7 +38,8 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind, TagProps } from "./Tag";
-import { autoFormat, autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source } from "./Tuning";
+import { autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source } from "./Tuning";
+import autoFormat from "./autoFormat";
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 type CollectionNote = ElementType<CollectionItem["notes"]>;

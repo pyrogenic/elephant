@@ -1,6 +1,7 @@
 import pick from "lodash/pick";
 import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, IAnyModelType, getRoot } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
+import autoFormat from "../autoFormat";
 import { ElephantMemory } from "../DiscogsIndexedCache";
 import { getStore } from "../LPDB";
 import { PromiseType } from "../shared/TypeConstraints";
@@ -17,11 +18,7 @@ export const ArtistModel = types.model("Artist", {
     cacheKey: types.optional(types.string, "artist"),
     profile: types.optional(types.string, ""),
     images: types.optional(types.array(ImageModel), []),
-}).views((self) => ({
-    // get roles(): ArtistRole[] {
-    //     return ArtistRoleStore.forArtist(self);
-    // },
-})).actions((self) => {
+}).actions((self) => {
     const actionState = {
         hydrating: false,
     };
@@ -45,8 +42,9 @@ export const ArtistModel = types.model("Artist", {
         const { cache, client } = getEnv<StoreEnv>(self);
         cache.clear({ url: self.cacheKey });
         const response: DiscogsArtist = yield client.getArtist(Number(self.id));
-        const patch: Partial<Artist> = pick(response, "name", "profile", "images");
+        const patch: Partial<Artist> = pick(response, "profile", "images");
         patch.id = self.id;
+        patch.name = autoFormat(response.name);
         patch.cacheKey = response.resource_url;
         console.log(`refresh ${self.name}: applying patch...`);
         applySnapshot(self, patch);
@@ -79,6 +77,7 @@ const ArtistStoreModel = types.model("ArtistStore", {
                 .then((patch) => {
                     if (patch) {
                         console.log(`loaded artist ${patch.name} from db`);
+                        patch.name = autoFormat(patch.name);
                         concreteResult.hydrate(patch);
                     } else {
                         concreteResult.refresh()
