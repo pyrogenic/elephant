@@ -12,7 +12,7 @@ import Container from "react-bootstrap/Container";
 import CollectionTable from "./CollectionTable";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
-import ElephantContext from "./ElephantContext";
+import ElephantContext, { IElephantContext } from "./ElephantContext";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import OrderedMap from "./OrderedMap";
@@ -20,11 +20,14 @@ import { DeepPendable } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Tuning from "./Tuning";
+import * as Router from "react-router-dom";
+import { observer } from "mobx-react";
+import Button from "react-bootstrap/esm/Button";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
 type FieldsResponse = PromiseType<ReturnType<Discojs["listCustomFields"]>>;
-export type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>;
+export type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>["folders"];
 type DiscogsLists = PromiseType<ReturnType<Discojs["getLists"]>>;
 
 type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
@@ -85,7 +88,7 @@ export default function Elephant() {
     return result;
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
-  const lpdb = React.useMemo(() => new LPDB(client), [client]);
+  const lpdb = React.useMemo(() => new LPDB(client, cache), [cache, client]);
   const [, setCollectionTimestamp] = React.useState<Date>(new Date());
 
   const { collection, inventory, lists } = lpdb;
@@ -98,7 +101,7 @@ export default function Elephant() {
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
 
-  return <ElephantContext.Provider value={{
+  const context = React.useMemo<IElephantContext>(() => ({
     cache,
     client,
     collection,
@@ -109,44 +112,46 @@ export default function Elephant() {
     lists,
     lpdb,
     setError,
-  }}>
-    <Masthead
-      bypassCache={bypassCache}
-      cache={cache}
-      collection={collection}
-      fluid={fluid}
-      avatarUrl={profile?.avatar_url}
-      search={search}
-      setBypassCache={setBypassCache}
-      setFilter={(newFilter) => {
-        if (newFilter !== filter.filter) {
-          setFilter({ ...filter, filter: newFilter });
-        }
-      }}
-      setFluid={setFluid}
-      setSearch={setSearch}
-      setToken={setToken}
-      setVerbose={setVerbose}
-      token={token}
-      verbose={verbose}
-    />
-    <Container fluid={fluid}>
-      {!isEmpty(error) && <Alert variant="warning">
-        <code>{error.toString()}</code>
-      </Alert>}
-      <CollectionTable tableSearch={tableSearch} />
-      {/* <Observer>{() => <>
-        {collection && <ReactJson name="collection" src={collectionTableData.get()} collapsed={true} />}
-        {fieldsById && <ReactJson name="fields" src={Array.from(fieldsById)} collapsed={true} />}
-        {folders && <ReactJson name="folders" src={folders} collapsed={true} />}
-        {identity && <ReactJson name="identity" src={identity} collapsed={true} />}
-        {profile && <ReactJson name="profile" src={profile} collapsed={true} />}
-        {inventory && <ReactJson name="inventory" src={inventory} collapsed={true} />}
-      </>}
-      </Observer> */}
-      <hr />
-      <Tuning />
-    </Container>
+  }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb]);
+  return <ElephantContext.Provider value={context}>
+    <Router.BrowserRouter basename="/elephant">
+      <Masthead
+        bypassCache={bypassCache}
+        cache={cache}
+        collection={collection}
+        fluid={fluid}
+        avatarUrl={profile?.avatar_url}
+        search={search}
+        setBypassCache={setBypassCache}
+        setFilter={(newFilter) => {
+          if (newFilter !== filter.filter) {
+            setFilter({ ...filter, filter: newFilter });
+          }
+        }}
+        setFluid={setFluid}
+        setSearch={setSearch}
+        setToken={setToken}
+        setVerbose={setVerbose}
+        token={token}
+        verbose={verbose}
+      />
+      <Container fluid={fluid}>
+        {!isEmpty(error) && <Alert variant="warning">
+          <code>{error.toString()}</code>
+        </Alert>}
+        <Router.Switch>
+          <Router.Route path="/artists">
+            <ArtistMode />
+          </Router.Route>
+          <Router.Route path="/tuning">
+            <Tuning />
+          </Router.Route>
+          <Router.Route path={["/", "/collection"]}>
+            <CollectionTable tableSearch={tableSearch} />
+          </Router.Route>
+        </Router.Switch>
+      </Container>
+    </Router.BrowserRouter>
   </ElephantContext.Provider>;
 
   function updateMemoSettings() {
@@ -156,7 +161,7 @@ export default function Elephant() {
 
   function getIdentity() {
     client.getProfile().then(setProfile, setError);
-    client.listFolders().then(setFolders, setError);
+    client.listFolders().then(({ folders }) => setFolders(folders), setError);
     // client.getIdentity().then(setIdentity, setError);
   }
 
@@ -212,4 +217,48 @@ export default function Elephant() {
   function updateCollection() {
     client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
   }
+}
+
+const ArtistPanel = observer(() => {
+  const { artistId } = Router.useParams<{ artistId?: string }>();
+  const { lpdb } = React.useContext(ElephantContext);
+  if (!artistId) { return null; }
+  if (!lpdb) { return null; }
+  const artist = lpdb.artist(artistId);
+  return <>
+    <pre>{artist.name}</pre>
+    <dl>
+      <dt>ID</dt>
+      <dd>{artist.id}</dd>
+    </dl>
+    <Button onClick={artist.refresh}>Refresh</Button>
+  </>;
+});
+
+function ArtistMode() {
+  let match = Router.useRouteMatch();
+
+  return (
+    <div>
+      <Router.Switch>
+        <Router.Route path={`${match.path}/:artistId`}>
+          <ArtistPanel />
+        </Router.Route>
+        <Router.Route path={match.path}>
+          <h2>Artists</h2>
+
+          <ul>
+            <li>
+              <Router.Link to={`${match.url}/components`}>Components</Router.Link>
+            </li>
+            <li>
+              <Router.Link to={`${match.url}/props-v-state`}>
+                Props v. State
+              </Router.Link>
+            </li>
+          </ul>
+        </Router.Route>
+      </Router.Switch>
+    </div>
+  );
 }

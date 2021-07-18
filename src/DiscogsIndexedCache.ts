@@ -4,41 +4,62 @@ import * as idb from "idb";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { PromiseType } from "./shared/TypeConstraints";
 import jsonpath from "jsonpath";
-import { Discojs } from "discojs";
+import { Artist } from "./model/Artist";
+import { ArtistRole } from "./model/ArtistRole";
 
 type CachedRequest = {
     url: string;
     data: any;
 }
 
-type Artist = PromiseType<ReturnType<Discojs["getArtist"]>>;
 interface MyDB extends idb.DBSchema {
     get: {
         key: string;
         value: CachedRequest;
     };
     artists: {
-        key: number;
+        key: string;
         value: Artist;
         indexes: {
             "by-name": string,
         };
     }
+    artistRoles: {
+        key: string;
+        value: ArtistRole;
+        indexes: {
+            "by-artist": string,
+            "by-release": string,
+            "by-role": string,
+        };
+    }
 }
 
+export type ElephantMemory = Promise<idb.IDBPDatabase<MyDB>>;
+
 export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMemoOptions> {
-    storage: Promise<idb.IDBPDatabase<MyDB>>;
+    storage: ElephantMemory;
     cache: boolean = true;
     bypass: boolean = false;
     log: boolean = false;
     version: number = 0;
 
     constructor() {
-        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 1, {
-            upgrade(db) {
-                db.createObjectStore("get", { keyPath: "url" });
-                const artists = db.createObjectStore("artists", { keyPath: "id" });
-                artists.createIndex("by-name", "profile");
+        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 5, {
+            upgrade(db, oldVersion) {
+                if (oldVersion < 1) {
+                    db.createObjectStore("get", { keyPath: "url" });
+                }
+
+                if (oldVersion < 5) {
+                    const artists = db.createObjectStore("artists", { keyPath: "id" });
+                    artists.createIndex("by-name", "name");
+
+                    const artistRoles = db.createObjectStore("artistRoles", { keyPath: "id" });
+                    artistRoles.createIndex("by-artist", "artist");
+                    artistRoles.createIndex("by-role", "role");
+                    artistRoles.createIndex("by-release", "release");
+                }
             },
         });
         makeObservable(this, {

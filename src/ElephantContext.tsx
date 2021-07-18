@@ -5,7 +5,7 @@ import LPDB from "./LPDB";
 import OrderedMap from "./OrderedMap";
 import { Collection, FieldsById, FieldsByName, Folders, Inventory, Lists } from "./Elephant";
 
-interface IElephantContext {
+export interface IElephantContext {
     lpdb?: LPDB;
     cache?: IDiscogsCache;
     client?: Discojs;

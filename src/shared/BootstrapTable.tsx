@@ -75,6 +75,8 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
     type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement>;
     type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
+    // typed version of UseGlobalFiltersOptions<TElement>["globalFilter"]
+    type GlobalFilterCallbackSignature = ((rows: Row<TElement>[], columnIds: string[], filterValue: TableSearch<TElement>) => any);
 
     // const { skipPageResetRef } = props;   
     // React.useEffect(() => {
@@ -105,8 +107,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         usePagination,
     ]), [detail]);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
-    const globalFilter: UseGlobalFiltersOptions<TElement>["globalFilter"] = React.useMemo(() =>
-    ((rows, _columns, filterValue: TableSearch<TElement>) => {
+
+    const globalFilter = React.useMemo<GlobalFilterCallbackSignature
+    >(() =>
+    ((rows, _columns, filterValue) => {
         if (filterValue === undefined) {
             return rows;
         }

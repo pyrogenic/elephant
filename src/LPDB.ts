@@ -6,6 +6,9 @@ import Worker from "./worker";
 import { ElementType } from "../../asset/lib";
 import { PromiseType } from "./shared/TypeConstraints";
 import OrderedMap from "./OrderedMap";
+import { ArtistStore, ArtistStoreModel } from "./model/Artist";
+import StoreEnv from "./model/StoreEnv";
+import DiscogsIndexedCache from "./DiscogsIndexedCache";
 
 const worker = new Worker();
 const osync = action(sync);
@@ -40,6 +43,7 @@ export default class LPDB {
   public readonly lists: Lists = observable(new OrderedMap<number, List>());
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
+  public readonly artistStore: ArtistStore;
 
   public byTag(tag: string): number[] {
     if (!this.byTagCache.has(tag)) {
@@ -292,7 +296,13 @@ export default class LPDB {
     });
   }
 
-  constructor(public readonly client: Discojs) {
+  public artist(id: string) {
+    return this.artistStore.get(id);
+  }
+
+  constructor(public readonly client: Discojs, public readonly cache: DiscogsIndexedCache) {
+    const storeEnv: StoreEnv = { cache, client, store: cache.storage };
+    this.artistStore = ArtistStoreModel.create({}, storeEnv);
     reaction(() => {
       const collectionItems = Array.from(this.collection.values());
       const collectionItemsJs = JSON.stringify(collectionItems.map((e) => toJS(e)));

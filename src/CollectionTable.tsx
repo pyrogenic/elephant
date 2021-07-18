@@ -119,7 +119,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         };
         return s;
     }, [cache]);
-    const folderName = React.useCallback((folder_id: number) => folders?.folders.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders?.folders, stale]);
+    const folderName = React.useCallback((folder_id: number) => folders?.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders, stale]);
 
     const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
     const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
@@ -229,7 +229,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         const bb = autoOrder(scb);
         return (aa - ba) || (ab - bb);
     }, [mediaCondition, sleeveCondition]);
-    const conditionColumn = React.useCallback((): ColumnFactoryResult => {
+    const conditionColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
             return [{
                 Header: "Cond.",
@@ -262,9 +262,9 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
                 ...{ sortType: sortByCondition } as any,
             }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
         }
-    }, [inventory, mediaCondition, sleeveCondition, sortByCondition, mediaConditionId, sleeveConditionId]);
+    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, inventory]);
 
-    const sourceColumn = React.useCallback((): ColumnFactoryResult => {
+    const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
             return [{
                 Header: "Source",
@@ -292,7 +292,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         const b = plays(bc.original) ?? -1;
         return a - b;
     }, [plays]);
-    const playCountColumn = React.useCallback((): ColumnFactoryResult => {
+    const playCountColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && playsId) {
             return [{
                 Header: "Plays",
@@ -320,7 +320,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         }
     }, [client, mediaCondition, playsId, sortByPlays]);
 
-    const notesColumn = React.useCallback((): ColumnFactoryResult => {
+    const notesColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && notesId) {
             return [{
                 Header: "Notes",
@@ -332,7 +332,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         }
     }, [cache, client, notesId]);
 
-    const tasksColumn = React.useCallback((): ColumnFactoryResult => {
+    const tasksColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && tasksId) {
             return [{
                 Header: "Tasks",

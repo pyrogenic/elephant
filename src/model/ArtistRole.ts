@@ -1,15 +1,5 @@
-import { flow, IAnyModelType, SnapshotOrInstance, types } from "mobx-state-tree";
-
-const ArtistModel = types.model("Artist", {
-    id: types.identifier,
-    name: types.string,
-}).views((self) => ({
-    get roles(): ArtistRole[] {
-        return ArtistRoleStore.forArtist(self);
-    },
-}));
-
-export type Artist = SnapshotOrInstance<typeof ArtistModel>;
+import { IAnyModelType, SnapshotOrInstance, types } from "mobx-state-tree";
+import { ArtistModel, Artist } from "./Artist";
 
 const ReleaseModel = types.model("Release", {
     id: types.identifier,
@@ -27,31 +17,13 @@ const ArtistRoleModel = types.model("ArtistRole", {
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
-const ArtistStore = types.model("ArtistStore", {
-    artists: types.map(ArtistModel),
-}).actions((self) => {
-    const fillIn = flow(function* fillIn(artist: Artist) {
-
-    });
-    return { fillIn };
-}).views((self) => ({
-    get(id: string, name: string = "unknown") {
-        let result = self.artists.get(id);
-        if (result === undefined) {
-            result = ArtistModel.create({ id, name });
-            self.artists.put(result);
-            self.fillIn(result);
-        }
-    },
-}));
-
 //const as = ArtistStore.create();
 
 const ReleaseStore = types.model("ReleaseStore", {
     releases: types.map(ReleaseModel),
 })
 
-const ArtistRoleStore = types.model("AristRoleStore", {
+export const ArtistRoleStore = types.model("AristRoleStore", {
 })
     .views((self) => ({
         forArtist(artist: Artist): ArtistRole[] {

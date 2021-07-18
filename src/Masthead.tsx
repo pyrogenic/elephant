@@ -11,6 +11,7 @@ import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
 import IDiscogsCache from "./IDiscogsCache";
 import SearchBox from "./shared/SearchBox";
+import * as Router from "react-router-dom";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
@@ -59,7 +60,13 @@ export default function Masthead({
             backgroundImage: `url(${logo})`,
             backgroundSize: "contain",
             backgroundRepeat: "no-repeat",
-        }}>Elephant</Navbar.Brand>
+        }}><Router.Link to="/">Elephant</Router.Link></Navbar.Brand>
+        <Navbar.Text>
+            <Router.Link to="/artists">Artists</Router.Link>
+        </Navbar.Text>
+        <Navbar.Text>
+            <Router.Link to="/tuning">Tuning</Router.Link>
+        </Navbar.Text>
         <SearchBox
             className={formSpacing}
             collection={collection}

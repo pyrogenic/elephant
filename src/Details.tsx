@@ -23,6 +23,7 @@ import LPDB from "./LPDB";
 import { Content } from "./shared/resolve";
 import Tag, { TagKind } from "./Tag";
 import { trackTuning } from "./Tuning";
+import * as Router from "react-router-dom";
 
 // artists query
 // $..extraartists..*['name','id','role']
@@ -84,6 +85,8 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         })), JSON.stringify.bind(JSON));
     }), [details]);
 
+    const history = Router.useHistory();
+
     const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
     const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
     const [cacheCount, setCacheCount] = React.useState(0);
@@ -137,7 +140,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
             </Card.Header>
             <Card.Body>
-                {artistInfo.get().map(({ name, role }) => {
+                {artistInfo.get().map(({ id, name, role }) => {
                     const musicalArtist = MUSICAL_ARTISTS.exec(role);
                     const createArtist = CREATIVE_ARTISTS.test(role);
                     const techArtist = TECHNICAL_ARTISTS.test(role);
@@ -161,6 +164,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                 techArtist ? TagKind.tag : TagKind.box}
                         tag={name}
                         extra={role}
+                        onClickTag={() => history.push(`/artists/${id}`)}
                     />;
                 })}
             </Card.Body>
