@@ -6,6 +6,7 @@ import { PromiseType } from "./shared/TypeConstraints";
 import jsonpath from "jsonpath";
 import { Artist } from "./model/Artist";
 import { ArtistRole } from "./model/ArtistRole";
+import { Release } from "./model/Release";
 
 type CachedRequest = {
     url: string;
@@ -16,22 +17,34 @@ interface MyDB extends idb.DBSchema {
     get: {
         key: string;
         value: CachedRequest;
-    };
+    },
     artists: {
         key: string;
         value: Artist;
         indexes: {
             "by-name": string,
         };
-    }
+    },
     artistRoles: {
         key: string;
-        value: ArtistRole;
+        value: {
+            artist: string,
+            role: string,
+            release: string,
+        };
         indexes: {
             "by-artist": string,
             "by-release": string,
             "by-role": string,
         };
+    },
+    releases: {
+        key: string,
+        value: Release,
+        indexes: {
+            "by-master": string,
+            "by-year": number,
+        },
     }
 }
 
@@ -45,7 +58,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     version: number = 0;
 
     constructor() {
-        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 5, {
+        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 6, {
             upgrade(db, oldVersion) {
                 if (oldVersion < 1) {
                     db.createObjectStore("get", { keyPath: "url" });
@@ -59,6 +72,12 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     artistRoles.createIndex("by-artist", "artist");
                     artistRoles.createIndex("by-role", "role");
                     artistRoles.createIndex("by-release", "release");
+                }
+
+                if (oldVersion < 6) {
+                    const releases = db.createObjectStore("releases", { keyPath: "id" });
+                    releases.createIndex("by-master", "masterId");
+                    releases.createIndex("by-year", "year");
                 }
             },
         });

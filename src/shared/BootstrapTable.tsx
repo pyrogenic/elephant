@@ -277,7 +277,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     column that fills the entire length of the table.
                   */}
                         {row.isExpanded &&
-                            <tr>
+                            <tr key={rowProps.key + "-detail"}>
                                 <td colSpan={visibleColumns.length}>
                                     {resolve(detail?.(row.original))}
                                 </td>

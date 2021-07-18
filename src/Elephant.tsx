@@ -220,11 +220,11 @@ export default function Elephant() {
 }
 
 const ArtistPanel = observer(() => {
-  const { artistId } = Router.useParams<{ artistId?: string }>();
+  const { artistId, artistName } = Router.useParams<{ artistId?: string, artistName?: string }>();
   const { lpdb } = React.useContext(ElephantContext);
   if (!artistId) { return null; }
   if (!lpdb) { return null; }
-  const artist = lpdb.artist(artistId);
+  const artist = lpdb.artist(artistId, artistName);
   return <>
     <pre>{artist.name}</pre>
     <dl>
@@ -241,7 +241,7 @@ function ArtistMode() {
   return (
     <div>
       <Router.Switch>
-        <Router.Route path={`${match.path}/:artistId`}>
+        <Router.Route path={[`${match.path}/:artistId`, `${match.path}/:artistId/:artistName`]}>
           <ArtistPanel />
         </Router.Route>
         <Router.Route path={match.path}>

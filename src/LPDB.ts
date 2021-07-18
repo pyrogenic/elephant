@@ -9,6 +9,10 @@ import OrderedMap from "./OrderedMap";
 import { ArtistStore, ArtistStoreModel } from "./model/Artist";
 import StoreEnv from "./model/StoreEnv";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
+import { ReleaseStore, ReleaseStoreModel } from "./model/Release";
+import { ArtistRoleStore, ArtistRoleStoreModel } from "./model/ArtistRole";
+import { Instance, types } from "mobx-state-tree";
+import { type } from "os";
 
 const worker = new Worker();
 const osync = action(sync);
@@ -33,6 +37,16 @@ export type MasterReleases = OrderedMap<number, Remote<MasterRelease>>;
 export type Label = PromiseType<ReturnType<Discojs["getLabel"]>>;
 export type Labels = OrderedMap<number, Remote<Label>>;
 
+const StoreModel = types.model("Store", {
+  artistStore: types.optional(ArtistStoreModel, {}),
+  releaseStore: types.optional(ReleaseStoreModel, {}),
+});
+
+export type Store = Instance<typeof StoreModel>;
+export type IStore = {
+  artistStore: ArtistStore,
+};
+
 export default class LPDB {
   public readonly collection: Collection = observable(new OrderedMap<number, CollectionItem>());
   public readonly releases: Releases = observable(new OrderedMap<number, Remote<Release>>());
@@ -43,7 +57,11 @@ export default class LPDB {
   public readonly lists: Lists = observable(new OrderedMap<number, List>());
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
-  public readonly artistStore: ArtistStore;
+
+  private readonly store: Store;
+
+  get artistStore() { return this.store.artistStore; }
+  get releaseStore() { return this.store.releaseStore; }
 
   public byTag(tag: string): number[] {
     if (!this.byTagCache.has(tag)) {
@@ -296,13 +314,13 @@ export default class LPDB {
     });
   }
 
-  public artist(id: string) {
-    return this.artistStore.get(id);
+  public artist(id: string, name?: string) {
+    return this.artistStore.get(id, name);
   }
 
   constructor(public readonly client: Discojs, public readonly cache: DiscogsIndexedCache) {
-    const storeEnv: StoreEnv = { cache, client, store: cache.storage };
-    this.artistStore = ArtistStoreModel.create({}, storeEnv);
+    const storeEnv: StoreEnv = { cache, client, db: cache.storage };
+    this.store = StoreModel.create({}, storeEnv);
     reaction(() => {
       const collectionItems = Array.from(this.collection.values());
       const collectionItemsJs = JSON.stringify(collectionItems.map((e) => toJS(e)));

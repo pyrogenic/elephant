@@ -1,22 +1,15 @@
 import pick from "lodash/pick";
-import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot } from "mobx-state-tree";
+import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, IAnyModelType, getRoot } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
 import { ElephantMemory } from "../DiscogsIndexedCache";
+import { IStore, Store } from "../LPDB";
 import { PromiseType } from "../shared/TypeConstraints";
+import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
 import StoreEnv from "./StoreEnv";
 //import { ArtistRole, ArtistRoleStore } from "./ArtistRole";
 
 type DiscogsArtist = PromiseType<ReturnType<Discojs["getArtist"]>>;
-//type DiscogsImage = ElementType<DiscogsArtist["images"]>;
-
-const ImageModel = types.model("Image", {
-    type: types.enumeration(["primary", "secondary"]),
-    width: types.number,
-    height: types.number,
-    uri: types.identifier,
-    uri150: types.string,
-});
 
 export const ArtistModel = types.model("Artist", {
     id: types.identifier,
@@ -32,7 +25,7 @@ export const ArtistModel = types.model("Artist", {
     const actionState = {
         hydrating: false,
     };
-    function hydrate(patch: any /* Artist */) {
+    const hydrate = (patch: any /* Artist */) => {
         actionState.hydrating = true;
         applySnapshot(self, patch);
     };
@@ -42,7 +35,7 @@ export const ArtistModel = types.model("Artist", {
             actionState.hydrating = false;
             return;
         }
-        const { store } = getEnv<StoreEnv>(self);
+        const { db: store } = getEnv<StoreEnv>(self);
         console.log(`persist ${self.name}`);
         const db: PromiseType<ElephantMemory> = yield store;
         const result: string = yield db.put("artists", getSnapshot(self));
@@ -51,14 +44,14 @@ export const ArtistModel = types.model("Artist", {
     const refresh = flow(function* refresh() {
         const { cache, client } = getEnv<StoreEnv>(self);
         cache.clear({ url: self.cacheKey });
-        const response: DiscogsArtist = yield client!.getArtist(Number(self.id));
+        const response: DiscogsArtist = yield client.getArtist(Number(self.id));
         const patch: Partial<Artist> = pick(response, "name", "profile", "images");
         patch.id = self.id;
         patch.cacheKey = response.resource_url;
         console.log(`refresh ${self.name}: applying patch...`);
         applySnapshot(self, patch);
     });
-    function afterCreate() {
+    const afterCreate = () => {
         onSnapshot(self, persist);
     }
     return {
@@ -70,15 +63,16 @@ export const ArtistModel = types.model("Artist", {
 });
 
 export type Artist = SnapshotOrInstance<typeof ArtistModel>;
+
 const ArtistStoreModel = types.model("ArtistStore", {
-    artists: types.map(ArtistModel),
+    artists: types.optional(types.map(ArtistModel), {}),
 }).actions((self) => ({
-    get(id: string, name: string = "unknown") {
+    get(id: string, name?: string) {
         let result = self.artists.get(id);
         if (result === undefined) {
             result = ArtistModel.create({ id, name });
             self.artists.put(result);
-            const { store } = getEnv<StoreEnv>(self);
+            const { db: store } = getEnv<StoreEnv>(self);
             const concreteResult = result;
             store
                 .then((db) => db.get("artists", id))
@@ -100,4 +94,18 @@ const ArtistStoreModel = types.model("ArtistStore", {
 }));
 
 export type ArtistStore = ReturnType<typeof ArtistStoreModel.create>;
+
 export { ArtistStoreModel };
+
+export const ArtistByIdReference = types.maybe(
+    types.reference(types.late((): IAnyModelType => ArtistModel), {
+        // given an identifier, find the user
+        get(id, parent: any) {
+            const store: IStore = getRoot(parent);
+            return store.artistStore.get(id.toString());
+        },
+        // given a user, produce the identifier that should be stored
+        set(value: Artist) {
+            return value.id;
+        },
+    }));

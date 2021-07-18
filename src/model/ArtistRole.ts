@@ -1,29 +1,23 @@
-import { IAnyModelType, SnapshotOrInstance, types } from "mobx-state-tree";
+import { getEnv, SnapshotOrInstance, types } from "mobx-state-tree";
 import { ArtistModel, Artist } from "./Artist";
+import { Release, ReleaseModel } from "./Release";
+import StoreEnv from "./StoreEnv";
 
-const ReleaseModel = types.model("Release", {
+export const ArtistRoleModel = types.model("ArtistRole", {
     id: types.identifier,
-    name: types.string,
-    artists: types.array(types.late((): IAnyModelType => ArtistRoleModel)),
-});
-
-export type Release = SnapshotOrInstance<typeof ReleaseModel>;
-
-const ArtistRoleModel = types.model("ArtistRole", {
-    artist: types.late((): IAnyModelType => ArtistModel),
-    role: types.string,
-    release: types.late((): IAnyModelType => ReleaseModel),
-});
+    role: types.frozen(types.string),
+    release: types.frozen(types.reference(types.late(() => ReleaseModel))),
+    artist: types.frozen(types.reference(types.late(() => ArtistModel))),
+}).views((self) => ({
+    get id() {
+        return `${self.artist}-${self.release}-${self.role}`;
+    },
+}));
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
-//const as = ArtistStore.create();
-
-const ReleaseStore = types.model("ReleaseStore", {
-    releases: types.map(ReleaseModel),
-})
-
-export const ArtistRoleStore = types.model("AristRoleStore", {
+export const ArtistRoleStoreModel = types.model("AristRoleStore", {
+    artistRoles: types.map(ArtistRoleModel),
 })
     .views((self) => ({
         forArtist(artist: Artist): ArtistRole[] {
@@ -33,34 +27,30 @@ export const ArtistRoleStore = types.model("AristRoleStore", {
             return [];
         },
         forRelease(release: Release): ArtistRole[] {
-            return [];
+            const result: ArtistRole[] = [];
+            // const { db } = getEnv<StoreEnv>(self);
+            // db.then((db) => db.getAllFromIndex("artistRoles", "by-release", release.id).then((dbResult) => dbResult.map(forEach((e))))
+            return result;
         },
     }))
     .actions((self) => ({
-        // function markLoading(loading) {
-        //     self.isLoading = loading
-        // }
-
-        // function updateBooks(json) {
-        //     values(self.books).forEach((book) => (book.isAvailable = false))
-        //     json.forEach((bookJson) => {
-        //         self.books.put(bookJson)
-        //         self.books.get(bookJson.id).isAvailable = true
-        //     })
-        // }
-
-        // const loadBooks = flow(function* loadBooks() {
-        //     try {
-        //         const json = yield self.shop.fetch("/books.json")
-        //         updateBooks(json)
-        //         markLoading(false)
-        //     } catch (err) {
-        //         console.error("Failed to load books ", err)
-        //     }
-        // })
-
-        // return {
-        //     updateBooks,
-        //     loadBooks,
-        // }
-    })).create();
+        get(artistId: string, release: Release, role: string) {
+            const id = `${artistId}-${release.id}-${role}`;
+            let result = self.artistRoles.get(id);
+            if (result === undefined) {
+                const { db: dbp } = getEnv<StoreEnv>(self);
+                result = ArtistRoleModel.create({ id, artist: artistId, release: release.id, role });
+                self.artistRoles.put(result);
+                const concreteResult = result;
+                dbp
+                    .then((db) => db.get("artistRoles", concreteResult.id)
+                        .then((patch) => {
+                            if (!patch) {
+                                //db.put("artistRoles", concreteResult);
+                            }
+                        }, console.error), console.error);
+            }
+            return result;
+        },
+    }));
+export type ArtistRoleStore = SnapshotOrInstance<typeof ArtistRoleStoreModel>;

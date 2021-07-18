@@ -1,4 +1,4 @@
-import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+//import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import jsonpath from "jsonpath";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
@@ -11,7 +11,6 @@ import Badge from "react-bootstrap/esm/Badge";
 import Button, { ButtonProps } from "react-bootstrap/esm/Button";
 import Card from "react-bootstrap/esm/Card";
 import Col from "react-bootstrap/esm/Col";
-import Form from "react-bootstrap/esm/Form";
 import Row from "react-bootstrap/esm/Row";
 import { FiRefreshCw } from "react-icons/fi";
 import ReactJson from "react-json-view";
@@ -38,6 +37,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const year = lpdb?.detail(item, "year", 0).get();
     const masterYear = lpdb?.masterDetail(item, "year", 0).get();
     const details = lpdb?.details(item);
+    const release = lpdb?.releaseStore.get(item.id.toString());
     const labels = uniqBy(item.basic_information.labels, "id").map(({ id }) => lpdb?.label(id));
     const masterForItem = lpdb?.masterForColectionItem(item);
     const masterForRelease = details?.status === "ready" ? lpdb?.masterForRelease(details.value) : undefined;
@@ -88,28 +88,28 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const history = Router.useHistory();
 
     const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
-    const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
     const [cacheCount, setCacheCount] = React.useState(0);
     React.useEffect(() => {
         cache?.count(cacheQuery).then(setCacheCount);
     }, [cache, cacheQuery, details, item, masterForItem]);
-    const result = React.useMemo(() => {
-        if (details?.status === "ready") {
-            try {
-                return jsonpath.query(details.value, q);
-            } catch (e) {
-                console.error(e);
-                return { error: e.message, stack: e.stack };
-            }
-        } else {
-            return { status: details?.status };
-        }
-    }, [details, q]);
+    // const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
+    // const result = React.useMemo(() => {
+    //     if (details?.status === "ready") {
+    //         try {
+    //             return jsonpath.query(details.value, q);
+    //         } catch (e) {
+    //             console.error(e);
+    //             return { error: e.message, stack: e.stack };
+    //         }
+    //     } else {
+    //         return { status: details?.status };
+    //     }
+    // }, [details, q]);
     if (!lpdb || !year || !masterYear) { return null; }
     return <>
-        <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
+        {/* <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
         {"error" in result ? <pre>{(result as any).stack ?? (result as any).error}
-        </pre> : <ReactJson src={result} collapsed={true} />}
+        </pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card>
             <Card.Header>Labels for {item.basic_information.title}</Card.Header>
             <Card.Body>
@@ -140,7 +140,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 <Button disabled={!cacheCount} onClick={() => cache?.clear(cacheQuery)}>Refresh{cacheCount ? <> <Badge variant={"light"}>{cacheCount}</Badge></> : null}</Button>
             </Card.Header>
             <Card.Body>
-                {artistInfo.get().map(({ id, name, role }) => {
+                {artistInfo.get().map(({ id, name, role }, index) => {
                     const musicalArtist = MUSICAL_ARTISTS.exec(role);
                     const createArtist = CREATIVE_ARTISTS.test(role);
                     const techArtist = TECHNICAL_ARTISTS.test(role);
@@ -154,6 +154,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         trackTuning("roles", role);
                     }
                     return <Tag
+                        key={index}
                         variant={
                             musicalArtist ? "primary" :
                                 createArtist ? "secondary" :
@@ -164,7 +165,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                 techArtist ? TagKind.tag : TagKind.box}
                         tag={name}
                         extra={role}
-                        onClickTag={() => history.push(`/artists/${id}`)}
+                        onClickTag={() => history.push(`/artists/${id}/${name}`)}
                     />;
                 })}
             </Card.Body>
@@ -175,8 +176,9 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     <p>
                         Release {item.id} <Badge variant={variantFor(details.status)}>{details.status}</Badge>
                     </p>
-                    <ReactJson src={pickedRelease} name="picked-release" collapsed={true} />
-                    <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} />
+                    {/* <ReactJson src={pickedRelease} name="picked-release" collapsed={true} /> */}
+                    {/* <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} /> */}
+                    <ReactJson src={release ?? {}} name="release" collapsed={true} />
                     <p>
                         Master {item.basic_information.master_id} <Badge variant={variantFor(masterForItem?.status ?? "pending")}>{masterForItem?.status ?? "not requested"}</Badge>
                     </p>
