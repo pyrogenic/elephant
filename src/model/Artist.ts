@@ -1,5 +1,5 @@
 import pick from "lodash/pick";
-import { flow, onPatch, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot } from "mobx-state-tree";
+import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
 import { ElephantMemory } from "../DiscogsIndexedCache";
 import { PromiseType } from "../shared/TypeConstraints";
@@ -32,7 +32,7 @@ export const ArtistModel = types.model("Artist", {
     const actionState = {
         hydrating: false,
     };
-    const hydrate = (patch: any) => {
+    function hydrate(patch: any /* Artist */) {
         actionState.hydrating = true;
         applySnapshot(self, patch);
     };
@@ -60,9 +60,6 @@ export const ArtistModel = types.model("Artist", {
     });
     function afterCreate() {
         onSnapshot(self, persist);
-        onPatch(self, (patch) => {
-            console.info({ patch });
-        });
     }
     return {
         hydrate,
