@@ -11,7 +11,7 @@ import StoreEnv from "./model/StoreEnv";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import { ReleaseStore, ReleaseStoreModel } from "./model/Release";
 import { ArtistRoleStore, ArtistRoleStoreModel } from "./model/ArtistRole";
-import { Instance, types } from "mobx-state-tree";
+import { getRoot, IAnyStateTreeNode, Instance, types } from "mobx-state-tree";
 import { type } from "os";
 
 const worker = new Worker();
@@ -42,10 +42,14 @@ const StoreModel = types.model("Store", {
   releaseStore: types.optional(ReleaseStoreModel, {}),
 });
 
-export type Store = Instance<typeof StoreModel>;
-export type IStore = {
+type IStore = {
   artistStore: ArtistStore,
+  releaseStore: ReleaseStore,
 };
+
+export function getStore(node: IAnyStateTreeNode): IStore {
+  return getRoot(node);
+}
 
 export default class LPDB {
   public readonly collection: Collection = observable(new OrderedMap<number, CollectionItem>());
@@ -58,7 +62,7 @@ export default class LPDB {
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
 
-  private readonly store: Store;
+  private readonly store: Instance<typeof StoreModel>;
 
   get artistStore() { return this.store.artistStore; }
   get releaseStore() { return this.store.releaseStore; }

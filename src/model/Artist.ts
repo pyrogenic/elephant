@@ -2,7 +2,7 @@ import pick from "lodash/pick";
 import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, IAnyModelType, getRoot } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
 import { ElephantMemory } from "../DiscogsIndexedCache";
-import { IStore, Store } from "../LPDB";
+import { getStore } from "../LPDB";
 import { PromiseType } from "../shared/TypeConstraints";
 import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
@@ -99,13 +99,12 @@ export { ArtistStoreModel };
 
 export const ArtistByIdReference = types.maybe(
     types.reference(types.late((): IAnyModelType => ArtistModel), {
-        // given an identifier, find the user
         get(id, parent: any) {
-            const store: IStore = getRoot(parent);
-            return store.artistStore.get(id.toString());
+            const { artistStore } = getStore(parent);
+            return artistStore.get(id.toString());
         },
-        // given a user, produce the identifier that should be stored
         set(value: Artist) {
             return value.id;
         },
     }));
+
