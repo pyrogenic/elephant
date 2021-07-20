@@ -1,29 +1,30 @@
 import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import pick from "lodash/pick";
-import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, SnapshotIn } from "mobx-state-tree";
-import { Discojs } from "../../../discojs/lib";
+import uniqBy from "lodash/uniqBy";
+import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, SnapshotIn, getParent, getParentOfType, IAnyModelType } from "mobx-state-tree";
+import { arraySetRemove } from "@pyrogenic/asset/lib";
+import { Discojs } from "discojs";
 import { ElephantMemory } from "../DiscogsIndexedCache";
 import { PromiseType } from "../shared/TypeConstraints";
-import { ArtistByIdReference, ArtistModel } from "./Artist";
+import { ArtistByIdReference } from "./Artist";
 import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
 import StoreEnv from "./StoreEnv";
+import { getStore } from "../LPDB";
 
 type DiscogsRelease = PromiseType<ReturnType<Discojs["getRelease"]>>;
 //type DiscogsImage = ElementType<DiscogsRelease["images"]>;
 
-export const ArtistRoleModel = types.model("ArtistRoleModel", {
+const ArtistRoleModel = types.model("ArtistRoleModel", {
     artist: ArtistByIdReference,
     role: types.string,
-}).views((self) => ({
-    // get release() {
-    //     return getParent(self);
-    // }
-}));
+});
+
+type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
 export const ReleaseModel = types.model("Release", {
-    id: types.identifier,
+    id: types.identifierNumber,
     title: types.optional(types.string, "unknown"),
     cacheKey: types.optional(types.string, "release"),
     artists: types.optional(types.array(ArtistRoleModel), []),
@@ -50,18 +51,45 @@ export const ReleaseModel = types.model("Release", {
         const { db: store } = getEnv<StoreEnv>(self);
         console.log(`persist ${self.title}`);
         const db: PromiseType<ElephantMemory> = yield store;
-        const result: string = yield db.put("releases", getSnapshot(self));
+        const tx = db.transaction(["releases", "artistRoles"], "readwrite");
+        let result = yield tx.db.put("releases", getSnapshot(self));
+        const existingKeys: string[] = yield tx.db.getAllKeysFromIndex("artistRoles", "by-release", self.id);
         console.log(`persist ${self.title} result: ${result}`);
+        for (const { artist, role } of self.artists) {
+            const [ar, id] = artistRole(artist.id, role, self.id);
+            if (!arraySetRemove(existingKeys, id)) {
+                result = yield tx.db.put("artistRoles", ar, id);
+                console.log(`persist ${id} result: ${result}`);
+            }
+        }
+        for (const id of existingKeys) {
+            console.log(`remove stale ${id}`);
+            yield tx.db.delete("artistRoles", id);
+        }
+        result = yield tx.done;
+        console.log(`persist tx result: ${result}`);
     });
-    const refresh = flow(function* refresh() {
+    const refresh = flow(function* refresh(fromDiscogs = false) {
         const { cache, client } = getEnv<StoreEnv>(self);
-        cache.clear({ url: self.cacheKey });
+        if (fromDiscogs) {
+            cache.clear({ url: self.cacheKey });
+        }
         const response: Omit<DiscogsRelease, "id"> = yield client.getRelease(Number(self.id));
         const patch: Partial<SnapshotIn<typeof ReleaseModel>> = pick(response, "title", "images", "thumb");
         patch.id = self.id;
         patch.cacheKey = response.resource_url;
+        const artists = flatten(compact([response.artists, response.extraartists]));
         // connect master
-        patch.artists = flatten(compact([response.artists, response.extraartists])).map(({ id, name, role }) => ({ artist: id.toString(), role }));
+        patch.artists = uniqBy(flatten(artists.map(({ id, role }) => {
+            // Ignore any [flavor text]
+            role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
+            // Split up comma, separated, roles
+            const roles = role.split(/,\s*/);
+            return roles.map((role) => {
+                role = role.replace("-By", " By");
+                return ({ artist: id.toString(), role });
+            });
+        })), JSON.stringify.bind(JSON));
         console.log(`refresh ${self.title}: applying patch...`);
         applySnapshot(self, patch);
     });
@@ -81,8 +109,8 @@ export type Release = SnapshotOrInstance<typeof ReleaseModel>;
 const ReleaseStoreModel = types.model("ReleaseStore", {
     releases: types.map(ReleaseModel),
 }).actions((self) => ({
-    get(id: string) {
-        let result = self.releases.get(id);
+    get(id: number) {
+        let result = self.releases.get(id.toString());
         if (result === undefined) {
             result = ReleaseModel.create({ id });
             self.releases.put(result);
@@ -110,3 +138,31 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
 export type ReleaseStore = ReturnType<typeof ReleaseStoreModel.create>;
 
 export { ReleaseStoreModel };
+
+type ArtistRoleSchema = {
+    artist: number;
+    role: string;
+    release: number;
+}
+
+export function artistRole(artist: number, role: string, release: number): [ArtistRoleSchema, string] {
+    return [{
+        artist,
+        role,
+        release,
+    }, `${artist}-${release}-${role}`];
+}
+
+
+export const ReleaseByIdReference = types.maybe(
+    types.reference(types.late((): IAnyModelType => ReleaseModel), {
+        get(id, parent: any) {
+            const { releaseStore } = getStore(parent);
+            return releaseStore.get(Number(id));
+        },
+        set(value: Release) {
+            console.log(value);
+            return value.id;
+        },
+    }));
+

@@ -1,18 +1,16 @@
-import { Discojs } from "discojs";
 import { sync } from "@pyrogenic/asset/lib/sync";
+import { Discojs } from "discojs";
 import { action, autorun, computed, observable, reaction, runInAction, set, toJS } from "mobx";
-import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
-import Worker from "./worker";
+import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types } from "mobx-state-tree";
 import { ElementType } from "../../asset/lib";
-import { PromiseType } from "./shared/TypeConstraints";
-import OrderedMap from "./OrderedMap";
-import { ArtistStore, ArtistStoreModel } from "./model/Artist";
-import StoreEnv from "./model/StoreEnv";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
-import { ReleaseStore, ReleaseStoreModel } from "./model/Release";
-import { ArtistRoleStore, ArtistRoleStoreModel } from "./model/ArtistRole";
-import { getRoot, IAnyStateTreeNode, Instance, types } from "mobx-state-tree";
-import { type } from "os";
+import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
+import { Artist, ArtistByIdReference, ArtistModel, ArtistStore, ArtistStoreModel } from "./model/Artist";
+import { ReleaseByIdReference, ReleaseModel, ReleaseStore, ReleaseStoreModel } from "./model/Release";
+import StoreEnv from "./model/StoreEnv";
+import OrderedMap from "./OrderedMap";
+import { PromiseType } from "./shared/TypeConstraints";
+import Worker from "./worker";
 
 const worker = new Worker();
 const osync = action(sync);
@@ -37,9 +35,57 @@ export type MasterReleases = OrderedMap<number, Remote<MasterRelease>>;
 export type Label = PromiseType<ReturnType<Discojs["getLabel"]>>;
 export type Labels = OrderedMap<number, Remote<Label>>;
 
+const ArtistRoleModel = types.model({
+  id: types.identifier,
+  artist: ArtistByIdReference,
+  role: types.string,
+  release: ReleaseByIdReference,
+});
+
+type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
+
+const ArtistRoleStoreModel = types.model({
+  arms: types.optional(types.map(ArtistRoleModel), {}),
+}).actions((self) => ({
+  get(armId: string) {
+    let result = self.arms.get(armId);
+    if (result) {
+      return result;
+    }
+    const data = /^(?<artist>\d+)-(?<release>\d+)-(?<role>.*)$/.exec(armId);
+    if (!data) {
+      throw new Error(`Bad armId: ${armId}`);
+    }
+    result = ArtistRoleModel.create({ id: armId, ...(data.groups as any) });
+    self.arms.put(result);
+    return result;
+  },
+}));
+
 const StoreModel = types.model("Store", {
   artistStore: types.optional(ArtistStoreModel, {}),
   releaseStore: types.optional(ReleaseStoreModel, {}),
+  armStore: types.optional(ArtistRoleStoreModel, {}),
+}).views((self) => {
+  const roleResults: Map<number, ArtistRole[]> = new Map();
+  return {
+    roles(artist: Artist | Artist["id"]) {
+      const artistId = typeof artist === "number" ? artist : artist.id;
+      let result = roleResults.get(artistId);
+      if (result === undefined) {
+        roleResults.set(artistId, result = []);
+        const { db: dbp } = getEnv<StoreEnv>(self);
+        dbp.then((db) => {
+          db.getAllKeysFromIndex("artistRoles", "by-artist", artistId).then((armIds) => {
+            armIds.forEach(action((armId) => {
+              result?.push(self.armStore.get(armId));
+            }));
+          });
+        });
+      }
+      return result;
+    },
+  };
 });
 
 type IStore = {
@@ -62,7 +108,7 @@ export default class LPDB {
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
 
-  private readonly store: Instance<typeof StoreModel>;
+  public readonly store: Instance<typeof StoreModel>;
 
   get artistStore() { return this.store.artistStore; }
   get releaseStore() { return this.store.releaseStore; }
@@ -318,7 +364,7 @@ export default class LPDB {
     });
   }
 
-  public artist(id: string, name?: string) {
+  public artist(id: number, name?: string) {
     return this.artistStore.get(id, name);
   }
 

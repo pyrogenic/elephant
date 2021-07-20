@@ -19,6 +19,7 @@ const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
 const INVENTORY_QUERY = { url: /\/inventory\?/ };
 const MASTERS_QUERY = { url: /discogs\.com\/masters\// };
 const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
+const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
 const LISTS_QUERY = { url: /discogs\.com\/lists\// };
 
 export default function Masthead({
@@ -137,6 +138,7 @@ function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<
         folderNamesCount: number,
         mastersCount: number,
         releasesCount: number,
+        artistsCount: number,
         listsCount: number,
         allCount: number,
     } = React.useMemo(() => observable({
@@ -145,6 +147,7 @@ function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<
         folderNamesCount: 0,
         mastersCount: 0,
         releasesCount: 0,
+        artistsCount: 0,
         listsCount: 0,
         allCount: 0,
     }), []);
@@ -153,6 +156,7 @@ function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<
     cache.count(FOLDER_NAMES_QUERY).then(action((result) => counts.folderNamesCount = result));
     cache.count(MASTERS_QUERY).then(action((result) => counts.mastersCount = result));
     cache.count(RELEASES_QUERY).then(action((result) => counts.releasesCount = result));
+    cache.count(ARTISTS_QUERY).then(action((result) => counts.artistsCount = result));
     cache.count(LISTS_QUERY).then(action((result) => counts.listsCount = result));
     cache.count().then(action((result) => counts.allCount = result));
     return <Observer render={() => {
@@ -162,6 +166,7 @@ function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<
             folderNamesCount,
             mastersCount,
             releasesCount,
+            artistsCount,
             listsCount,
             allCount,
         } = counts;
@@ -214,6 +219,15 @@ function CacheControl(cache: IDiscogsCache, setShowCacheButtons: React.Dispatch<
                 >
                     Releases
                     {releasesCount ? <> <Badge variant="warning">{releasesCount}</Badge></> : null}
+                </Button>
+            </InputGroup.Append>
+            <InputGroup.Append>
+                <Button
+                    variant="outline-warning"
+                    onClick={cache.clear.bind(cache, ARTISTS_QUERY)}
+                >
+                    Artists
+                    {artistsCount ? <> <Badge variant="warning">{artistsCount}</Badge></> : null}
                 </Button>
             </InputGroup.Append>
             <InputGroup.Append>

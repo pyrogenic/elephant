@@ -37,7 +37,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const year = lpdb?.detail(item, "year", 0).get();
     const masterYear = lpdb?.masterDetail(item, "year", 0).get();
     const details = lpdb?.details(item);
-    const release = lpdb?.releaseStore.get(item.id.toString());
+    const release = lpdb?.releaseStore.get(item.id);
     const labels = uniqBy(item.basic_information.labels, "id").map(({ id }) => lpdb?.label(id));
     const masterForItem = lpdb?.masterForColectionItem(item);
     const masterForRelease = details?.status === "ready" ? lpdb?.masterForRelease(details.value) : undefined;
@@ -74,10 +74,6 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
             // Split up comma, separated, roles
             const roles = role.split(/,\s*/);
-            // .map((e) => {
-            //     const m = e.match(/^(?<role>.*\S)(\s*\[.*\])$/);
-            //     return m?.groups?.role ?? e;
-            // })
             return roles.map((role) => {
                 role = role.replace("-By", " By");
                 return ({ name, id, role });
@@ -178,6 +174,8 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     </p>
                     {/* <ReactJson src={pickedRelease} name="picked-release" collapsed={true} /> */}
                     {/* <ReactJson src={details.status === "ready" ? details.value : details.status === "error" ? details.error : {}} name="release" collapsed={true} /> */}
+                    {/* {release?.artists[0]?.release?.title} */}
+                    {release && <Button onClick={release.refresh}>Refresh Release MST</Button>}
                     <ReactJson src={release ?? {}} name="release" collapsed={true} />
                     <p>
                         Master {item.basic_information.master_id} <Badge variant={variantFor(masterForItem?.status ?? "pending")}>{masterForItem?.status ?? "not requested"}</Badge>

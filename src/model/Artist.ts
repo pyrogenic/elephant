@@ -1,5 +1,5 @@
 import pick from "lodash/pick";
-import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, IAnyModelType, getRoot } from "mobx-state-tree";
+import { applySnapshot, flow, getEnv, getRoot, getSnapshot, IAnyModelType, onSnapshot, protect, SnapshotOrInstance, types, unprotect } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
 import autoFormat from "../autoFormat";
 import { ElephantMemory } from "../DiscogsIndexedCache";
@@ -8,12 +8,11 @@ import { PromiseType } from "../shared/TypeConstraints";
 import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
 import StoreEnv from "./StoreEnv";
-//import { ArtistRole, ArtistRoleStore } from "./ArtistRole";
 
 type DiscogsArtist = PromiseType<ReturnType<Discojs["getArtist"]>>;
 
 export const ArtistModel = types.model("Artist", {
-    id: types.identifier,
+    id: types.identifierNumber,
     name: types.optional(types.string, "unknown"),
     cacheKey: types.optional(types.string, "artist"),
     profile: types.optional(types.string, ""),
@@ -38,14 +37,25 @@ export const ArtistModel = types.model("Artist", {
         const result: string = yield db.put("artists", getSnapshot(self));
         console.log(`persist ${self.name} result: ${result}`);
     });
-    const refresh = flow(function* refresh() {
+    const refresh = flow(function* refresh(fromDiscogs = false) {
         const { cache, client } = getEnv<StoreEnv>(self);
-        cache.clear({ url: self.cacheKey });
-        const response: DiscogsArtist = yield client.getArtist(Number(self.id));
-        const patch: Partial<Artist> = pick(response, "profile", "images");
-        patch.id = self.id;
-        patch.name = autoFormat(response.name);
-        patch.cacheKey = response.resource_url;
+        if (fromDiscogs) {
+            cache.clear({ url: self.cacheKey });
+        }
+        let patch: Partial<Artist>;
+        try {
+            const response: DiscogsArtist = yield client.getArtist(Number(self.id));
+            patch = pick(response, "profile", "images");
+            patch.id = self.id;
+            patch.name = autoFormat(response.name);
+            patch.cacheKey = response.resource_url;
+        } catch (e) {
+            console.error(e);
+            patch = {};
+            patch.id = self.id;
+            patch.name = self.name || e.message;
+            patch.profile = self.profile || e.message;
+        }
         console.log(`refresh ${self.name}: applying patch...`);
         applySnapshot(self, patch);
     });
@@ -64,15 +74,22 @@ export type Artist = SnapshotOrInstance<typeof ArtistModel>;
 
 const ArtistStoreModel = types.model("ArtistStore", {
     artists: types.optional(types.map(ArtistModel), {}),
-}).actions((self) => ({
-    get(id: string, name?: string) {
-        let result = self.artists.get(id);
+}).views((self) => ({
+    get all() {
+        return Array.from(self.artists.values());
+    },
+})).actions((self) => {
+    let loadedAll: Promise<void> | undefined;
+    function get(id: number, name?: string) {
+        let result = self.artists.get(id.toString());
         if (result === undefined) {
             result = ArtistModel.create({ id, name });
+            unprotect(getRoot(self));
             self.artists.put(result);
-            const { db: store } = getEnv<StoreEnv>(self);
+            protect(getRoot(self));
+            const { db } = getEnv<StoreEnv>(self);
             const concreteResult = result;
-            store
+            db
                 .then((db) => db.get("artists", id))
                 .then((patch) => {
                     if (patch) {
@@ -89,8 +106,19 @@ const ArtistStoreModel = types.model("ArtistStore", {
                 });
         }
         return result;
-    },
-}));
+    };
+    function loadAll() {
+        if (loadedAll) {
+            return;
+        }
+        const { db } = getEnv<StoreEnv>(self);
+        db.then((db) => db.getAllKeys("artists").then((ids) => ids.forEach((i) => get(i))));
+    }
+    return {
+        get,
+        loadAll,
+    };
+});
 
 export type ArtistStore = ReturnType<typeof ArtistStoreModel.create>;
 
@@ -100,9 +128,10 @@ export const ArtistByIdReference = types.maybe(
     types.reference(types.late((): IAnyModelType => ArtistModel), {
         get(id, parent: any) {
             const { artistStore } = getStore(parent);
-            return artistStore.get(id.toString());
+            return artistStore.get(Number(id));
         },
         set(value: Artist) {
+            console.log(value);
             return value.id;
         },
     }));

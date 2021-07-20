@@ -23,7 +23,7 @@ import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-
 import { Column } from "react-table";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./Details";
-import { CollectionItem, DiscogsCollectionItem, InventoryItem, List } from "./Elephant";
+import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, List } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
 import IDiscogsCache from "./IDiscogsCache";
@@ -98,7 +98,10 @@ function applyInstruction(instruction: string, _src: any) {
 const ARTIST_COLUMN_TITLE = "Release";
 
 
-export default function CollectionTable({ tableSearch }: { tableSearch: TableSearch<CollectionItem> }) {
+export default function CollectionTable({ tableSearch, collectionSubset }: {
+    tableSearch?: TableSearch<CollectionItem>,
+    collectionSubset?: ReturnType<Collection["values"]>,
+}) {
     type ColumnFactoryResult = [column: BootstrapTableColumn<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
     const {
@@ -344,7 +347,6 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         }
     }, [cache, client, tasksId]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const collectionTableData = computed(() => {
         for (const list of lists.values()) {
             if (isPatch(list)) {
@@ -358,8 +360,9 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
                 });
             }
         }
-        return collection.values();
+        return collectionSubset ?? collection.values();
     });
+
     const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
         const columns: Column<CollectionItem>[] = [];
         const handledFieldNames: string[] = [];
@@ -438,8 +441,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
         className: "centered-column",
         accessor: ({ basic_information: { labels } }) => uniqueLabels(labels),
         Cell: ({ value }: { value: Labels }) => {
-            return value.map((label) => <LazyMusicLabel label={label} hq={true} alwaysShowName={false} />);
-            //return labelNames(value).map((s) => <span className="label-name">{s}</span>)
+            return value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} alwaysShowName={false} />);
         },
         sortType: autoSortBy("Label"),
     }), [autoSortBy]);
@@ -532,7 +534,7 @@ export default function CollectionTable({ tableSearch }: { tableSearch: TableSea
     }, [folderName]);
 
     return <BootstrapTable
-        sessionKey={"Collection"}
+        sessionKey={collectionSubset ? undefined : "Collection"}
         searchAndFilter={tableSearch}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
@@ -717,7 +719,7 @@ function TasksEditor(props: {
             {availableTasks && <Dropdown onSelect={action((task) => task && tasks.push({ task, checked: false }))}>
                 <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
                 <Dropdown.Menu>
-                    {availableTasks.map((task) => <Dropdown.Item eventKey={task}>{task}</Dropdown.Item>)}
+                    {availableTasks.map((task) => <Dropdown.Item key={task} eventKey={task}>{task}</Dropdown.Item>)}
                 </Dropdown.Menu>
             </Dropdown>}
         </>;

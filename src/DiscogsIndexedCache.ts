@@ -5,7 +5,6 @@ import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { PromiseType } from "./shared/TypeConstraints";
 import jsonpath from "jsonpath";
 import { Artist } from "./model/Artist";
-import { ArtistRole } from "./model/ArtistRole";
 import { Release } from "./model/Release";
 
 type CachedRequest = {
@@ -19,7 +18,7 @@ interface MyDB extends idb.DBSchema {
         value: CachedRequest;
     },
     artists: {
-        key: string;
+        key: number;
         value: Artist;
         indexes: {
             "by-name": string,
@@ -28,18 +27,18 @@ interface MyDB extends idb.DBSchema {
     artistRoles: {
         key: string;
         value: {
-            artist: string,
+            artist: number,
             role: string,
-            release: string,
+            release: number,
         };
         indexes: {
-            "by-artist": string,
-            "by-release": string,
+            "by-artist": number,
+            "by-release": number,
             "by-role": string,
         };
     },
     releases: {
-        key: string,
+        key: number,
         value: Release,
         indexes: {
             "by-master": string,
@@ -58,7 +57,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     version: number = 0;
 
     constructor() {
-        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 6, {
+        this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
             upgrade(db, oldVersion) {
                 if (oldVersion < 1) {
                     db.createObjectStore("get", { keyPath: "url" });
@@ -78,6 +77,14 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     const releases = db.createObjectStore("releases", { keyPath: "id" });
                     releases.createIndex("by-master", "masterId");
                     releases.createIndex("by-year", "year");
+                }
+
+                if (oldVersion < 7) {
+                    db.deleteObjectStore("artistRoles");
+                    const artistRoles = db.createObjectStore("artistRoles");
+                    artistRoles.createIndex("by-artist", "artist");
+                    artistRoles.createIndex("by-role", "role");
+                    artistRoles.createIndex("by-release", "release");
                 }
             },
         });

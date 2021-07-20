@@ -2,13 +2,18 @@ import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
+import find from "lodash/find";
 import isEmpty from "lodash/isEmpty";
 import merge from "lodash/merge";
+import sortBy from "lodash/sortBy";
 import { action, reaction } from "mobx";
+import { observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Container from "react-bootstrap/Container";
+import Button from "react-bootstrap/esm/Button";
+import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
@@ -20,9 +25,6 @@ import { DeepPendable } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Tuning from "./Tuning";
-import * as Router from "react-router-dom";
-import { observer } from "mobx-react";
-import Button from "react-bootstrap/esm/Button";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -221,23 +223,40 @@ export default function Elephant() {
 
 const ArtistPanel = observer(() => {
   const { artistId, artistName } = Router.useParams<{ artistId?: string, artistName?: string }>();
-  const { lpdb } = React.useContext(ElephantContext);
+  const { lpdb, collection } = React.useContext(ElephantContext);
   if (!artistId) { return null; }
   if (!lpdb) { return null; }
-  const artist = lpdb.artist(artistId, artistName);
+  const artist = lpdb.artist(Number(artistId), artistName);
+  const roles = lpdb.store.roles(artist.id);
+  const collectionSubeset = collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id));
   return <>
-    <pre>{artist.name}</pre>
+    <h2>{artist.name}</h2>
     <dl>
       <dt>ID</dt>
       <dd>{artist.id}</dd>
+      <dt>Roles</dt>
+      <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
     </dl>
     <Button onClick={artist.refresh}>Refresh</Button>
+    <CollectionTable collectionSubset={collectionSubeset} />
+  </>;
+});
+
+const ArtistIndex = observer(() => {
+  const { lpdb } = React.useContext(ElephantContext);
+  let match = Router.useRouteMatch();
+
+  if (!lpdb) { return null; }
+  lpdb.artistStore.loadAll();
+
+  return <>
+    <h2>Artists</h2>
+    {(sortBy(lpdb.artistStore.all, "name").map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>))}
   </>;
 });
 
 function ArtistMode() {
   let match = Router.useRouteMatch();
-
   return (
     <div>
       <Router.Switch>
@@ -245,18 +264,7 @@ function ArtistMode() {
           <ArtistPanel />
         </Router.Route>
         <Router.Route path={match.path}>
-          <h2>Artists</h2>
-
-          <ul>
-            <li>
-              <Router.Link to={`${match.url}/components`}>Components</Router.Link>
-            </li>
-            <li>
-              <Router.Link to={`${match.url}/props-v-state`}>
-                Props v. State
-              </Router.Link>
-            </li>
-          </ul>
+          <ArtistIndex />
         </Router.Route>
       </Router.Switch>
     </div>
