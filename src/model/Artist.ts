@@ -27,15 +27,15 @@ export const ArtistModel = types.model("Artist", {
     };
     const persist = flow(function* persist(): MultipleYieldGenerator {
         if (actionState.hydrating) {
-            console.log(`skipped persisting ${self.name} because it was just loaded from the db`);
+            // console.log(`skipped persisting ${self.name} because it was just loaded from the db`);
             actionState.hydrating = false;
             return;
         }
         const { db: store } = getEnv<StoreEnv>(self);
-        console.log(`persist ${self.name}`);
+        // console.log(`persist ${self.name}`);
         const db: PromiseType<ElephantMemory> = yield store;
         const result: string = yield db.put("artists", getSnapshot(self));
-        console.log(`persist ${self.name} result: ${result}`);
+        // console.log(`persist ${self.name} result: ${result}`);
     });
     const refresh = flow(function* refresh(fromDiscogs = false) {
         const { cache, client } = getEnv<StoreEnv>(self);
@@ -56,7 +56,7 @@ export const ArtistModel = types.model("Artist", {
             patch.name = self.name || e.message;
             patch.profile = self.profile || e.message;
         }
-        console.log(`refresh ${self.name}: applying patch...`);
+        // console.log(`refresh ${self.name}: applying patch...`);
         applySnapshot(self, patch);
     });
     const afterCreate = () => {
@@ -93,7 +93,7 @@ const ArtistStoreModel = types.model("ArtistStore", {
                 .then((db) => db.get("artists", id))
                 .then((patch) => {
                     if (patch) {
-                        console.log(`loaded artist ${patch.name} from db`);
+                        // console.log(`loaded artist ${patch.name} from db`);
                         patch.name = autoFormat(patch.name);
                         concreteResult.hydrate(patch);
                     } else {
@@ -131,7 +131,7 @@ export const ArtistByIdReference = types.maybe(
             return artistStore.get(Number(id));
         },
         set(value: Artist) {
-            console.log(value);
+            // console.log(value);
             return value.id;
         },
     }));

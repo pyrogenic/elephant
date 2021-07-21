@@ -214,3 +214,14 @@ a.music-label {
 .dropdown-toggle.no-toggle:hover::after {
     content: inherit;
 }
+
+.graph {
+    width: 100%;
+    svg {
+        height: 1000px;
+        width: 100%;
+        background: whitesmoke;
+        border: 1px solid black;
+    }
+    
+}

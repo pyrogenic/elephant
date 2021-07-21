@@ -2,7 +2,7 @@ import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import pick from "lodash/pick";
 import uniqBy from "lodash/uniqBy";
-import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, SnapshotIn, getParent, getParentOfType, IAnyModelType } from "mobx-state-tree";
+import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, SnapshotIn, IAnyModelType, getRoot, protect, unprotect } from "mobx-state-tree";
 import { arraySetRemove } from "@pyrogenic/asset/lib";
 import { Discojs } from "discojs";
 import { ElephantMemory } from "../DiscogsIndexedCache";
@@ -108,12 +108,19 @@ export type Release = SnapshotOrInstance<typeof ReleaseModel>;
 
 const ReleaseStoreModel = types.model("ReleaseStore", {
     releases: types.map(ReleaseModel),
-}).actions((self) => ({
-    get(id: number) {
+}).views((self) => ({
+    get all() {
+        return Array.from(self.releases.values());
+    },
+})).actions((self) => {
+    const loadedAll = false;
+    function get(id: number) {
         let result = self.releases.get(id.toString());
         if (result === undefined) {
             result = ReleaseModel.create({ id });
+            unprotect(getRoot(self));
             self.releases.put(result);
+            protect(getRoot(self));
             const { db: store } = getEnv<StoreEnv>(self);
             const concreteResult = result;
             store
@@ -123,7 +130,7 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
                         console.log(`loaded release ${patch.title} from db`);
                         concreteResult.hydrate(patch);
                     } else {
-                        concreteResult.refresh()
+                        concreteResult.refresh();
                     }
                 })
                 .catch((e) => {
@@ -132,8 +139,19 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
                 });
         }
         return result;
-    },
-}));
+    };
+    function loadAll() {
+        if (loadedAll) {
+            return;
+        }
+        const { db } = getEnv<StoreEnv>(self);
+        db.then((db) => db.getAllKeys("releases").then((ids) => ids.forEach((i) => get(i))));
+    }
+    return {
+        get,
+        loadAll,
+    };
+});
 
 export type ReleaseStore = ReturnType<typeof ReleaseStoreModel.create>;
 

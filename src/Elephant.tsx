@@ -2,17 +2,17 @@ import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
-import find from "lodash/find";
 import isEmpty from "lodash/isEmpty";
+import groupBy from "lodash/groupBy";
+import map from "lodash/map";
 import merge from "lodash/merge";
-import sortBy from "lodash/sortBy";
-import { action, reaction } from "mobx";
-import { observer } from "mobx-react";
+import { action, computed, reaction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Container from "react-bootstrap/Container";
-import Button from "react-bootstrap/esm/Button";
+import type { GraphData } from "react-d3-graph";
+import { Graph } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
@@ -25,6 +25,10 @@ import { DeepPendable } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Tuning from "./Tuning";
+import { Artist } from "./model/Artist";
+import ReactJson from "react-json-view";
+import { ArtistMode } from "./ArtistRoute";
+import { DataIndex } from "./DataRoute";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -119,7 +123,6 @@ export default function Elephant() {
     <Router.BrowserRouter basename="/elephant">
       <Masthead
         bypassCache={bypassCache}
-        cache={cache}
         collection={collection}
         fluid={fluid}
         avatarUrl={profile?.avatar_url}
@@ -144,6 +147,9 @@ export default function Elephant() {
         <Router.Switch>
           <Router.Route path="/artists">
             <ArtistMode />
+          </Router.Route>
+          <Router.Route path="/data">
+            <DataIndex />
           </Router.Route>
           <Router.Route path="/tuning">
             <Tuning />
@@ -219,54 +225,4 @@ export default function Elephant() {
   function updateCollection() {
     client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
   }
-}
-
-const ArtistPanel = observer(() => {
-  const { artistId, artistName } = Router.useParams<{ artistId?: string, artistName?: string }>();
-  const { lpdb, collection } = React.useContext(ElephantContext);
-  if (!artistId) { return null; }
-  if (!lpdb) { return null; }
-  const artist = lpdb.artist(Number(artistId), artistName);
-  const roles = lpdb.store.roles(artist.id);
-  const collectionSubeset = collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id));
-  return <>
-    <h2>{artist.name}</h2>
-    <dl>
-      <dt>ID</dt>
-      <dd>{artist.id}</dd>
-      <dt>Roles</dt>
-      <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
-    </dl>
-    <Button onClick={artist.refresh}>Refresh</Button>
-    <CollectionTable collectionSubset={collectionSubeset} />
-  </>;
-});
-
-const ArtistIndex = observer(() => {
-  const { lpdb } = React.useContext(ElephantContext);
-  let match = Router.useRouteMatch();
-
-  if (!lpdb) { return null; }
-  lpdb.artistStore.loadAll();
-
-  return <>
-    <h2>Artists</h2>
-    {(sortBy(lpdb.artistStore.all, "name").map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>))}
-  </>;
-});
-
-function ArtistMode() {
-  let match = Router.useRouteMatch();
-  return (
-    <div>
-      <Router.Switch>
-        <Router.Route path={[`${match.path}/:artistId`, `${match.path}/:artistId/:artistName`]}>
-          <ArtistPanel />
-        </Router.Route>
-        <Router.Route path={match.path}>
-          <ArtistIndex />
-        </Router.Route>
-      </Router.Switch>
-    </div>
-  );
 }
