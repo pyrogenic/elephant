@@ -108,11 +108,28 @@ export type Release = SnapshotOrInstance<typeof ReleaseModel>;
 
 const ReleaseStoreModel = types.model("ReleaseStore", {
     releases: types.map(ReleaseModel),
-}).views((self) => ({
-    get all() {
-        return Array.from(self.releases.values());
-    },
-})).actions((self) => {
+}).views((self) => {
+    const sizeContainer: { loaded: number; all?: number; } = { loaded: 0, all: undefined };
+    const knownContainer: Set<number> = new Set();
+    return ({
+        get all() {
+            return Array.from(self.releases.values());
+        },
+        get count() {
+            const { db } = getEnv<StoreEnv>(self);
+            db.then((db) => db.count("releases")).then((all) => sizeContainer.all = all);
+            sizeContainer.loaded = self.releases.size;
+            return sizeContainer;
+        },
+        get known() {
+            const { db } = getEnv<StoreEnv>(self);
+            db.then((db) => db.getAllKeys("releases")).then((all) => all.forEach(((e) => {
+                knownContainer.add(e);
+            })));
+            return knownContainer;
+        },
+    });
+}).actions((self) => {
     const loadedAll = false;
     function get(id: number) {
         let result = self.releases.get(id.toString());

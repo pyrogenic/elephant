@@ -3,7 +3,7 @@ import { observable, runInAction, computed } from "mobx";
 import { observer } from "mobx-react";
 import { Card } from "react-bootstrap";
 import { arraySetAddAll, ElementType } from "@pyrogenic/asset/lib";
-import { CollectionItem } from "./Elephant";
+import { CollectionItem, List, Lists } from "./Elephant";
 import { TagKind } from "./Tag";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import Bootstrap from "react-bootstrap/types";
@@ -42,6 +42,16 @@ export function orderUri(source: Source, orderNumber: string) {
         default:
             return {};
     }
+}
+
+const PATCH_LIST_PATTERN = /^Patch: /;
+
+export function isPatch(list: List) {
+    return list.definition.name.match(PATCH_LIST_PATTERN);
+}
+
+export function patches(lists: Lists) {
+    return lists.values().filter(isPatch);
 }
 
 export type Location = {

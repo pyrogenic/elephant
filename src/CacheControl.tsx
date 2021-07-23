@@ -3,7 +3,9 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/esm/Col";
 import InputGroup from "react-bootstrap/esm/InputGroup";
+import Row from "react-bootstrap/esm/Row";
 import ElephantContext from "./ElephantContext";
 import { ButtonVariant, Variant } from "./shared/Shared";
 
@@ -37,8 +39,8 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
         allCount: 0,
     }), []);
 
-    const { cache } = React.useContext(ElephantContext);
-    if (!cache) { return null; }
+    const { cache, lpdb } = React.useContext(ElephantContext);
+    if (!cache || !lpdb) { return null; }
 
     cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
     cache.count(INVENTORY_QUERY).then(action((result) => counts.inventoryCount = result));
@@ -54,7 +56,10 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
             collectionCount, inventoryCount, folderNamesCount, mastersCount, releasesCount, artistsCount, listsCount, allCount,
         } = counts;
         const allBadge = allCount ? <> <Badge variant={badgeVariant}>{allCount}</Badge></> : null;
-        return <InputGroup>
+        return <>
+            <Row>
+                <Col>
+                    <InputGroup>
             <InputGroup.Prepend>
                 <Button
                     variant={variant}
@@ -127,6 +132,12 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
                     {allBadge}
                 </Button>
             </InputGroup.Append>
-        </InputGroup>;
+                    </InputGroup>
+                </Col>
+            </Row>
+            <Row>
+                {lpdb}
+            </Row>
+        </>;
     }} />;
 }

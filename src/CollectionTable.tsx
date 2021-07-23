@@ -38,7 +38,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind, TagProps } from "./Tag";
-import { autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source } from "./Tuning";
+import { autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, isPatch, patches } from "./Tuning";
 import autoFormat from "./autoFormat";
 
 type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
@@ -69,12 +69,6 @@ const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
 const getNote = action("getNote", (notes: CollectionNote[], id: number): string | undefined => {
     return noteById(notes, id)?.value;
 });
-
-const PATCH_LIST_PATTERN = /^Patch: /;
-
-function isPatch(list: List) {
-    return list.definition.name.match(PATCH_LIST_PATTERN);
-}
 
 function sortByTasks(ac: { values: { Tasks: string[] } }, bc: { values: { Tasks: string[] } }) {
     const a = ac.values.Tasks;
@@ -348,17 +342,15 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     }, [cache, client, tasksId]);
 
     const collectionTableData = computed(() => {
-        for (const list of lists.values()) {
-            if (isPatch(list)) {
-                const queries = list.definition.description.split("\n");
-                list.items.forEach((item) => {
-                    const instruction = item.comment;
-                    const applyThisInstruction = applyInstruction.bind(null, instruction);
-                    for (const entry of lpdb!.entriesForRelease(item.id)) {
-                        runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
-                    }
-                });
-            }
+        for (const list of patches(lists)) {
+            const queries = list.definition.description.split("\n");
+            list.items.forEach((item) => {
+                const instruction = item.comment;
+                const applyThisInstruction = applyInstruction.bind(null, instruction);
+                for (const entry of lpdb!.entriesForRelease(item.id)) {
+                    runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
+                }
+            });
         }
         return collectionSubset ?? collection.values();
     });
