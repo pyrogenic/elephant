@@ -40,3 +40,10 @@ td > img:only-child {
 svg.icon {
     vertical-align: -20%;
 }
+
+.comma-sep {
+    white-space: pre;
+    &:not(:last-of-type)::after {
+        content: ", ";
+    }
+}

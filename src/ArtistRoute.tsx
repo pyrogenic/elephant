@@ -9,24 +9,29 @@ import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 
 const ArtistPanel = observer(() => {
-  const { artistId, artistName } = Router.useParams<{ artistId?: string; artistName?: string; }>();
+  const { artistId: artistIdSrc, artistName } = Router.useParams<{ artistId?: string; artistName?: string; }>();
   const { lpdb, collection } = React.useContext(ElephantContext);
-  if (!artistId) { return null; }
+  const artistId = Number(artistIdSrc);
+  if (!isFinite(artistId)) { return null; }
   if (!lpdb) { return null; }
-  const artist = lpdb.artist(Number(artistId), artistName);
+  const artist = lpdb.artist(artistId, artistName);
   const roles = lpdb.store.roles(artist.id);
-  const collectionSubeset = collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id));
+  const collectionSubset = collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id));
+  const primaryArtistSubset = collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)).map(({ id }) => lpdb.releaseStore.get(id));
   return <>
     <h2>{artist.name}</h2>
+
+    <CollectionTable collectionSubset={collectionSubset} />
+
     <dl>
       <dt>ID</dt>
       <dd>{artist.id}</dd>
       <dt>Roles</dt>
       <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
+      <dt>Primary Releases</dt>
+      <dd>{primaryArtistSubset.map(({ id, title }) => <pre key={id}>{title ?? id}</pre>)}</dd>
     </dl>
     <Button onClick={artist.refresh}>Refresh</Button>
-
-    <CollectionTable collectionSubset={collectionSubeset} />
   </>;
 });
 // type GraphData = 

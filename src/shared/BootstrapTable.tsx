@@ -257,9 +257,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                         const target: Element = e.target as Element;
                         // const currentTarget: Element = e.currentTarget as Element;
                         const targetRoll = target.attributes.getNamedItem("role")?.value;
+                        const targetClassNames = target.classList;
                         // const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
                         // console.log({ targetRoll, currentTargetRoll, target, currentTarget });
-                        if (targetRoll === "cell" || targetRoll === "row") {
+                        if (targetRoll === "cell" || targetRoll === "row" || targetClassNames.contains("expand")) {
                             row.toggleRowExpanded();
                         }
                     };

@@ -14,10 +14,8 @@ import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
-import Container from "react-bootstrap/Container";
 import Dropdown from "react-bootstrap/esm/Dropdown";
 import { FormControlProps } from "react-bootstrap/esm/FormControl";
-import Row from "react-bootstrap/esm/Row";
 import Form from "react-bootstrap/Form";
 import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { Column } from "react-table";
@@ -40,8 +38,9 @@ import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind, TagProps } from "./Tag";
 import { autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, isPatch, patches } from "./Tuning";
 import autoFormat from "./autoFormat";
+import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 
-type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
+export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 type CollectionNote = ElementType<CollectionItem["notes"]>;
 
 const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } = {
@@ -449,7 +448,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     const releaseColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: ARTIST_COLUMN_TITLE,
         accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
-        Cell: ({ value }: { value: ArtistCellProps; }) => <ArtistsCell {...value} />,
+        Cell: ({ value }: { value: ReleaseCellProps; }) => <ReleaseCell {...value} />,
         sortType: sortByArtist,
     }), [sortByArtist]);
 
@@ -743,22 +742,6 @@ function RatingEditor(props: {
         };
         return <Stars disabled={pending(rating)} value={value} count={5} setValue={commit} />;
     }} />;
-}
-
-type ArtistCellProps = {
-    artists: Artist[];
-    title: string;
-};
-
-function ArtistsCell({ artists, title }: ArtistCellProps) {
-    return <Container className="ArtistsCell">
-        <Row className="artist">
-            {artists.map(({ name }) => autoFormat(name)).join(", ")}
-        </Row>
-        <Row className="title">
-            {autoFormat(title)}
-        </Row>
-    </Container>;
 }
 
 function releaseUrl({ id }: CollectionItem) {

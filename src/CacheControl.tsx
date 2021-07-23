@@ -6,8 +6,10 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/esm/Col";
 import InputGroup from "react-bootstrap/esm/InputGroup";
 import Row from "react-bootstrap/esm/Row";
+import { FiRefreshCw } from "react-icons/fi";
 import ElephantContext from "./ElephantContext";
 import { ButtonVariant, Variant } from "./shared/Shared";
+import { patches } from "./Tuning";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
@@ -39,8 +41,8 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
         allCount: 0,
     }), []);
 
-    const { cache, lpdb } = React.useContext(ElephantContext);
-    if (!cache || !lpdb) { return null; }
+    const { cache, lists } = React.useContext(ElephantContext);
+    if (!cache) { return null; }
 
     cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
     cache.count(INVENTORY_QUERY).then(action((result) => counts.inventoryCount = result));
@@ -136,7 +138,11 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
                 </Col>
             </Row>
             <Row>
-                {lpdb}
+                <Col>
+                    {patches(lists).map((list) => <li>
+                        <span title={list.definition.description}>{list.definition.name}</span> <Badge>{list.items.length}</Badge>{list.definition.resource_url && <> <FiRefreshCw onClick={() => cache.clear({ url: list.definition.resource_url })} /></>}
+                    </li>)}
+                </Col>
             </Row>
         </>;
     }} />;

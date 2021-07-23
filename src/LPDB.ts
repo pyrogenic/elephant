@@ -71,6 +71,9 @@ const StoreModel = types.model("Store", {
   return {
     roles(artist: Artist | Artist["id"]) {
       const artistId = typeof artist === "number" ? artist : artist.id;
+      if (isNaN(artistId)) {
+        throw new Error("NaN artist");
+      }
       let result = roleResults.get(artistId);
       if (result === undefined) {
         roleResults.set(artistId, result = []);
@@ -80,7 +83,7 @@ const StoreModel = types.model("Store", {
             armIds.forEach(action((armId) => {
               result?.push(self.armStore.get(armId));
             }));
-          });
+          }, (error) => console.log(`${error.message} for key ${artistId}`));
         });
       }
       return result;

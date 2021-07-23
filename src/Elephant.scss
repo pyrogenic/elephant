@@ -40,13 +40,6 @@ tr.sold {
     opacity: 50%;
 }
 
-.label-name {
-    white-space: pre;
-    &:not(:last-of-type)::after {
-        content: ", ";
-    }
-}
-
 .grade {
     box-sizing: content-box;
     width: 1.8rem;
