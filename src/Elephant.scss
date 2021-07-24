@@ -28,6 +28,10 @@ table {
             overflow: hidden;
         }
     }
+
+    a.active {
+        color: inherit;
+    }
 }
 
 td {

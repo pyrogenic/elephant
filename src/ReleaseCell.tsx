@@ -13,7 +13,7 @@ export type ReleaseCellProps = {
 export default function ReleaseCell({ artists, title }: ReleaseCellProps) {
     return <Container className="ArtistsCell">
         <Row className="artist">
-            {artists.map(({ id, name }) => <Router.Link className="comma-sep" to={`/artists/${id}/${name}`}>{autoFormat(name)}</Router.Link>)}
+            {artists.map(({ id, name }) => <Router.NavLink className="comma-sep" to={`/artists/${id}/${name}`}>{autoFormat(name)}</Router.NavLink>)}
         </Row>
         <Row className="title expand">
             {autoFormat(title)}
