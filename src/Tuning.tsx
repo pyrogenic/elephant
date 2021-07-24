@@ -257,7 +257,7 @@ const TUNING_TRACKER = observable({
 export function trackTuning(key: keyof typeof TUNING_TRACKER, ...items: string[]) {
     runInAction(() => {
         if (arraySetAddAll(TUNING_TRACKER, key, items, true)) {
-            console.log(TUNING_TRACKER[key]);
+            //console.log(TUNING_TRACKER[key]);
         }
     });
 }

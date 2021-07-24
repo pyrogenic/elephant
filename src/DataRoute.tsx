@@ -11,14 +11,30 @@ import { CacheControl } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
 
 export const DataIndex = observer(() => {
-    const { collection, lpdb } = React.useContext(ElephantContext);
-    if (!lpdb) { return null; }
+    const { collection, lpdb, cache } = React.useContext(ElephantContext);
+    if (!lpdb || !cache) { return null; }
     const uniqueReleases = uniqBy(collection.values(), "id");
     const knownIds = map(lpdb.releaseStore.all, "id");//lpdb.releaseStore.known ?? new Set();
     const unstoredReleases = uniqueReleases.filter(({ id }) => !knownIds.includes(id));
     const first = unstoredReleases[0];
     return <Row>
         <Col>
+            <Card>
+                <Card.Header>Request Tracker</Card.Header>
+                <Card.Body>
+                    <div>
+                        {cache.waiting.map((detail, i) => <li key={i}>{detail}</li>)}
+                    </div>
+                    <hr />
+                    <div>
+                        {cache.inflight.map((detail, i) => <li key={i}>{detail}</li>)}
+                    </div>
+                    <hr />
+                    <div>
+                        {cache.completed.map(({ detail, error }, i) => <li key={i} className={error ? "text-danger" : "text-muted"}>{detail} {error && error.message}</li>)}
+                    </div>
+                </Card.Body>
+            </Card>
             <Card>
                 <Card.Header>Elephant Data</Card.Header>
                 <Card.Header><CacheControl /></Card.Header>

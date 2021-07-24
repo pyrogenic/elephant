@@ -4,10 +4,11 @@ import IDiscogsCache from "./IDiscogsCache";
 import LPDB from "./LPDB";
 import OrderedMap from "./OrderedMap";
 import { Collection, FieldsById, FieldsByName, Folders, Inventory, Lists } from "./Elephant";
+import DiscogsIndexedCache from "./DiscogsIndexedCache";
 
 export interface IElephantContext {
     lpdb?: LPDB;
-    cache?: IDiscogsCache;
+    cache?: DiscogsIndexedCache;
     client?: Discojs;
     collection: Collection;
     fieldsById?: FieldsById;

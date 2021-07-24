@@ -2,12 +2,34 @@ import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import React from "react";
 import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
+import * as Router from "react-router-dom";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
-import IDiscogsCache from "./IDiscogsCache";
-import SearchBox from "./shared/SearchBox";
-import * as Router from "react-router-dom";
+import ElephantContext from "./ElephantContext";
 import "./Masthead.scss";
+import SearchBox from "./shared/SearchBox";
+
+function SpeedTracker() {
+    const { cache } = React.useContext(ElephantContext);
+    const [{ rpm, waiting }, setRpm] = React.useState<{
+        rpm?: number,
+        waiting?: number,
+    }>({});
+    const update = React.useMemo(() => () => {
+        const newRpm = cache?.rpm;
+        const newWaiting = cache?.waiting.length;
+        setRpm({ rpm: newRpm, waiting: newWaiting });
+    }, [cache]);
+    React.useEffect(() => {
+        const t = setInterval(update, 500);
+        return clearInterval.bind(null, t);
+    }, [update]);
+    return <>
+        <Navbar.Text>
+            {rpm} rpm, {waiting} blocked
+        </Navbar.Text>
+    </>;
+}
 
 export default function Masthead({
     avatarUrl,
@@ -73,6 +95,7 @@ export default function Masthead({
                 />
             </>;
         }} /> */}
+        <SpeedTracker />
         <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-end">
             <Form inline>
@@ -115,5 +138,3 @@ export default function Masthead({
                 }}>&nbsp;</span>}
     </Navbar>;
 }
-
-
