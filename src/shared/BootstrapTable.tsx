@@ -6,7 +6,7 @@ import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import { matchSorter } from "match-sorter";
 import React, { MouseEventHandler } from "react";
-import Table from "react-bootstrap/esm/Table";
+import Table from "react-bootstrap/Table";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import {
     Column,

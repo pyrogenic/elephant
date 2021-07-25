@@ -1,5 +1,4 @@
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
@@ -23,6 +22,7 @@ import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Tuning from "./Tuning";
 import { ArtistMode } from "./ArtistRoute";
 import { DataIndex } from "./DataRoute";
+import AuthRoute from "./AuthRoute";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -135,9 +135,7 @@ export default function Elephant() {
         }}
         setFluid={setFluid}
         setSearch={setSearch}
-        setToken={setToken}
         setVerbose={setVerbose}
-        token={token}
         verbose={verbose}
       />
       <Container fluid={fluid}>
@@ -145,6 +143,12 @@ export default function Elephant() {
           <code>{error.toString()}</code>
         </Alert>}
         <Router.Switch>
+          <Router.Route path="/auth">
+            <AuthRoute
+              setToken={setToken}
+              token={token}
+            />
+          </Router.Route>
           <Router.Route path="/artists">
             <ArtistMode />
           </Router.Route>

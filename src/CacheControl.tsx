@@ -3,9 +3,9 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/esm/Col";
-import InputGroup from "react-bootstrap/esm/InputGroup";
-import Row from "react-bootstrap/esm/Row";
+import Col from "react-bootstrap/Col";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
 import { FiRefreshCw } from "react-icons/fi";
 import ElephantContext from "./ElephantContext";
 import { ButtonVariant, Variant } from "./shared/Shared";
@@ -20,7 +20,7 @@ const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
 const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
 const LISTS_QUERY = { url: /discogs\.com\/lists\// };
 
-export function CacheControl({ variant, badgeVariant = "light" }: { variant?: ButtonVariant, badgeVariant?: Variant }) {
+export function CacheControl({ variant, badgeVariant = "light", badgeText = "dark" }: { variant?: ButtonVariant, badgeVariant?: Variant, badgeText?: Variant }) {
     const counts: {
         collectionCount: number;
         inventoryCount: number;
@@ -57,83 +57,67 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
         const {
             collectionCount, inventoryCount, folderNamesCount, mastersCount, releasesCount, artistsCount, listsCount, allCount,
         } = counts;
-        const allBadge = allCount ? <> <Badge variant={badgeVariant}>{allCount}</Badge></> : null;
+        const allBadge = allCount ? <> <Badge bg={badgeVariant} text={badgeText}>{allCount}</Badge></> : null;
         return <>
             <Row>
                 <Col>
-                    <InputGroup>
-            <InputGroup.Prepend>
+                    <InputGroup className="mb-2">
                 <Button
-                    variant={variant}
+                            variant={variant}
                     onClick={cache.clear.bind(cache, COLLECTION_QUERY)}
                 >
                     Collection
-                    {collectionCount ? <> <Badge variant={badgeVariant}>{collectionCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Prepend>
-            <InputGroup.Prepend>
+                            {collectionCount ? <> <Badge bg={badgeVariant} text={badgeText}>{collectionCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, INVENTORY_QUERY)}
                 >
                     Inventory
-                    {inventoryCount ? <> <Badge variant={badgeVariant}>{inventoryCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Prepend>
-            <InputGroup.Prepend>
+                            {inventoryCount ? <> <Badge bg={badgeVariant} text={badgeText}>{inventoryCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY)}
                 >
                     Folders
-                    {folderNamesCount ? <> <Badge variant={badgeVariant}>{folderNamesCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Prepend>
-            <InputGroup.Prepend>
+                            {folderNamesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{folderNamesCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, MASTERS_QUERY)}
                 >
                     Masters
-                    {mastersCount ? <> <Badge variant={badgeVariant}>{mastersCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Prepend>
-            <InputGroup.Append>
+                            {mastersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{mastersCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, RELEASES_QUERY)}
                 >
                     Releases
-                    {releasesCount ? <> <Badge variant={badgeVariant}>{releasesCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Append>
-            <InputGroup.Append>
+                            {releasesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{releasesCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, ARTISTS_QUERY)}
                 >
                     Artists
-                    {artistsCount ? <> <Badge variant={badgeVariant}>{artistsCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Append>
-            <InputGroup.Append>
+                            {artistsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{artistsCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, LISTS_QUERY)}
                 >
                     Lists
-                    {listsCount ? <> <Badge variant={badgeVariant}>{listsCount}</Badge></> : null}
-                </Button>
-            </InputGroup.Append>
-            <InputGroup.Append>
+                            {listsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{listsCount}</Badge></> : null}
+                        </Button>
                 <Button
                     variant={variant}
                     onClick={cache.clear.bind(cache, undefined)}
                 >
                     All
                     {allBadge}
-                </Button>
-            </InputGroup.Append>
+                        </Button>
                     </InputGroup>
                 </Col>
             </Row>

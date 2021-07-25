@@ -32,14 +32,14 @@ $grid-breakpoints-xl: 1200px;
 }
 
 .Pager:first-of-type {
-    .input-group div button {
+    .input-group button {
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }
 }
 
 table + .Pager {
-    .input-group div button {
+    .input-group button {
         border-top-left-radius: 0;
         border-top-right-radius: 0;
     }

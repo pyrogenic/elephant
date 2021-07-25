@@ -1,3 +1,5 @@
+@import "custom";
+
 img.cover {
     border: 1px grey solid;
     border-radius: 3px;
@@ -13,7 +15,6 @@ table {
         font-size: small !important;
     }
     .form-control {
-        margin-top: -7px;
         padding: 0;
         border-radius: 0;
         border-top: none;
@@ -28,9 +29,24 @@ table {
             overflow: hidden;
         }
     }
+    
+}
 
-    a.active {
-        color: inherit;
+a {
+    color: inherit !important;
+    text-decoration: inherit !important;
+}
+
+a:hover {
+    color: inherit !important;
+    text-decoration: underline !important;
+}
+
+a.active[aria-current="page"] {
+    color: inherit;
+    cursor: default;
+    &:hover {
+        text-decoration: none !important;
     }
 }
 

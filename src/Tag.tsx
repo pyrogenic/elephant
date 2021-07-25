@@ -25,7 +25,7 @@ export type TagProps = {
     kind: TagKind;
     extra?: Content;
     title?: string;
-    variant?: BadgeProps["variant"];
+    bg?: BadgeProps["bg"];
     onClickCount?: () => void;
     onClickExtra?: () => void;
     onClickIcon?: () => void;
@@ -38,7 +38,7 @@ export default function Tag({
     kind,
     extra,
     title,
-    variant,
+    bg,
     onClickIcon,
     onClickTag,
     onClickCount,
@@ -86,7 +86,8 @@ export default function Tag({
         }
         return <Badge
             className={classConcat(kind, "tag", className)}
-            variant={variant ?? "secondary"}
+            bg={bg ?? "secondary"}
+            text={bg === "light" ? "dark" : undefined}
             onClick={onClickTag}
             title={title}
         >
@@ -100,7 +101,8 @@ export default function Tag({
                 &nbsp;
                 <Badge
                     className="count"
-                    variant="light"
+                    bg="light"
+                    text="dark"
                     onClick={onClickCount}>
                     {count}
                 </Badge>
@@ -122,7 +124,8 @@ function ExtraBadge({ onClick, extra }: { onClick?: () => void, extra: Content }
     }
     return <Badge
         className="extra"
-        variant="light"
+        bg="light"
+        text="dark"
         onClick={onClick}
         title={title}
     >

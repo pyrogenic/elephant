@@ -1,18 +1,23 @@
 import uniqBy from "lodash/uniqBy";
-import { action, observable } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 import Card from "react-bootstrap/Card";
-import Badge from "react-bootstrap/esm/Badge";
-import Button from "react-bootstrap/esm/Button";
-import Col from "react-bootstrap/esm/Col";
-import Row from "react-bootstrap/esm/Row";
+import Badge, { BadgeProps } from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { CacheControl } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
-import { Artist } from "./model/Artist";
-import { Release } from "./model/Release";
+import { Variant } from "./shared/Shared";
 
-const TaskEntry = Badge;
+function TaskEntry(props: BadgeProps & { bg?: Variant, text?: Variant }) {
+    let text: Variant | undefined = props.text;
+    const bg: Variant = props.bg ?? "light";
+    if (bg === "light" && text === undefined) {
+        text = "dark";
+    }
+    return <Badge bg={bg} text={text} {...props} />
+}
 
 // const progress = observable<{
 //     releaseId?: number,

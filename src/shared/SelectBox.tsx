@@ -2,7 +2,7 @@ import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import compact from "lodash/compact";
 import { computed } from "mobx";
 import React from "react";
-import Badge from "react-bootstrap/esm/Badge";
+import Badge from "react-bootstrap/Badge";
 import MultiSelect from "react-multi-select-component";
 import "./SelectBox.scss";
 
@@ -37,6 +37,6 @@ export default function SelectBox({
         value={multiValue.get()}
         onChange={(newValue: Options) => setValue(newValue.map(({ value }) => value))}
         labelledBy={placeholder}
-        valueRenderer={(selected) => selected.map(({ label }) => <Badge pill variant="secondary">{label}</Badge>)}
+        valueRenderer={(selected) => selected.map(({ label }) => <Badge pill bg="secondary">{label}</Badge>)}
     />;
 }

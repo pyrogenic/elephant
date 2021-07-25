@@ -1,3 +1,5 @@
+@import "../custom";
+
 @mixin center-vertically {
     position: relative;
     top: 50%;
@@ -33,10 +35,20 @@ td > img:only-child {
         margin-right: inherit;
     }
 }
+
 .badge:not(:last-of-type) {
     margin-right: 0.2rem;
 }
 
+$lbg: adjust-color($light, $lightness: -5%);
+@debug $lbg;
+
+.badge.bg-light{
+    .badge.bg-light{
+        background-color: $lbg !important;
+        //border: solid 0.25px $dark;
+    }
+}
 svg.icon {
     vertical-align: -20%;
 }

@@ -3,6 +3,8 @@ import ReactDOM from "react-dom";
 import Elephant from "./Elephant";
 import reportWebVitals from "./reportWebVitals";
 
+import "./index.scss";
+
 ReactDOM.render(
   <React.StrictMode>
     <Elephant />

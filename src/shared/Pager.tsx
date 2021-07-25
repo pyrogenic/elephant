@@ -2,11 +2,11 @@ import classConcat from "@pyrogenic/perl/lib/classConcat";
 import clamp from "lodash/clamp";
 import range from "lodash/range";
 import React from "react";
-import Button, { ButtonProps } from "react-bootstrap/esm/Button";
-import Col from "react-bootstrap/esm/Col";
-import Form from "react-bootstrap/esm/Form";
-import InputGroup from "react-bootstrap/esm/InputGroup";
-import Row from "react-bootstrap/esm/Row";
+import Button, { ButtonProps } from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
 import {
     FiChevronLeft,
     FiChevronRight,
@@ -82,7 +82,7 @@ export default function Pager({
             onKeyEvent={keyEventHandler} />}
         <Col>
             <InputGroup>
-                <InputGroup.Prepend>
+                <>
                     <Button
                         className={classConcat("first", (lastMove?.bad && lastMove?.op === "prev") && "bad")}
                         key={"min page"}
@@ -107,7 +107,7 @@ export default function Pager({
                     {minShownPage < currentPage && range(minShownPage, currentPage).map((page: number) =>
                         <PageButton key={page} autoHide={page < minShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
                     {currentPageSpine?.[0] && <InputGroup.Text>{currentPageSpine[0]}</InputGroup.Text>}
-                </InputGroup.Prepend>
+                </>
                 <Form.Control
                     key={currentPage + 1}
                     className="spine"
@@ -116,7 +116,7 @@ export default function Pager({
                     max={maxPage + 1}
                     value={(currentPage + 1).toString()}
                     onChange={({ target: { value } }) => gotoPage(clamp(Number(value) - 1, 0, maxPage))} />
-                <InputGroup.Append>
+                <>
                     {currentPageSpine?.[1] && <InputGroup.Text>{currentPageSpine[1]}</InputGroup.Text>}
                     {currentPage < maxShownPage && range(currentPage + 1, maxShownPage + 1).map((page: number) =>
                         <PageButton key={page}  autoHide={page > maxShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
@@ -141,7 +141,7 @@ export default function Pager({
                     >
                         <FiChevronsRight />
                     </Button>
-                </InputGroup.Append>
+                </>
             </InputGroup>
         </Col>
     </Row>;

@@ -1,13 +1,13 @@
-import Badge from "react-bootstrap/esm/Badge";
-import Dropdown from "react-bootstrap/esm/Dropdown";
+import Badge from "react-bootstrap/Badge";
+import Dropdown from "react-bootstrap/Dropdown";
 import { ElementType, ensure } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import "./FilterBox.scss";
 import React from "react";
-import Form from "react-bootstrap/esm/Form";
+import Form from "react-bootstrap/Form";
 import omit from "lodash/omit";
-import { ButtonProps } from "react-bootstrap/esm/Button";
 import { useAsyncDebounce } from "react-table";
+import { ButtonVariant } from "./Shared";
 
 type Filter<T> = (item: T) => boolean | undefined;
 
@@ -114,9 +114,9 @@ export default function FilterBox<T>({ items, tags, setFilteredItems, setFilter 
         setFilters({ ...filters })
     }
     return <div className="FilterBox">
-        {ands.map(([tag], i) => <Badge key={i} variant="primary" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
-        {ors.map(([tag], i) => <Badge key={i} variant="success" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
-        {nots.map(([tag], i) => <Badge key={i} variant="danger" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
+        {ands.map(([tag], i) => <Badge key={i} bg="primary" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
+        {ors.map(([tag], i) => <Badge key={i} bg="success" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
+        {nots.map(([tag], i) => <Badge key={i} bg="danger" onClick={remove.bind(null, tag)}>{tag}</Badge>)}
         {filteredTags.length ? <>
             <DropdownPicker
                 placeholder={"and"}
@@ -223,7 +223,7 @@ function DropdownPicker({
     options: string[],
     onSelect(option: string): void,
     placeholder: string,
-    variant: ButtonProps["variant"],
+        variant: ButtonVariant,
 }) {
     const [value, setValue] = React.useState("");
     return (
@@ -235,7 +235,7 @@ function DropdownPicker({
             >
                 {options.map((option, i) => {
                     const itemBadge = badge?.(option);
-                    return <Dropdown.Item key={i} eventKey={option}>{option}{itemBadge && <> <Badge variant="secondary">{itemBadge}</Badge></>}</Dropdown.Item>;
+                    return <Dropdown.Item key={i} eventKey={option}>{option}{itemBadge && <> <Badge bg="secondary">{itemBadge}</Badge></>}</Dropdown.Item>;
                 })}
             </Dropdown.Menu>
         </Dropdown>);

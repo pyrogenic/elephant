@@ -3,7 +3,7 @@ import sortBy from "lodash/sortBy";
 import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import Button from "react-bootstrap/esm/Button";
+import Button from "react-bootstrap/Button";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";

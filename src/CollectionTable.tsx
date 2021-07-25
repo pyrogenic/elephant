@@ -1,6 +1,5 @@
 import { compare } from "@pyrogenic/asset/lib/compare";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
-import "bootstrap/dist/css/bootstrap.min.css";
 import { CurrenciesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
@@ -14,8 +13,8 @@ import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
 import Badge from "react-bootstrap/Badge";
-import Dropdown from "react-bootstrap/esm/Dropdown";
-import { FormControlProps } from "react-bootstrap/esm/FormControl";
+import Dropdown from "react-bootstrap/Dropdown";
+import { FormControlProps } from "react-bootstrap/FormControl";
 import Form from "react-bootstrap/Form";
 import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { Column } from "react-table";
@@ -237,10 +236,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     return <>
                         <div className="d-flex d-flex-row">
                             <div className="grade grade-media">
-                                <Badge as="div" variant={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
+                                <Badge as="div" bg={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
                             </div>
                             <div className="grade grade-sleeve">
-                                <Badge as="div" variant={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
+                                <Badge as="div" bg={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
                             </div>
                         </div>
                         <Observer render={() => {
@@ -249,7 +248,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             const status = pendingValue(listing.status);
                             return <div className="d-flex d-flex-row">
                                 <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
-                                    <Badge as="div" variant="light" className={kebabCase(status)} title={priceToString(listing.price)}></Badge>
+                                    <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}></Badge>
                                 </ExternalLink>
                                 </div>
                             </div>;
@@ -272,9 +271,9 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
                     const price = cache && client && <div className="flex flex-row d-inline-flex price">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
                     let { uri, Icon } = orderUri(source as Source, orderNumber);
-                    Icon = Icon ?? (() => <div><Badge variant="dark">{source}</Badge> {orderNumber}</div>);
+                    Icon = Icon ?? (() => <div><Badge bg="dark">{source}</Badge> {orderNumber}</div>);
                     if (uri) {
-                        return <><ExternalLink href={uri}><Icon className="mr-1" /></ExternalLink>{price}</>;
+                        return <><ExternalLink href={uri}><Icon className="me-1" /></ExternalLink>{price}</>;
                     }
                     return <><Icon />{price}</>;
                 },
