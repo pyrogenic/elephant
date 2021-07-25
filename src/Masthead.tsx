@@ -71,7 +71,7 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "me-2";
-    return <Navbar bg="light" className="mb-3">
+    return <Navbar variant="light" className="mb-3">
         <Navbar.Brand className="ps-5" style={{
             backgroundImage: `url(${logo})`,
             backgroundSize: "contain",
