@@ -58,11 +58,12 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     log: boolean = false;
     version: number = 0;
     waiting: string[] = [];
-    tracker = new PromiseTracker();
-    pause?: Promise<void>;
+    get tracker() { return PromiseTracker(); }
+    pause?: Promise<any>;
     errorPause: number = 0;
     unpause?: () => void;
     pauseCheck?: NodeJS.Timeout;
+    oneRequest = true;
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
@@ -102,7 +103,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             log: observable,
             version: observable,
             waiting: observable,
-            tracker: observable,
+            tracker: computed,
             inflight: computed,
             completed: computed,
             clear: action,
@@ -113,7 +114,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     private checkRate = () => {
         const rpm = this.rpm;
         if (rpm >= 30 || this.errorPause > Date.now()) {
-            if (this.pause === undefined) {
+            if (this.unpause === undefined) {
                 this.pause = new Promise<void>((unpause, _) => {
                     console.log("paused");
                     this.unpause = unpause;
@@ -147,11 +148,18 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         return history.map(({ detail }) => detail);
     }
 
+    public get dbInflight() {
+        const history = this.tracker.inflight("idb");
+        return history.map(({ detail }) => detail);
+    }
+
     public get completed() {
         const history = this.tracker.history("discogs");
         const ended = history.filter(({ end }) => end);
         return ended.map(({ detail, error }) => ({ detail, error }));
     }
+
+    private activeGets = new Map<string, Promise<any>>();
 
     public get = async <T>(factory: () => Promise<T>, ...props: Parameters<typeof fetch>) => {
         const method = props[1]?.method ?? "GET";
@@ -159,49 +167,87 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         let key = typeof props[0] === "object" ? props[0].url : props[0];
         if (method !== "GET") {
             key = `${method} ${key}`;
-            while (true) {
-                this.checkRate();
-                if (this.pause === undefined) {
-                    break;
-                }
-
-                this.waiting.push(key);
-                try {
+            runInAction(this.waiting.push.bind(this.waiting, key));
+            try {
+                while (true) {
+                    this.checkRate();
+                    if (this.pause === undefined) {
+                        break;
+                    }
                     await this.pause;
                 }
-                finally {
-                    arraySetRemove(this.waiting, key);
-                }
+            }
+            finally {
+                runInAction(() => arraySetRemove(this.waiting, key));
             }
             return factory();
         }
-        if (log) { console.log({ props, cache, bypass, log }); }
+        if (this.activeGets.has(key)) {
+            console.log(`Returning existing active request: ${key}`);
+            return this.activeGets.get(key);
+        }
+        console.log(`Starting new active request for ${key}`);
+        const p = this.getInternal(factory, key, log, bypass, cache);
+        this.activeGets.set(key, p);
+        p.then(() => {
+            console.log(`Active request completed for ${key}`);
+            if (this.activeGets.get(key) === p) {
+                console.log(`Deleted cached promise: ${key}`);
+                this.activeGets.delete(key);
+            }
+        });
+        return p;
+    };
+
+    private getInternal = async <T>(factory: () => Promise<T>, key: string, log: boolean, bypass: boolean, cache: boolean) => {
+        if (log) { console.log({ key, cache, bypass, log }); }
         let retries = 3;
+        let waited = 0;
         while (true) {
-            while (true) {
-                const cachedValue = !bypass && await (await this.storage).get("get", key);
-                if (cachedValue) {
-                    return cachedValue.data as T;
-                }
+            runInAction(() => this.waiting.push(key));
+            try {
+                while (true) {
+                    const cachedValue = !bypass && await this.getFromCache(key);
+                    if (cachedValue) {
+                        if (waited) {
+                            console.log(`Returning cached value after wait filled it in: ${key}`);
+                        }
+                        return cachedValue.data as T;
+                    }
 
-                this.checkRate();
-                if (this.pause === undefined) {
-                    break;
-                }
+                    this.checkRate();
+                    if (this.pause === undefined) {
+                        break;
+                    }
 
-                this.waiting.push(key);
-                try {
+                    waited++;
+                    console.log(`Waiting #${waited}: ${key}`);
                     await this.pause;
                 }
-                finally {
+            }
+            finally {
+                runInAction(() => {
                     arraySetRemove(this.waiting, key);
-                }
+                });
+            }
+            if (waited) {
+                console.log(`Resuming after waiting: ${key}`);
             }
             try {
                 const promise = factory();
                 this.tracker.track("discogs", key, promise);
-                const newValue = await promise;
-                if (log) { console.log({ props, newValue }); }
+                let newValue: T;
+                try {
+                    if (this.oneRequest && this.pause === undefined) {
+                        this.pause = promise;
+                    }
+                    newValue = await promise;
+                } finally {
+                    if (this.pause === promise) {
+                        this.pause = undefined;
+                    }
+                }
+                if (log) { console.log({ key, newValue }); }
                 if (cache) {
                     this.cacheValue<T>(key, newValue);
                 }
@@ -295,6 +341,14 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             console.error(e);
             return [];
         }
+    }
+
+    private getFromCache(key: string) {
+        runInAction(() => arraySetRemove(this.waiting, key));
+        const promise = this.storage.then((db) => db.get("get", key));
+        this.tracker.track("idb", key + " [IDB]", promise);
+        promise.then(() => runInAction(() => this.waiting.push(key)));
+        return promise;
     }
 }
 

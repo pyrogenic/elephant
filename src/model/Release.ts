@@ -1,17 +1,18 @@
+import { arraySetRemove } from "@pyrogenic/asset/lib";
+import { Discojs } from "discojs";
 import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import pick from "lodash/pick";
 import uniqBy from "lodash/uniqBy";
-import { flow, onSnapshot, SnapshotOrInstance, types, getEnv, getSnapshot, applySnapshot, SnapshotIn, IAnyModelType, getRoot, protect, unprotect } from "mobx-state-tree";
-import { arraySetRemove } from "@pyrogenic/asset/lib";
-import { Discojs } from "discojs";
+import { action, observable, runInAction } from "mobx";
+import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotIn, SnapshotOrInstance, types } from "mobx-state-tree";
 import { ElephantMemory } from "../DiscogsIndexedCache";
+import { getStore } from "../LPDB";
 import { PromiseType } from "../shared/TypeConstraints";
 import { ArtistByIdReference } from "./Artist";
 import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
 import StoreEnv from "./StoreEnv";
-import { getStore } from "../LPDB";
 
 type DiscogsRelease = PromiseType<ReturnType<Discojs["getRelease"]>>;
 //type DiscogsImage = ElementType<DiscogsRelease["images"]>;
@@ -21,7 +22,7 @@ const ArtistRoleModel = types.model("ArtistRoleModel", {
     role: types.string,
 });
 
-type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
+export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
 export const ReleaseModel = types.model("Release", {
     id: types.identifierNumber,
@@ -109,44 +110,51 @@ export type Release = SnapshotOrInstance<typeof ReleaseModel>;
 const ReleaseStoreModel = types.model("ReleaseStore", {
     releases: types.map(ReleaseModel),
 }).views((self) => {
-    const sizeContainer: { loaded: number; all?: number; } = { loaded: 0, all: undefined };
-    const knownContainer: Set<number> = new Set();
+    const sizeContainer: { loaded: number; all?: number; } = observable({ loaded: 0, all: undefined });
+    const knownContainer = observable(new Set<number>());
     return ({
         get all() {
             return Array.from(self.releases.values());
         },
         get count() {
             const { db } = getEnv<StoreEnv>(self);
-            db.then((db) => db.count("releases")).then((all) => sizeContainer.all = all);
-            sizeContainer.loaded = self.releases.size;
+            db.then((db) => db.count("releases")).then(action((all) => sizeContainer.all = all));
+            runInAction(() => sizeContainer.loaded = self.releases.size);
             return sizeContainer;
         },
         get known() {
             const { db } = getEnv<StoreEnv>(self);
-            db.then((db) => db.getAllKeys("releases")).then((all) => all.forEach(((e) => {
+            db.then((db) => db.getAllKeys("releases")).then((all) => all.forEach(action((e) => {
                 knownContainer.add(e);
             })));
+            self.releases.forEach(action(({ id }) => knownContainer.add(id)));
             return knownContainer;
         },
     });
 }).actions((self) => {
     const loadedAll = false;
+    function putInternal(release: Release) {
+        console.log(`new release ${release.id}`);
+        self.releases.put(release);
+    }
     function get(id: number) {
         let result = self.releases.get(id.toString());
         if (result === undefined) {
             result = ReleaseModel.create({ id });
-            unprotect(getRoot(self));
-            self.releases.put(result);
-            protect(getRoot(self));
+            (self as any).putInternal(result);
             const { db: store } = getEnv<StoreEnv>(self);
             const concreteResult = result;
             store
-                .then((db) => db.get("releases", id))
+                .then((db) => {
+                    console.log(`fetching release ${id} from db…`);
+                    return db.get("releases", id);
+                })
                 .then((patch) => {
                     if (patch) {
                         console.log(`loaded release ${patch.title} from db`);
                         concreteResult.hydrate(patch);
                     } else {
+                        console.log(`fetching release ${id} from discogs`);
                         concreteResult.refresh();
                     }
                 })
@@ -167,6 +175,7 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
     return {
         get,
         loadAll,
+        putInternal,
     };
 });
 

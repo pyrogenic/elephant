@@ -1,6 +1,6 @@
 import { CollectionItem } from "../Elephant";
 
-console.warn("Creating worker");
+//console.warn("Creating worker");
 
 type Myself = {
     byTag: Map<string, number[]>,

@@ -28,9 +28,10 @@ import * as Router from "react-router-dom";
 // $..extraartists..*['name','id','role']
 // result is single array, needs to be split into 3-tuples
 
-const MUSICAL_ARTISTS = /\b((?<_instrument>(?<strings>(?<guitar>((Acoustic|Electric|Bass) )?Guitar)|Bass\b|Celesta|Cello|Harp|Mandolin|Sitar|Viol(|a|in)\b)|(?<percussion>Bongo|Conga|Drum|Percussion|Glock|Tabla\b|Tambourine|Timbales|Vibes|Vibraphone|Xylo)|(?<keys>Keys\b|Keyboard|Harmonium|Mellotron|Piano|Organ|Synth)|(?<brass>Horn|Flugelhorn|Trumpet|Trombone|Tuba)|(?<wind>Clarinet|Flute|Kazoo|Harmonica|Oboe|Sax(|ophone)\b|Woodwind)|(?<group>Choir$|Chorus$|Orchestra))|Scratches|Vocal|Voice)/;
+const MUSICAL_ARTISTS = /\b((?<_instrument>(?<strings>(?<guitar>((Acoustic|Electric|Bass) )?Guitar)|Bass\b|Celesta|Cello|Autoharp|Banjo|Harp|Mandolin|Sarangi|Sitar|Viol(|a|in)\b)|(?<percussion>Bongo|Conga|Cymbal|Drum|Percussion|Glock|Tabla\b|Tambourine|Timbales|Vibes|Vibraphone|Xylo)|(?<keys>Keys\b|Keyboard|Harmonium|Mellotron|Piano|Organ|Synth)|(?<brass>Horn|Flugelhorn|Trumpet|Trombone|Tuba)|(?<wind>Clarinet|Flute|Kazoo|Harmonica|Oboe|Sax(|ophone)\b|Woodwind)|(?<group>Choir$|Chorus$|Orchestra))|Scratches|Vocal|Voice)/;
 const CREATIVE_ARTISTS = /\b(Arrange|Conduct|Master\b|(?<originator>Compos|Lyric|Music|Writ|Words))/;
 const TECHNICAL_ARTISTS = /\b(Lacquer|Produce|Recorded|Mastered|Remaster)/;
+const IGNORE_ARTISTS = ["Directed By", "Mixed By", "Painting"];
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -41,17 +42,17 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const labels = uniqBy(item.basic_information.labels, "id").map(({ id }) => lpdb?.label(id));
     const masterForItem = lpdb?.masterForColectionItem(item);
     const masterForRelease = details?.status === "ready" ? lpdb?.masterForRelease(details.value) : undefined;
-    const pickedRelease = React.useMemo(() => {
-        if (details?.status !== "ready") {
-            return {};
-        }
-        return pick(details.value, [
-            "uri",
-            "tracklist",
-            "artists_sort",
-        ])!;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [details?.status]);
+    // const pickedRelease = React.useMemo(() => {
+    //     if (details?.status !== "ready") {
+    //         return {};
+    //     }
+    //     return pick(details.value, [
+    //         "uri",
+    //         "tracklist",
+    //         "artists_sort",
+    //     ])!;
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [details?.status]);
     const pickedMaster = React.useMemo(() => {
         if (masterForItem?.status !== "ready" || masterForItem.value === "no-master-release") {
             return {};
@@ -85,8 +86,10 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
 
     const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
     const [cacheCount, setCacheCount] = React.useState(0);
+    const effectCleanupSemaphore = React.useRef(true);
     React.useEffect(() => {
-        cache?.count(cacheQuery).then(setCacheCount);
+        cache?.count(cacheQuery).then((r) => effectCleanupSemaphore.current && setCacheCount(r));
+        return () => { effectCleanupSemaphore.current = false };
     }, [cache, cacheQuery, details, item, masterForItem]);
     // const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
     // const result = React.useMemo(() => {
@@ -140,13 +143,14 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     const musicalArtist = MUSICAL_ARTISTS.exec(role);
                     const createArtist = CREATIVE_ARTISTS.test(role);
                     const techArtist = TECHNICAL_ARTISTS.test(role);
+                    const ignoredArtist = IGNORE_ARTISTS.includes(role);
                     if (musicalArtist?.groups) {
                         const tags = Object.entries(musicalArtist.groups).filter(([k, v]) => k[0] !== "_" && v).map(([k]) => k).join(", ");
                         if (tags) {
                             role = `${role} (${tags})`;
                         }
                     }
-                    if (!musicalArtist && !createArtist && !techArtist) {
+                    if (!musicalArtist && !createArtist && !techArtist && !ignoredArtist) {
                         trackTuning("roles", role);
                     }
                     return <Tag

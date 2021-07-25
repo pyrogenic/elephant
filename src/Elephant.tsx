@@ -3,16 +3,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
-import groupBy from "lodash/groupBy";
-import map from "lodash/map";
 import merge from "lodash/merge";
-import { action, computed, reaction } from "mobx";
+import { action, reaction, runInAction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Container from "react-bootstrap/Container";
-import type { GraphData } from "react-d3-graph";
-import { Graph } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
@@ -25,8 +21,6 @@ import { DeepPendable } from "./shared/Pendable";
 import "./shared/Shared.scss";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import Tuning from "./Tuning";
-import { Artist } from "./model/Artist";
-import ReactJson from "react-json-view";
 import { ArtistMode } from "./ArtistRoute";
 import { DataIndex } from "./DataRoute";
 
@@ -102,7 +96,13 @@ export default function Elephant() {
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
-  React.useEffect(updateMemoSettings, [bypassCache, cache, verbose]);
+
+  React.useEffect(() => {
+    runInAction(() => {
+      cache.bypass = bypassCache;
+      cache.log = verbose;
+    });
+  }, [bypassCache, cache, verbose]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
   const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
@@ -161,11 +161,6 @@ export default function Elephant() {
       </Container>
     </Router.BrowserRouter>
   </ElephantContext.Provider>;
-
-  function updateMemoSettings() {
-    cache.bypass = bypassCache;
-    cache.log = verbose;
-  }
 
   function getIdentity() {
     client.getProfile().then(setProfile, setError);

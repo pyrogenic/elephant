@@ -3,6 +3,7 @@ import minDiff, { MinDiffSrc } from "@pyrogenic/perl/lib/minDiff";
 import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
+import flatten from "lodash/flatten";
 import { matchSorter } from "match-sorter";
 import React, { MouseEventHandler } from "react";
 import Table from "react-bootstrap/esm/Table";
@@ -250,7 +251,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 ))}
             </thead>
             <tbody {...getTableBodyProps()}>
-                {page.map((plainRow) => {
+                {compact(flatten(page.map((plainRow) => {
                     const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
                     const onClick: MouseEventHandler = (e) => {
@@ -265,26 +266,26 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                         }
                     };
                     const rowProps = row.getRowProps();
-                    return <>
-                        <tr {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original))} onClick={onClick}>
+                    return [
+                        <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original))} onClick={onClick}>
                             {row.cells.map(cell => {
                                 const cellProps = cell.getCellProps();
                                 const column = cell.column as BootstrapTableColumn<TElement>;
                                 return <td {...cellProps} className={classConcat(cellProps, column.className)}>{cell.render("Cell")}</td>
                             })}
-                        </tr>
-                        {/*
+                        </tr>,
+                    /*
                     If the row is in an expanded state, render a row with a
                     column that fills the entire length of the table.
-                  */}
-                        {row.isExpanded &&
+                  */
+                        row.isExpanded &&
                             <tr key={rowProps.key + "-detail"}>
                                 <td colSpan={visibleColumns.length}>
                                     {resolve(detail?.(row.original))}
                                 </td>
-                            </tr>}
-                    </>
-                })}
+                        </tr>,
+                    ];
+                })))}
             </tbody>
         </Table>
         <select

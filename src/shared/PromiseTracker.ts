@@ -1,5 +1,4 @@
-import { minBy } from "lodash";
-import { action, computed, makeObservable, observable } from "mobx";
+import { action, makeObservable, observable } from "mobx";
 
 interface ILogEntry {
     key: string;
@@ -11,7 +10,7 @@ interface ILogEntry {
 
 type Op = "start" | "end";
 
-export default class PromiseTracker {
+class PromiseTrackerImpl {
     public readonly listeners: Array<(op: Op, item: ILogEntry) => void> = [];
     private readonly logEntries: ILogEntry[] = observable([]);
 
@@ -58,7 +57,7 @@ export default class PromiseTracker {
         // make sure there is a bucket for now
         buckets[0] = [];
         // const maxDiff = now - (minBy(logEntries, "start")?.start ?? now);
-        this.logEntries.forEach((entry) => {
+        logEntries.forEach((entry) => {
             const bucketId = Math.floor((now - entry.start) / width);
             const bucket = buckets[bucketId] ?? (buckets[bucketId] = []);
             bucket.push(entry);
@@ -90,4 +89,10 @@ export default class PromiseTracker {
             }
         });
     }
+}
+
+const cont = window as { "[[PromiseTracker]]"?: PromiseTrackerImpl };
+
+export default function PromiseTracker() {
+    return cont["[[PromiseTracker]]"] = cont["[[PromiseTracker]]"] || new PromiseTrackerImpl();
 }

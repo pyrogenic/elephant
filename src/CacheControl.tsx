@@ -139,7 +139,7 @@ export function CacheControl({ variant, badgeVariant = "light" }: { variant?: Bu
             </Row>
             <Row>
                 <Col>
-                    {patches(lists).map((list) => <li>
+                    {patches(lists).map((list) => <li key={list.definition.id}>
                         <span title={list.definition.description}>{list.definition.name}</span> <Badge>{list.items.length}</Badge>{list.definition.resource_url && <> <FiRefreshCw onClick={() => cache.clear({ url: list.definition.resource_url })} /></>}
                     </li>)}
                 </Col>

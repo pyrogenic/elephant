@@ -5,8 +5,8 @@ import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types
 import { ElementType } from "../../asset/lib";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
-import { Artist, ArtistByIdReference, ArtistModel, ArtistStore, ArtistStoreModel } from "./model/Artist";
-import { ReleaseByIdReference, ReleaseModel, ReleaseStore, ReleaseStoreModel } from "./model/Release";
+import { Artist, ArtistByIdReference, ArtistStore, ArtistStoreModel } from "./model/Artist";
+import { ReleaseByIdReference, ReleaseStore, ReleaseStoreModel } from "./model/Release";
 import StoreEnv from "./model/StoreEnv";
 import OrderedMap from "./OrderedMap";
 import { PromiseType } from "./shared/TypeConstraints";
@@ -101,13 +101,13 @@ export function getStore(node: IAnyStateTreeNode): IStore {
 }
 
 export default class LPDB {
-  public readonly collection: Collection = observable(new OrderedMap<number, CollectionItem>());
-  public readonly releases: Releases = observable(new OrderedMap<number, Remote<Release>>());
-  public readonly labels: Labels = observable(new OrderedMap<number, Remote<Label>>());
-  public readonly masters: MasterReleases = observable(new OrderedMap<number, Remote<MasterRelease>>());
-  public readonly mastersByReleaseId: MasterReleases = observable(new OrderedMap<number, Remote<MasterRelease>>());
-  public readonly inventory: Inventory = observable(new OrderedMap<number, InventoryItem>());
-  public readonly lists: Lists = observable(new OrderedMap<number, List>());
+  public readonly collection: Collection = new OrderedMap<number, CollectionItem>();
+  public readonly releases: Releases = new OrderedMap<number, Remote<Release>>();
+  public readonly labels: Labels = new OrderedMap<number, Remote<Label>>();
+  public readonly masters: MasterReleases = new OrderedMap<number, Remote<MasterRelease>>();
+  public readonly mastersByReleaseId: MasterReleases = new OrderedMap<number, Remote<MasterRelease>>();
+  public readonly inventory: Inventory = new OrderedMap<number, InventoryItem>();
+  public readonly lists: Lists = new OrderedMap<number, List>();
   public readonly tags: string[] = observable([]);
   private readonly byTagCache: Map<string, number[]> = new Map();
 
@@ -227,7 +227,7 @@ export default class LPDB {
     return this.master(item.master_id);
   }
 
-  public master(masterId: number | undefined): Remote<MasterRelease> {
+  public master = action((masterId: number | undefined): Remote<MasterRelease> => {
     let refresh = () => { };
     if (masterId === undefined || masterId === 0) {
       return {
@@ -236,28 +236,28 @@ export default class LPDB {
         refresh,
       };
     }
-    let result = this.masters.get(masterId);
-    if (result) {
-      return result;
+    let knownResult = this.masters.get(masterId);
+    if (knownResult) {
+      return knownResult;
     }
-    result = observable<Remote<MasterRelease>>({
+    const result = observable<Remote<MasterRelease>>({
       status: "pending",
     });
     refresh = () => this.client.getMaster(masterId).then(
       action((value) => {
-        set(result!, "status", "ready");
-        set(result!, "value", value);
-        set(result!, "refresh", refresh);
+        set(result, "status", "ready");
+        set(result, "value", value);
+        set(result, "refresh", refresh);
       }),
       action((error) => {
-        set(result!, "status", "error");
-        set(result!, "error", error);
-        set(result!, "refresh", refresh);
+        set(result, "status", "error");
+        set(result, "error", error);
+        set(result, "refresh", refresh);
       }));
     this.masters.set(masterId, result);
     refresh();
     return result;
-  }
+  });
 
   public label(labelId: number): Remote<Label> {
     let refresh = () => { };

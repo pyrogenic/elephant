@@ -21,7 +21,7 @@ import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-
 import { Column } from "react-table";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./Details";
-import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, List } from "./Elephant";
+import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
 import IDiscogsCache from "./IDiscogsCache";

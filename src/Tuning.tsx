@@ -286,7 +286,7 @@ const Tuning = observer(() => {
                 <dt>Novel Formats</dt>
                 <dd>{novelFormats.get().join(", ")}</dd>
                 <dt>Idioms</dt>
-                <dd>{IDIOMS.map((s) => <code>{s}</code>)}</dd>
+                <dd>{IDIOMS.map((s, i) => <code key={i}>{s}</code>)}</dd>
             </dl>
         </Card.Body>
     </Card>;

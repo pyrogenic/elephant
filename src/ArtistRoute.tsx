@@ -1,9 +1,10 @@
-import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+// import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import sortBy from "lodash/sortBy";
+import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/esm/Button";
-import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
+// import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
@@ -16,12 +17,12 @@ const ArtistPanel = observer(() => {
   if (!lpdb) { return null; }
   const artist = lpdb.artist(artistId, artistName);
   const roles = lpdb.store.roles(artist.id);
-  const collectionSubset = collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id));
-  const primaryArtistSubset = collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)).map(({ id }) => lpdb.releaseStore.get(id));
+  const collectionSubset = computed(() => collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id)));
+  const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)).map(({ id }) => lpdb.releaseStore.get(id)));
   return <>
     <h2>{artist.name}</h2>
 
-    <CollectionTable collectionSubset={collectionSubset} />
+    <CollectionTable collectionSubset={collectionSubset.get()} />
 
     <dl>
       <dt>ID</dt>
@@ -29,7 +30,7 @@ const ArtistPanel = observer(() => {
       <dt>Roles</dt>
       <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
       <dt>Primary Releases</dt>
-      <dd>{primaryArtistSubset.map(({ id, title }) => <pre key={id}>{title ?? id}</pre>)}</dd>
+      <dd>{primaryArtistSubset.get().map(({ id, title }) => <pre key={id}>{title ?? id}</pre>)}</dd>
     </dl>
     <Button onClick={artist.refresh}>Refresh</Button>
   </>;
@@ -48,29 +49,28 @@ const ArtistPanel = observer(() => {
 //     title?: string;
 //   }[],
 // };
-type GC = Partial<GraphConfiguration<GraphNode & {
-  label: string;
-}, GraphLink & {
-  label: string;
-}>>;
-let revision = 0;
+// type GC = Partial<GraphConfiguration<GraphNode & {
+//   label: string;
+// }, GraphLink & {
+//   label: string;
+//   }>>;
 const ArtistIndex = observer(() => {
   const { lpdb } = React.useContext(ElephantContext);
-  const [config, setConfig] = useStorageState<GC>("local", "graph-config2", {
-    node: {
-      renderLabel: true,
-      labelProperty: "label",
-    },
-    link: {
-      renderLabel: true,
-      labelProperty: "label",
-    },
-    "automaticRearrangeAfterDropNode": true,
-    // "height": 1000,
-    "collapsible": true,
-  });
-  const [float, setFloat] = React.useState<string>();
-  const [error, setError] = React.useState<string>();
+  // const [config, setConfig] = useStorageState<GC>("local", "graph-config2", {
+  //   node: {
+  //     renderLabel: true,
+  //     labelProperty: "label",
+  //   },
+  //   link: {
+  //     renderLabel: true,
+  //     labelProperty: "label",
+  //   },
+  //   "automaticRearrangeAfterDropNode": true,
+  //   // "height": 1000,
+  //   "collapsible": true,
+  // });
+  // const [float, setFloat] = React.useState<string>();
+  // const [error, setError] = React.useState<string>();
 
   let match = Router.useRouteMatch();
 

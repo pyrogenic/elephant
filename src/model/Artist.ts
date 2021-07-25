@@ -1,5 +1,5 @@
 import pick from "lodash/pick";
-import { applySnapshot, flow, getEnv, getRoot, getSnapshot, IAnyModelType, onSnapshot, protect, SnapshotOrInstance, types, unprotect } from "mobx-state-tree";
+import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotOrInstance, types } from "mobx-state-tree";
 import { Discojs } from "../../../discojs/lib";
 import autoFormat from "../autoFormat";
 import { ElephantMemory } from "../DiscogsIndexedCache";
@@ -18,12 +18,29 @@ export const ArtistModel = types.model("Artist", {
     profile: types.optional(types.string, ""),
     images: types.optional(types.array(ImageModel), []),
 }).actions((self) => {
-    const actionState = {
+    const actionState: {
+        hydrating: boolean,
+        promise: Promise<void> | undefined,
+        resolve?: () => void,
+    } = {
         hydrating: false,
+        promise: undefined,
     };
+    const loading = () => actionState.promise ?? Promise.resolve();
+    const startLoading = () => {
+        const promise = new Promise<void>((resolve, _) => actionState.resolve = resolve);
+        promise.then(() => {
+            if (actionState.promise === promise) {
+                actionState.promise = undefined;
+                actionState.resolve = undefined;
+            }
+        });
+        actionState.promise = promise;
+    }
     const hydrate = (patch: any /* Artist */) => {
         actionState.hydrating = true;
         applySnapshot(self, patch);
+        actionState.resolve?.();
     };
     const persist = flow(function* persist(): MultipleYieldGenerator {
         if (actionState.hydrating) {
@@ -34,35 +51,33 @@ export const ArtistModel = types.model("Artist", {
         const { db: store } = getEnv<StoreEnv>(self);
         // console.log(`persist ${self.name}`);
         const db: PromiseType<ElephantMemory> = yield store;
-        const result: string = yield db.put("artists", getSnapshot(self));
+        /* const result: string = */ yield db.put("artists", getSnapshot(self));
         // console.log(`persist ${self.name} result: ${result}`);
     });
     const refresh = flow(function* refresh(fromDiscogs = false) {
-        const { cache, client } = getEnv<StoreEnv>(self);
-        if (fromDiscogs) {
-            cache.clear({ url: self.cacheKey });
-        }
-        let patch: Partial<Artist>;
         try {
+            const { cache, client } = getEnv<StoreEnv>(self);
+            if (fromDiscogs) {
+                cache.clear({ url: self.cacheKey });
+            }
+            let patch: Partial<Artist>;
             const response: DiscogsArtist = yield client.getArtist(Number(self.id));
             patch = pick(response, "profile", "images");
             patch.id = self.id;
             patch.name = autoFormat(response.name);
             patch.cacheKey = response.resource_url;
-        } catch (e) {
-            console.error(e);
-            patch = {};
-            patch.id = self.id;
-            patch.name = self.name || e.message;
-            patch.profile = self.profile || e.message;
+            // console.log(`refresh ${self.name}: applying patch...`);
+            applySnapshot(self, patch);
+        } finally {
+            actionState.resolve?.();
         }
-        // console.log(`refresh ${self.name}: applying patch...`);
-        applySnapshot(self, patch);
     });
     const afterCreate = () => {
         onSnapshot(self, persist);
     }
     return {
+        loading,
+        startLoading,
         hydrate,
         persist,
         refresh,
@@ -71,7 +86,16 @@ export const ArtistModel = types.model("Artist", {
 });
 
 export type Artist = SnapshotOrInstance<typeof ArtistModel>;
+/*
 
+{
+  "id": 129220,
+  "name": "unknown",
+  "cacheKey": "artist",
+  "profile": "Network request failed",
+  "images": []
+}
+*/
 const ArtistStoreModel = types.model("ArtistStore", {
     artists: types.optional(types.map(ArtistModel), {}),
 }).views((self) => ({
@@ -80,15 +104,17 @@ const ArtistStoreModel = types.model("ArtistStore", {
     },
 })).actions((self) => {
     let loadedAll: Promise<void> | undefined;
+    function putInternal(artist: Artist) {
+        self.artists.put(artist);
+    }
     function get(id: number, name?: string) {
         let result = self.artists.get(id.toString());
         if (result === undefined) {
             result = ArtistModel.create({ id, name });
-            unprotect(getRoot(self));
-            self.artists.put(result);
-            protect(getRoot(self));
+            (self as any).putInternal(result!);
             const { db } = getEnv<StoreEnv>(self);
             const concreteResult = result;
+            concreteResult.startLoading();
             db
                 .then((db) => db.get("artists", id))
                 .then((patch) => {
@@ -117,6 +143,7 @@ const ArtistStoreModel = types.model("ArtistStore", {
     return {
         get,
         loadAll,
+        putInternal,
     };
 });
 

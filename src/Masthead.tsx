@@ -11,14 +11,16 @@ import SearchBox from "./shared/SearchBox";
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);
-    const [{ rpm, waiting }, setRpm] = React.useState<{
+    const [{ rpm, waiting, errorPause }, setRpm] = React.useState<{
         rpm?: number,
         waiting?: number,
+        errorPause?: number,
     }>({});
     const update = React.useMemo(() => () => {
         const newRpm = cache?.rpm;
         const newWaiting = cache?.waiting.length;
-        setRpm({ rpm: newRpm, waiting: newWaiting });
+        const newErrorPause = cache?.errorPause;
+        setRpm({ rpm: newRpm, waiting: newWaiting, errorPause: newErrorPause });
     }, [cache]);
     React.useEffect(() => {
         const t = setInterval(update, 500);
@@ -26,7 +28,7 @@ function SpeedTracker() {
     }, [update]);
     return <>
         <Navbar.Text>
-            {rpm} rpm, {waiting} blocked
+            {rpm} rpm, {waiting} blocked, {errorPause ? `pausing for ${Math.ceil((errorPause - Date.now()) / 1000)}s` : "unpaused"}
         </Navbar.Text>
     </>;
 }

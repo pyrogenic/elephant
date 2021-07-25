@@ -1,6 +1,5 @@
 import { Discojs } from "discojs";
 import React from "react";
-import IDiscogsCache from "./IDiscogsCache";
 import LPDB from "./LPDB";
 import OrderedMap from "./OrderedMap";
 import { Collection, FieldsById, FieldsByName, Folders, Inventory, Lists } from "./Elephant";

@@ -1,14 +1,20 @@
+import { action, computed, makeObservable, observable } from "mobx";
 
 export default class OrderedMap<TKey, TValue> {
-    private content = new Map<TKey, TValue>();
+    private content = observable(new Map<TKey, TValue>());
     private insertionOrder = new Map<TKey, number>();
-    private inOrder: TValue[] = [];
+    private inOrder: TValue[] = observable([]);
+    constructor() {
+        makeObservable(this, {
+            size: computed,
+        });
+    }
     public get size() { return this.inOrder.length; }
     public values = () => this.inOrder;
-    public get(key: TKey) {
+    public get = (key: TKey) => {
         return this.content.get(key);
-    }
-    public set(key: TKey, value: TValue) {
+    };
+    public set = action((key: TKey, value: TValue) => {
         const i = this.insertionOrder.get(key);
         if (i !== undefined) {
             this.inOrder[i] = value;
@@ -17,5 +23,5 @@ export default class OrderedMap<TKey, TValue> {
             this.inOrder.push(value);
         }
         this.content.set(key, value);
-    }
+    });
 }
