@@ -14,21 +14,23 @@ import { Release } from "./model/Release";
 
 const TaskEntry = Badge;
 
+// const progress = observable<{
+//     releaseId?: number,
+//     release?: Release,
+//     artist?: Artist,
+//     role?: string,
+// }>({ release: undefined });
+
 export const DataIndex = observer(() => {
     const { collection, lpdb, cache } = React.useContext(ElephantContext);
     if (!lpdb || !cache) { return null; }
-    const uniqueReleases = uniqBy(collection.values(), "id");
+    const uniqueReleaseIds = uniqBy(collection.values(), "id").map(({ id }) => id);
     // const loadedIds = map(lpdb.releaseStore.all, "id");
     const storedIds = lpdb.releaseStore.known;
     //const allArtistIds = uniq(flatten(lpdb.releaseStore.all.map(({ artists }) => artists.map(({ artist: { id } }) => id))));
-    const unstoredReleases = uniqueReleases.filter(({ id }) => !storedIds.has(id));
+    const unstoredReleases = uniqueReleaseIds.filter((id) => !storedIds.has(id));
     const first = unstoredReleases[0];
-    const progress = observable<{
-        release?: Release,
-        artist?: Artist,
-        role?: string,
-    }>({ release: undefined })
-    const setProgress = action((key: keyof typeof progress, value: any) => progress[key] = value);
+    // const setProgress = action((key: keyof typeof progress, value: any) => progress[key] = value);
     return <Row>
         <Col>
             <Card>
@@ -36,24 +38,30 @@ export const DataIndex = observer(() => {
                 <Card.Header><CacheControl /></Card.Header>
                 <Card.Body>
                     <h5>Releases</h5>
-                    <p>Loaded {lpdb.releaseStore.count.loaded} / Stored {lpdb.releaseStore.count.all ?? "?"} / Known {uniqueReleases.length}</p>
+                    <p>Loaded {lpdb.releaseStore.count.loaded} / Stored {lpdb.releaseStore.count.all ?? "?"} / Known {uniqueReleaseIds.length}</p>
                     <hr />
-                    {first && <p>First unstored: <Button onClick={() => lpdb.releaseStore.get(first.id)}>{first.basic_information.title}</Button></p>}
+                    {first && <p>First unstored: <Button onClick={() => lpdb.releaseStore.get(first)}>{first}</Button></p>}
                     <hr />
-                    {unstoredReleases.length ? <Button onClick={() => unstoredReleases.forEach(({ id }) => lpdb.releaseStore.get(id))}>Get all {unstoredReleases.length} unstored releases</Button> : null}
+                    {unstoredReleases.length ? <Button onClick={() => unstoredReleases.forEach((id) => lpdb.releaseStore.get(id))}>Get all {unstoredReleases.length} unstored releases</Button> : null}
                     <hr />
-                    {progress.release ? <>
-                        Processing {progress.release.title}, {progress.role} / {progress.artist?.name ?? progress.artist?.id}
+                    {/* {progress.releaseId ? <>
+                        Processing {progress.releaseId}, {progress.release?.title}, {progress.role} / {progress.artist?.name ?? progress.artist?.id}
                     </> : <Button onClick={async () => {
-                        for (var e of uniqueReleases) {
-                            setProgress("release", e);
-                            for (var ee of lpdb.releaseStore.get(e.id).artists) {
-                                setProgress("artist", ee.artist);
-                                setProgress("role", ee.role);
-                                await ee.artist.loading();
-                            }
+                            for (var releaseId of uniqueReleaseIds) {
+                                setProgress("releaseId", releaseId);
+                                setImmediate(async () => {
+                                    const releaseId = progress.releaseId;
+                                    if (!releaseId) { return; }
+                                    const release = lpdb.releaseStore.get(releaseId);
+                                    for (var ee of release.artists) {
+                                        setProgress("artist", ee.artist);
+                                        setProgress("role", ee.role);
+                                        await ee.artist.loading();
+                                        console.log(`loaded ${ee.artist.name}`);
+                                    }
+                                });
                         }
-                    }}>Get all artists</Button>}
+                    }}>Get all artists</Button>} */}
                 </Card.Body>
             </Card>
         </Col>
