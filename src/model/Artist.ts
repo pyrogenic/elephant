@@ -108,6 +108,9 @@ const ArtistStoreModel = types.model("ArtistStore", {
         self.artists.put(artist);
     }
     function get(id: number, name?: string) {
+        if (id === 0) {
+            throw new Error("Zero is not a valid ID.");
+        }
         let result = self.artists.get(id.toString());
         if (result === undefined) {
             result = ArtistModel.create({ id, name });
@@ -138,7 +141,7 @@ const ArtistStoreModel = types.model("ArtistStore", {
             return;
         }
         const { db } = getEnv<StoreEnv>(self);
-        db.then((db) => db.getAllKeys("artists").then((ids) => ids.forEach((i) => get(i))));
+        db.then((db) => db.getAllKeys("artists").then((ids) => ids.forEach((i) => i !== 0 && get(i))));
     }
     return {
         get,

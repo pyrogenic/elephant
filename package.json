@@ -61,7 +61,8 @@
     "webpack": "~5.37.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start-rs": "react-scripts start",
+    "start": "FORCE_COLOR=true yarn start-rs | cat",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

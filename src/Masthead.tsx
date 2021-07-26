@@ -11,6 +11,7 @@ import "./Masthead.scss";
 import SearchBox from "./shared/SearchBox";
 import compact from "lodash/compact";
 import sum from "lodash/sum";
+import Loader from "./shared/Loader";
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);
@@ -31,16 +32,30 @@ function SpeedTracker() {
         const t = setInterval(update, 500);
         return clearInterval.bind(null, t);
     }, [update]);
-    const total = sum(compact([db, rpm, waiting]));
+    const total = sum(compact([db, waiting]));
     const pauseLabel = errorPause ? `${Math.ceil((errorPause - Date.now()) / 1000)}s` : undefined;
     const label = pauseLabel ?? total ? total : undefined;
     return <>
         <Navbar.Text>
-            <Spinner animation="border" role="status" hidden={label === undefined} />
-            <span className="spinner-overlay">{label}</span>
+            <Loader autoHide>
+                {label}
+            </Loader>
+            {/* <div className="loader" role="status" //hidden={label === undefined}
+            ><div className=""></div>
+                {label ?? "t}
+            </div> */}
         </Navbar.Text>
+        {db && <Navbar.Text>
+            {db} db
+        </Navbar.Text>}
+        {rpm && rpm > 0 && <Navbar.Text>
+            {rpm} rpm
+        </Navbar.Text>}
+        {waiting && waiting > 0 && <Navbar.Text>
+            {waiting} blocked
+        </Navbar.Text>}
         {label && <Navbar.Text>
-            {db} db, {rpm} rpm, {waiting} blocked, {pauseLabel ? `pausing for ${pauseLabel}` : "unpaused"}
+            {pauseLabel ? `pausing for ${pauseLabel}` : "unpaused"}
         </Navbar.Text>}
     </>;
 }
@@ -71,7 +86,7 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "me-2";
-    return <Navbar variant="light" className="mb-3">
+    return <Navbar bg="dark" variant="dark" className="mb-3">
         <Navbar.Brand className="ps-5" style={{
             backgroundImage: `url(${logo})`,
             backgroundSize: "contain",
@@ -85,13 +100,19 @@ export default function Masthead({
             <Router.NavLink exact to="/artists">Artists</Router.NavLink>
         </Navbar.Text>
         <Navbar.Text>
+            <Router.NavLink exact to="/labels">Labels</Router.NavLink>
+        </Navbar.Text>
+        <Navbar.Text>
+            <Router.NavLink exact to="/tags">Tags</Router.NavLink>
+        </Navbar.Text>
+        <Navbar.Text>
             <Router.NavLink exact to="/data">Data</Router.NavLink>
         </Navbar.Text>
         <Navbar.Text>
             <Router.NavLink exact to="/tuning">Tuning</Router.NavLink>
         </Navbar.Text>
         <SearchBox
-            className={formSpacing}
+            className="me-3"
             collection={collection}
             search={search}
             setSearch={setSearch}

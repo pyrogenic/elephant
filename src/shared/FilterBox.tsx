@@ -1,12 +1,12 @@
-import Badge from "react-bootstrap/Badge";
-import Dropdown from "react-bootstrap/Dropdown";
 import { ElementType, ensure } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import "./FilterBox.scss";
-import React from "react";
-import Form from "react-bootstrap/Form";
 import omit from "lodash/omit";
+import React from "react";
+import Dropdown from "react-bootstrap/Dropdown";
+import Form from "react-bootstrap/Form";
 import { useAsyncDebounce } from "react-table";
+import Badge from "./Badge";
+import "./FilterBox.scss";
 import { ButtonVariant } from "./Shared";
 
 type Filter<T> = (item: T) => boolean | undefined;

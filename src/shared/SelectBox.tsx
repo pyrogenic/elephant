@@ -2,7 +2,7 @@ import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import compact from "lodash/compact";
 import { computed } from "mobx";
 import React from "react";
-import Badge from "react-bootstrap/Badge";
+import Badge from "./Badge";
 import MultiSelect from "react-multi-select-component";
 import "./SelectBox.scss";
 

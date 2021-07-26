@@ -12,7 +12,7 @@ import { action, computed, observable, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
-import Badge from "react-bootstrap/Badge";
+import Badge from "./shared/Badge";
 import Dropdown from "react-bootstrap/Dropdown";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import Form from "react-bootstrap/Form";
@@ -34,8 +34,8 @@ import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
-import Tag, { TagKind, TagProps } from "./Tag";
-import { autoOrder, autoVariant, Formats, FORMATS, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, isPatch, patches } from "./Tuning";
+import Tag, { TagKind } from "./Tag";
+import { autoOrder, autoVariant, Formats, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, patches, useTagsFor, formatToTag } from "./Tuning";
 import autoFormat from "./autoFormat";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 
@@ -154,13 +154,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return undefined;
     }, [mediaCondition, playsId]);
 
-    const tagsFor = React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) =>
-        computed(() => compact([
-            ...formats(formatSrc).map((format) => formatToTag(format, false)),
-            ...(lpdb?.listsForRelease(id) ?? []).filter((list) => !isPatch(list.list)).map(listEntryToTag),
-            ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
-            ...styles.map((tag) => ({ tag, kind: TagKind.style })),
-        ])), [lpdb]);
+    const tagsFor = useTagsFor();
 
     const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
         if (!sourceId || !orderNumberId) {
@@ -745,17 +739,4 @@ function RatingEditor(props: {
 
 function releaseUrl({ id }: CollectionItem) {
     return `https://www.discogs.com/release/${id}`;
-}
-
-function formatToTag(format: string, abbr?: boolean): TagProps | undefined {
-    const formatData = FORMATS[format];
-    if (!formatData) {
-        return undefined;
-    }
-    const tag = (abbr ? formatData.abbr : formatData.name) ?? formatData.name ?? format;
-    return { tag, kind: formatData.as, title: tag === formatData.abbr ? format : undefined };
-}
-
-function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
-    return { tag, kind: TagKind.list, extra };
 }

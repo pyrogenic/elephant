@@ -3,6 +3,7 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Badge, { BadgeProps } from "react-bootstrap/Badge";
 import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiCircle, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
+import * as Router from "react-router-dom";
 import ElephantContext from "./ElephantContext";
 import { Content, resolve } from "./shared/resolve";
 import "./Tag.scss";
@@ -91,6 +92,7 @@ export default function Tag({
             onClick={onClickTag}
             title={title}
         >
+            <Router.NavLink exact to={`/tags/${encodeURIComponent(tag)}`}>
             <Icon
                 className="icon"
                 onClick={onClickIcon}
@@ -113,6 +115,7 @@ export default function Tag({
                     ? resolve(extra)
                     : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
             </> : null}
+            </Router.NavLink>
         </Badge>;
     }
 }

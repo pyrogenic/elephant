@@ -1,5 +1,5 @@
 .spinner {
-    flex-wrap: nowrap;
+    flex-wrap: nowrap !important; 
     font-variant-numeric: tabular-nums;
     text-align: center;
     &:not(:hover) * {

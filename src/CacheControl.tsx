@@ -1,15 +1,14 @@
 import { action, observable } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
-import { FiRefreshCw } from "react-icons/fi";
 import ElephantContext from "./ElephantContext";
+import Badge from "./shared/Badge";
+import BootstrapTable, { BootstrapTableColumn } from "./shared/BootstrapTable";
 import { ButtonVariant, Variant } from "./shared/Shared";
-import { patches } from "./Tuning";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
@@ -40,8 +39,19 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
         listsCount: 0,
         allCount: 0,
     }), []);
+    type Readout = {
+        category: string,
+        cached: number,
+        stored: number,
+    };
+    const columns = React.useMemo<BootstrapTableColumn<Readout>[]>(() => [
+        {
 
-    const { cache, lists } = React.useContext(ElephantContext);
+            accessor: "category",
+        },
+    ], []);
+
+    const { cache } = React.useContext(ElephantContext);
     if (!cache) { return null; }
 
     cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
@@ -58,7 +68,12 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
             collectionCount, inventoryCount, folderNamesCount, mastersCount, releasesCount, artistsCount, listsCount, allCount,
         } = counts;
         const allBadge = allCount ? <> <Badge bg={badgeVariant} text={badgeText}>{allCount}</Badge></> : null;
+
         return <>
+            <BootstrapTable
+                columns={columns}
+                data={[]}
+            />
             <Row>
                 <Col>
                     <InputGroup className="mb-2">
@@ -119,13 +134,6 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
                     {allBadge}
                         </Button>
                     </InputGroup>
-                </Col>
-            </Row>
-            <Row>
-                <Col>
-                    {patches(lists).map((list) => <li key={list.definition.id}>
-                        <span title={list.definition.description}>{list.definition.name}</span> <Badge>{list.items.length}</Badge>{list.definition.resource_url && <> <FiRefreshCw onClick={() => cache.clear({ url: list.definition.resource_url })} /></>}
-                    </li>)}
                 </Col>
             </Row>
         </>;

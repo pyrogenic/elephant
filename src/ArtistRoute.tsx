@@ -20,7 +20,7 @@ const ArtistPanel = observer(() => {
   const collectionSubset = computed(() => collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id)));
   const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)).map(({ id }) => lpdb.releaseStore.get(id)));
   return <>
-    <h2>{artist.name}</h2>
+    <h2>{artistName ?? artist.name}</h2>
 
     <CollectionTable collectionSubset={collectionSubset.get()} />
 

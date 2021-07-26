@@ -2,22 +2,14 @@ import uniqBy from "lodash/uniqBy";
 import { observer } from "mobx-react";
 import React from "react";
 import Card from "react-bootstrap/Card";
-import Badge, { BadgeProps } from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import { CacheControl } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
-import { Variant } from "./shared/Shared";
-
-function TaskEntry(props: BadgeProps & { bg?: Variant, text?: Variant }) {
-    let text: Variant | undefined = props.text;
-    const bg: Variant = props.bg ?? "light";
-    if (bg === "light" && text === undefined) {
-        text = "dark";
-    }
-    return <Badge bg={bg} text={text} {...props} />
-}
+import Badge from "./shared/Badge";
+import { patches } from "./Tuning";
+import { FiRefreshCw } from "react-icons/fi";
 
 // const progress = observable<{
 //     releaseId?: number,
@@ -27,7 +19,7 @@ function TaskEntry(props: BadgeProps & { bg?: Variant, text?: Variant }) {
 // }>({ release: undefined });
 
 export const DataIndex = observer(() => {
-    const { collection, lpdb, cache } = React.useContext(ElephantContext);
+    const { collection, lpdb, cache, lists } = React.useContext(ElephantContext);
     if (!lpdb || !cache) { return null; }
     const uniqueReleaseIds = uniqBy(collection.values(), "id").map(({ id }) => id);
     // const loadedIds = map(lpdb.releaseStore.all, "id");
@@ -35,13 +27,19 @@ export const DataIndex = observer(() => {
     //const allArtistIds = uniq(flatten(lpdb.releaseStore.all.map(({ artists }) => artists.map(({ artist: { id } }) => id))));
     const unstoredReleases = uniqueReleaseIds.filter((id) => !storedIds.has(id));
     const first = unstoredReleases[0];
+    const staleReleases = lpdb.releaseStore.all.filter(({ stale }) => stale);
+    const firstStale = staleReleases[0];
     // const setProgress = action((key: keyof typeof progress, value: any) => progress[key] = value);
     return <Row>
         <Col>
             <Card>
                 <Card.Header>Elephant Data</Card.Header>
-                <Card.Header><CacheControl /></Card.Header>
                 <Card.Body>
+                    <Row>
+                        <Col>
+                            <CacheControl />
+                        </Col>
+                    </Row>
                     <h5>Releases</h5>
                     <p>Loaded {lpdb.releaseStore.count.loaded} / Stored {lpdb.releaseStore.count.all ?? "?"} / Known {uniqueReleaseIds.length}</p>
                     <hr />
@@ -49,6 +47,30 @@ export const DataIndex = observer(() => {
                     <hr />
                     {unstoredReleases.length ? <Button onClick={() => unstoredReleases.forEach((id) => lpdb.releaseStore.get(id))}>Get all {unstoredReleases.length} unstored releases</Button> : null}
                     <hr />
+                    <Button onClick={() => lpdb.releaseStore.loadAll()}>Load All Releases</Button>
+                    <hr />
+                    {firstStale && <p>First stale: <Button onClick={() => firstStale.refresh()}>{firstStale.title} @ version {firstStale.version}</Button></p>}
+                    {staleReleases.length ? <Button onClick={() => staleReleases.forEach((r) => r.refresh())}>Update all {staleReleases.length} stale releases</Button> : null}
+                    <hr />
+
+
+                    <Row>
+                        {patches(lists).map((list) => <Col key={list.definition.id}><Card >
+                            <Card.Header title={list.definition.description}>
+                                {list.definition.name}
+                                {" "}
+                                <Badge>{list.items.length}</Badge>
+                                {list.definition.resource_url && <>
+                                    {" "}
+                                    <FiRefreshCw onClick={() => cache.clear({ url: list.definition.resource_url })} />
+                                </>}
+                            </Card.Header>
+                            <Card.Body>
+                                {list.items.map(({ id }) => <li key={id}>{lpdb.releaseStore.get(id).title}</li>)}
+                            </Card.Body>
+                        </Card></Col>)}
+                    </Row>
+
                     {/* {progress.releaseId ? <>
                         Processing {progress.releaseId}, {progress.release?.title}, {progress.role} / {progress.artist?.name ?? progress.artist?.id}
                     </> : <Button onClick={async () => {
@@ -76,22 +98,22 @@ export const DataIndex = observer(() => {
                 <Card.Body>
                     <h5>Cache Checks</h5>
                     <div>
-                        {cache.dbInflight.map((detail, i) => <TaskEntry key={i}>{prettyPrint(detail)}</TaskEntry>)}
+                        {cache.dbInflight.map((detail, i) => <Badge key={i}>{prettyPrint(detail)}</Badge>)}
                     </div>
                     <hr />
                     <h5>Pending Requests</h5>
                     <div>
-                        {cache.waiting.map((detail, i) => <TaskEntry key={i}>{prettyPrint(detail)}</TaskEntry>)}
+                        {cache.waiting.map((detail, i) => <Badge key={i}>{prettyPrint(detail)}</Badge>)}
                     </div>
                     <hr />
                     <h5>Active Discogs Requests</h5>
                     <div>
-                        {cache.inflight.map((detail, i) => <TaskEntry key={i}>{prettyPrint(detail)}</TaskEntry>)}
+                        {cache.inflight.map((detail, i) => <Badge key={i}>{prettyPrint(detail)}</Badge>)}
                     </div>
                     <hr />
                     <h5>Completed Requests</h5>
                     <div>
-                        {cache.completed.reverse().map(({ detail, error }, i) => <TaskEntry key={i} className={error ? "text-danger" : "text-muted"}>{prettyPrint(detail)} {error && error.message}</TaskEntry>)}
+                        {cache.completed.reverse().map(({ detail, error }, i) => <Badge key={i} className={error ? "text-danger" : "text-muted"}>{prettyPrint(detail)} {error && error.message}</Badge>)}
                     </div>
                 </Card.Body>
             </Card>

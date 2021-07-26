@@ -4,10 +4,13 @@ import { observer } from "mobx-react";
 import { Card } from "react-bootstrap";
 import { arraySetAddAll, ElementType } from "@pyrogenic/asset/lib";
 import { CollectionItem, List, Lists } from "./Elephant";
-import { TagKind } from "./Tag";
+import { TagKind, TagProps } from "./Tag";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
-import Bootstrap from "react-bootstrap/types";
 import autoFormat from "./autoFormat";
+import { Variant } from "./shared/Shared";
+import React from "react";
+import ElephantContext from "./ElephantContext";
+import LPDB from "./LPDB";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -125,7 +128,7 @@ export function parseLocation(str: string): Location {
     };
 }
 
-export function autoVariant(str: string | undefined): Bootstrap.Color | undefined {
+export function autoVariant(str: string | undefined): Variant | undefined {
     switch (str) {
         case "Mint (M)":
         case "M":
@@ -293,3 +296,26 @@ const Tuning = observer(() => {
 })
 
 export default Tuning;
+
+export function formatToTag(format: string, abbr?: boolean): TagProps | undefined {
+    const formatData = FORMATS[format];
+    if (!formatData) {
+        return undefined;
+    }
+    const tag = (abbr ? formatData.abbr : formatData.name) ?? formatData.name ?? format;
+    return { tag, kind: formatData.as, title: tag === formatData.abbr ? format : undefined };
+}
+
+export function listEntryToTag({ list: { definition: { name: tag } }, entry: { comment: extra } }: ElementType<ReturnType<LPDB["listsForRelease"]>>) {
+    return { tag, kind: TagKind.list, extra };
+}
+
+export function useTagsFor() {
+    const { lpdb } = React.useContext(ElephantContext);
+    return React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) => computed(() => compact([
+        ...formats(formatSrc).map((format) => formatToTag(format, false)),
+        ...(lpdb?.listsForRelease(id) ?? []).filter((list) => !isPatch(list.list)).map(listEntryToTag),
+        ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
+        ...styles.map((tag) => ({ tag, kind: TagKind.style })),
+    ])), [lpdb]);
+}

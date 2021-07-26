@@ -7,7 +7,7 @@ import uniqBy from "lodash/uniqBy";
 import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import Badge from "react-bootstrap/Badge";
+import Badge from "./shared/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -21,7 +21,7 @@ import ElephantContext from "./ElephantContext";
 import { MusicLabelLogo } from "./LazyMusicLabel";
 import LPDB from "./LPDB";
 import { Content } from "./shared/resolve";
-import { ButtonVariant } from "./shared/Shared";
+import { Variant } from "./shared/Shared";
 import Tag, { TagKind } from "./Tag";
 import { trackTuning } from "./Tuning";
 
@@ -198,7 +198,7 @@ const Details = observer(DetailsImpl);
 
 export default Details;
 
-function variantFor(status: ReturnType<LPDB["details"]>["status"]): ButtonVariant {
+function variantFor(status: ReturnType<LPDB["details"]>["status"]): Variant {
     switch (status) {
         case "pending":
             return "warning";

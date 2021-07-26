@@ -5,9 +5,11 @@ import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import { Label } from "./LPDB";
 import { ElementType } from "./shared/TypeConstraints";
-import ExternalLink from "./shared/ExternalLink";
+import * as Router from "react-router-dom";
 
-export default function LazyMusicLabel({ label: { name, id }, alwaysShowName, hq }: { label: ElementType<CollectionItem["basic_information"]["labels"]>, alwaysShowName?: boolean, hq?: boolean }) {
+type LabelProps = Pick<ElementType<CollectionItem["basic_information"]["labels"]>, "name" | "id">;
+
+export default function LazyMusicLabel({ label: { name, id }, alwaysShowName, hq }: { label: LabelProps, alwaysShowName?: boolean, hq?: boolean }) {
     const { lpdb } = React.useContext(ElephantContext);
     const label = React.useMemo(() => lpdb?.label(id), [id, lpdb]);
     return <Observer render={() => {
@@ -16,16 +18,16 @@ export default function LazyMusicLabel({ label: { name, id }, alwaysShowName, hq
     }} />;
 }
 
-export function MusicLabelLogo({ uri, name, images, alwaysShowName, hq }: { uri?: string; name: string; images?: Label["images"], alwaysShowName?: boolean, hq?: boolean }) {
+export function MusicLabelLogo({ id, name, images, alwaysShowName, hq }: { id?: number; name?: string; images?: Label["images"], alwaysShowName?: boolean, hq?: boolean }) {
     images = images && sortBy(images, factor);
     const image = images?.shift();
     if (image) {
         const { uri, uri150 } = image;
-        return <ExternalLink href={uri} className="quiet music-label">
+        return <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label">
             <img className="music-label-logo-inline" src={hq ? uri : uri150} alt="logo" title={name} />{alwaysShowName && <span className="name">{name}</span>}
-        </ExternalLink>;
+        </Router.NavLink>;
     } else {
-        return <ExternalLink href={uri} className="quiet music-label">{name}</ExternalLink>;
+        return <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label">{name}</Router.NavLink>;
     }
 
     // //const image = label.images.find(({ type }) => type === "primary");

@@ -116,11 +116,11 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         if (rpm >= 30 || this.errorPause > Date.now()) {
             if (this.unpause === undefined) {
                 this.pause = new Promise<void>((unpause, _) => {
-                    console.log("paused");
+                    if (this.log) console.log("paused");
                     this.unpause = unpause;
                 });
                 this.pause.then(() => {
-                    console.log("unpaused");
+                    if (this.log) console.log("unpaused");
                     this.pause = undefined;
                     this.unpause = undefined;
                 });
@@ -183,16 +183,16 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             return factory();
         }
         if (this.activeGets.has(key)) {
-            console.log(`Returning existing active request: ${key}`);
+            if (this.log) console.log(`Returning existing active request: ${key}`);
             return this.activeGets.get(key);
         }
-        console.log(`Starting new active request for ${key}`);
+        if (this.log) console.log(`Starting new active request for ${key}`);
         const p = this.getInternal(factory, key, log, bypass, cache);
         this.activeGets.set(key, p);
         p.then(() => {
-            console.log(`Active request completed for ${key}`);
+            if (this.log) console.log(`Active request completed for ${key}`);
             if (this.activeGets.get(key) === p) {
-                console.log(`Deleted cached promise: ${key}`);
+                if (this.log) console.log(`Deleted cached promise: ${key}`);
                 this.activeGets.delete(key);
             }
         });
@@ -210,7 +210,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     const cachedValue = !bypass && await this.getFromCache(key);
                     if (cachedValue) {
                         if (waited) {
-                            console.log(`Returning cached value after wait filled it in: ${key}`);
+                            if (this.log) console.log(`Returning cached value after wait filled it in: ${key}`);
                         }
                         return cachedValue.data as T;
                     }
@@ -221,7 +221,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     }
 
                     waited++;
-                    console.log(`Waiting #${waited}: ${key}`);
+                    if (this.log) console.log(`Waiting #${waited}: ${key}`);
                     await this.pause;
                 }
             }
@@ -231,7 +231,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 });
             }
             if (waited) {
-                console.log(`Resuming after waiting: ${key}`);
+                if (this.log) console.log(`Resuming after waiting: ${key}`);
             }
             try {
                 const promise = factory();
@@ -285,6 +285,15 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         runInAction(() => this.version++);
     };
 
+    private allKeysPromise?: Promise<string[]>;
+
+    private getAllKeys = () => {
+        if (this.allKeysPromise) { return this.allKeysPromise; }
+        this.allKeysPromise = this.storage.then((db) => db.getAllKeys("get"));
+        this.allKeysPromise.then(() => this.allKeysPromise = undefined, () => this.allKeysPromise = undefined);
+        return this.allKeysPromise;
+    }
+
     public count = async ({ url, data }: CacheQuery = {}) => {
         if (data) {
             return (await (await (await this.storage).getAll("get")).filter((item) => {
@@ -295,7 +304,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             })).length;
         }
         if (url) {
-            let results = await (await this.storage).getAllKeys("get");
+            let results = await this.getAllKeys();
             results = results.filter(test.bind(null, url));
             return results.length;
         }
@@ -314,11 +323,11 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 }).map(({ url }) => url));
             }
             if (url) {
-                let results = await db.getAllKeys("get");
+                let results = await this.getAllKeys();
                 results = results.filter(test.bind(null, url));
                 return results;
             }
-            return db.getAllKeys("get")
+            return this.getAllKeys();
         } catch (e) {
             console.error(e);
             return [];

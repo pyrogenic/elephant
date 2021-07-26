@@ -1,4 +1,11 @@
-@import "custom";
+@import "~bootstrap/scss/functions";
+@import "~bootstrap/scss/variables";
+
+.disco-tagged {
+    a {
+        color: $primary !important;
+    }
+}
 
 img.cover {
     border: 1px grey solid;

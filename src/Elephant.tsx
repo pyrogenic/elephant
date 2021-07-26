@@ -23,6 +23,8 @@ import Tuning from "./Tuning";
 import { ArtistMode } from "./ArtistRoute";
 import { DataIndex } from "./DataRoute";
 import AuthRoute from "./AuthRoute";
+import { LabelMode } from "./LabelRoute";
+import { TagsMode } from "./TagsRoute";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -151,6 +153,12 @@ export default function Elephant() {
           </Router.Route>
           <Router.Route path="/artists">
             <ArtistMode />
+          </Router.Route>
+          <Router.Route path="/labels">
+            <LabelMode />
+          </Router.Route>
+          <Router.Route path="/tags">
+            <TagsMode />
           </Router.Route>
           <Router.Route path="/data">
             <DataIndex />

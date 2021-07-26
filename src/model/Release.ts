@@ -24,6 +24,8 @@ const ArtistRoleModel = types.model("ArtistRoleModel", {
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
+const CURRENT_VERSION = 1;
+
 export const ReleaseModel = types.model("Release", {
     id: types.identifierNumber,
     title: types.optional(types.string, "unknown"),
@@ -31,10 +33,14 @@ export const ReleaseModel = types.model("Release", {
     artists: types.optional(types.array(ArtistRoleModel), []),
     images: types.optional(types.array(ImageModel), []),
     thumb: types.maybe(types.string),
+    version: types.optional(types.integer, 0),
 }).views((self) => ({
     // get roles(): ReleaseRole[] {
     //     return ReleaseRoleStore.forRelease(self);
     // },
+    get stale() {
+        return self.version < CURRENT_VERSION;
+    },
 })).actions((self) => {
     const actionState = {
         hydrating: false,
@@ -91,6 +97,7 @@ export const ReleaseModel = types.model("Release", {
                 return ({ artist: id.toString(), role });
             });
         })), JSON.stringify.bind(JSON));
+        patch.version = CURRENT_VERSION;
         console.log(`refresh ${self.title}: applying patch...`);
         applySnapshot(self, patch);
     });
