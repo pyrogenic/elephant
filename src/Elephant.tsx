@@ -25,6 +25,7 @@ import { DataIndex } from "./DataRoute";
 import AuthRoute from "./AuthRoute";
 import { LabelMode } from "./LabelRoute";
 import { TagsMode } from "./TagsRoute";
+import { TasksMode } from "./TasksRoute";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -159,6 +160,9 @@ export default function Elephant() {
           </Router.Route>
           <Router.Route path="/tags">
             <TagsMode />
+          </Router.Route>
+          <Router.Route path="/tasks">
+            <TasksMode />
           </Router.Route>
           <Router.Route path="/data">
             <DataIndex />

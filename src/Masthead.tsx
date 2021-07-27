@@ -106,6 +106,9 @@ export default function Masthead({
             <Router.NavLink exact to="/tags">Tags</Router.NavLink>
         </Navbar.Text>
         <Navbar.Text>
+            <Router.NavLink exact to="/tasks">Tasks</Router.NavLink>
+        </Navbar.Text>
+        <Navbar.Text>
             <Router.NavLink exact to="/data">Data</Router.NavLink>
         </Navbar.Text>
         <Navbar.Text>

@@ -1,9 +1,9 @@
 import { uniq, flattenDeep, compact } from "lodash";
-import { observable, runInAction, computed } from "mobx";
+import { observable, runInAction, computed, action } from "mobx";
 import { observer } from "mobx-react";
 import { Card } from "react-bootstrap";
 import { arraySetAddAll, ElementType } from "@pyrogenic/asset/lib";
-import { CollectionItem, List, Lists } from "./Elephant";
+import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
 import { TagKind, TagProps } from "./Tag";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import autoFormat from "./autoFormat";
@@ -310,6 +310,24 @@ export function listEntryToTag({ list: { definition: { name: tag } }, entry: { c
     return { tag, kind: TagKind.list, extra };
 }
 
+type CollectionNote = ElementType<CollectionItem["notes"]>;
+
+export const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
+    try {
+        let result = notes.find(({ field_id }) => field_id === id);
+        if (result) { return result; }
+        result = { field_id: id, value: "" };
+        notes.push(result);
+        return result;
+    } catch (e) {
+        return e.toString();
+    }
+});
+
+export const getNote = action("getNote", (notes: CollectionNote[], id: number): string | undefined => {
+    return noteById(notes, id)?.value;
+});
+
 export function useTagsFor() {
     const { lpdb } = React.useContext(ElephantContext);
     return React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) => computed(() => compact([
@@ -318,4 +336,17 @@ export function useTagsFor() {
         ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
         ...styles.map((tag) => ({ tag, kind: TagKind.style })),
     ])), [lpdb]);
+}
+
+export function useTasks(fieldsByName?: FieldsByName) {
+    const ec = React.useContext(ElephantContext);
+    fieldsByName = fieldsByName ?? ec.fieldsByName;
+    const tasksId = React.useMemo(() => fieldsByName?.get(KnownFieldTitle.tasks)?.id, [fieldsByName]);
+    const tasks = React.useCallback(({ notes }: CollectionItem): string[] => {
+        if (!tasksId) { return []; }
+        const value = getNote(notes, tasksId);
+        if (!value) { return []; }
+        return value.split("\n").sort();
+    }, [tasksId]);
+    return { tasks, tasksId };
 }

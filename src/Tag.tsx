@@ -15,6 +15,7 @@ export enum TagKind {
     style = "style",
     list = "list",
     box = "box",
+    task = "box",
     shelf = "shelf",
     bay = "bay",
     unknown = "unknown",
@@ -50,6 +51,7 @@ export default function Tag({
     function content() {
         var count: number | undefined;
         var Icon: typeof FiTag;
+        var rte = "tag";
         switch (kind) {
             case TagKind.format:
                 Icon = FiCircle;
@@ -72,6 +74,10 @@ export default function Tag({
             case TagKind.bay:
                 Icon = FiAlertTriangle;
                 break;
+            case TagKind.task:
+                rte = "tasks";
+                Icon = FiSquare;
+                break;
             case TagKind.box:
                 Icon = FiArchive;
                 break;
@@ -92,7 +98,7 @@ export default function Tag({
             onClick={onClickTag}
             title={title}
         >
-            <Router.NavLink exact to={`/tags/${encodeURIComponent(tag)}`}>
+            <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
             <Icon
                 className="icon"
                 onClick={onClickIcon}

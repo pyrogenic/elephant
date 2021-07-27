@@ -35,12 +35,11 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, Formats, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, patches, useTagsFor, formatToTag } from "./Tuning";
+import { autoOrder, autoVariant, Formats, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, patches, useTagsFor, formatToTag, noteById, getNote, useTasks } from "./Tuning";
 import autoFormat from "./autoFormat";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
-type CollectionNote = ElementType<CollectionItem["notes"]>;
 
 const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } = {
     ready: "remote-ready",
@@ -51,22 +50,6 @@ const STATUS_CLASSES: { [K in ReturnType<LPDB["details"]>["status"]]?: string } 
 function uniqueLabels(labels: Labels) {
     return uniqBy(labels, "id");
 }
-
-const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
-    try {
-        let result = notes.find(({ field_id }) => field_id === id);
-        if (result) { return result; }
-        result = { field_id: id, value: "" };
-        notes.push(result);
-        return result;
-    } catch (e) {
-        return e.toString();
-    }
-});
-
-const getNote = action("getNote", (notes: CollectionNote[], id: number): string | undefined => {
-    return noteById(notes, id)?.value;
-});
 
 function sortByTasks(ac: { values: { Tasks: string[] } }, bc: { values: { Tasks: string[] } }) {
     const a = ac.values.Tasks;
@@ -124,14 +107,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
     const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
     const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
-    const tasksId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.tasks)?.id, [fieldsByName]);
 
-    const tasks = React.useCallback(({ notes }: CollectionItem): string[] => {
-        if (!tasksId) { return []; }
-        const value = getNote(notes, tasksId);
-        if (!value) { return []; }
-        return value.split("\n").sort();
-    }, [tasksId]);
+    const { tasks, tasksId } = useTasks();
 
     const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
     const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
