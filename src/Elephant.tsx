@@ -7,6 +7,8 @@ import { action, reaction, runInAction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import Container from "react-bootstrap/Container";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
@@ -174,6 +176,12 @@ export default function Elephant() {
             <CollectionTable tableSearch={tableSearch} />
           </Router.Route>
         </Router.Switch>
+        <hr />
+        <Row>
+          <Col>
+            This application uses Discogs’ API but is not affiliated with, sponsored or endorsed by Discogs. ‘Discogs’ is a trademark of Zink Media, LLC.
+          </Col>
+        </Row>
       </Container>
     </Router.BrowserRouter>
   </ElephantContext.Provider>;

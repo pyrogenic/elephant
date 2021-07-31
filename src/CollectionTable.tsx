@@ -1,4 +1,4 @@
-import { compare } from "@pyrogenic/asset/lib/compare";
+import { arraySetAdd, arraySetRemove, compare } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
@@ -12,12 +12,12 @@ import { action, computed, observable, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
-import Badge from "./shared/Badge";
 import Dropdown from "react-bootstrap/Dropdown";
-import { FormControlProps } from "react-bootstrap/FormControl";
 import Form from "react-bootstrap/Form";
+import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { Column } from "react-table";
+import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./Details";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
@@ -25,7 +25,10 @@ import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
 import IDiscogsCache from "./IDiscogsCache";
 import LazyMusicLabel from "./LazyMusicLabel";
+import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
+import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
+import Badge from "./shared/Badge";
 import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
@@ -35,9 +38,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, Formats, formats, KnownFieldTitle, labelNames, Labels, parseLocation, orderUri, Source, patches, useTagsFor, formatToTag, noteById, getNote, useTasks } from "./Tuning";
-import autoFormat from "./autoFormat";
-import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
+import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, noteById, orderUri, patches, Source, useTagsFor, useTasks } from "./Tuning";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -85,20 +86,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         collection,
         fieldsById,
         fieldsByName,
-        folders,
         inventory,
         lists,
         lpdb,
     } = React.useContext(ElephantContext);
 
-    const stale = React.useMemo(() => {
-        function s<T>(pattern: Parameters<IDiscogsCache["clear"]>[0], result: T) {
-            cache?.clear(pattern);
-            return result;
-        };
-        return s;
-    }, [cache]);
-    const folderName = React.useCallback((folder_id: number) => folders?.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders, stale]);
+    const folderName = useFolderName();
 
     const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
     const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
@@ -161,7 +154,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             case "Tasks":
                 return ["words", tasks(item).join(" ")];
             case "Tags":
-                return ["words", tagsFor(item).get().map(({ tag }) => tag).join(" ")];
+                return ["words", tagsFor(item, { includeLocation: false }).get().map(({ tag }) => tag).join(" ")];
             case "Type":
                 return ["words", [...formats(item.basic_information.formats), item.basic_information.formats[0]?.name].join(" ")];
             case "Year":
@@ -268,16 +261,28 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     return <Observer render={() => {
                         const { folder_id, id: release_id, instance_id, notes } = row;
                         const playsNote = noteById(notes, playsId)!;
-                        let plays = Number(pendingValue(playsNote.value ?? "0"));
+                        let playsValue = pendingValue(playsNote.value ?? "0");
+                        let [playsStr, ...history] = playsValue.split("\n")
+                        let plays = Number(playsStr);
                         const media = mediaCondition(notes);
                         if (!plays && media) {
                             plays = 1;
                         }
-                        return <Spinner value={plays} min={0} onChange={change} />;
+                        return <Spinner value={plays} min={0} onChange={change} title={history.join("\n")} />;
 
                         function change(value: number) {
-                            const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, value.toString())
-                            mutate(playsNote, "value", value, promise);
+                            const newPlayCount = value.toString();
+                            const now = new Date();
+                            const today = [now.getFullYear(), now.getMonth(), now.getDate()].join(".");
+                            const segments = [newPlayCount, ...history];
+                            if (value > plays) {
+                                arraySetAdd(segments, today);
+                            } else {
+                                arraySetRemove(segments, today);
+                            }
+                            const newFieldValue = segments.join("\n");
+                            const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, newFieldValue)
+                            mutate(playsNote, "value", newFieldValue, promise);
                         }
                     }} />;
                 },
@@ -443,6 +448,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             let className: string | undefined = undefined;
             switch (status) {
                 case "remain":
+                case "unknown":
                     extra = false;
                     break;
                 case "leave":
@@ -466,9 +472,15 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const tagsColumn = React.useMemo(() => ({
         Header: "Tags",
-        accessor: tagsFor,
-        Cell: ({ value }: { value: ReturnType<typeof tagsFor>; }) => <Observer render={() => {
+        accessor: (e: CollectionItem) => tagsFor(e),
+        Cell: ({ value, row: { original } }: { value: ReturnType<typeof tagsFor>, row: { original: CollectionItem } }) => <Observer render={() => {
             const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>);
+            // const add = availableTags && <Dropdown onSelect={(list) => addToList(original, list)}>
+            //     <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
+            //     <Dropdown.Menu>
+            //         {availableTasks.map((task) => <Dropdown.Item key={task} eventKey={task}>{task}</Dropdown.Item>)}
+            //     </Dropdown.Menu>
+            // </Dropdown>;
             return <div className="d-inline d-flex-column">{badges}</div>;
         }} />,
         sortType: sortByTags,
@@ -503,6 +515,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         detail={(item) => <Details item={item} />}
         rowClassName={rowClassName} />;
 }
+
+// function addToList(item: CollectionItem, { definition: list }: List) {
+//     const { client } = React.useContext(ElephantContext);
+// }
 
 /*
  

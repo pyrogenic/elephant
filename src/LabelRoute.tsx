@@ -1,20 +1,19 @@
 // import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import flatten from "lodash/flatten";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import flatten from "lodash/flatten";
 import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import Figure from "react-bootstrap/Button";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
+import DiscogsLinkback from "./DiscogsLinkback";
 import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
 import Loader from "./shared/Loader";
 
 function DiscoTag({ src }: { src: string }) {
-    let match = Router.useRouteMatch();
     const { lpdb } = React.useContext(ElephantContext);
     if (!lpdb) { return null; }
     const result: JSX.Element[] = [];
@@ -75,6 +74,9 @@ const LabelPanel = observer(() => {
             </h2>
             <p>
                 {label.status === "ready" && <DiscoTag src={label.value.profile} />}
+            </p>
+            <p>
+                {label.status === "ready" && <DiscogsLinkback {...label.value} />}
             </p>
         </div>
         <CollectionTable collectionSubset={collectionSubset.get()} />

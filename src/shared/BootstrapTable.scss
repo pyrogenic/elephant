@@ -11,5 +11,12 @@ table.BootstrapTable {
     tr:not([role="row"]), td:not([role="cell"]) {
         border-top: none;
     }
+
+    .drawer {
+        border-top: none;
+        margin-top: -1rem;
+        margin-left: 1rem;
+        margin-right: 1rem;
+    }
 }
     

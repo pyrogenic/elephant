@@ -17,7 +17,7 @@ const TagPanel = observer(() => {
     const tagsFor = useTagsFor();
     const collectionSubset = computed(() => {
         const result = collection.values().filter((item) => {
-            const itemTags = tagsFor(item).get();
+            const itemTags = tagsFor(item, { includeLocation: true }).get();
             const match = itemTags.find(({ tag }) => tag === tagName);
             return match;
         });
@@ -33,7 +33,7 @@ const TagPanel = observer(() => {
 const TagsIndex = observer(() => {
     const { collection } = React.useContext(ElephantContext);
     const tagsFor = useTagsFor();
-    const tags = computed(() => uniqBy(flatten(collection.values().map((item) => tagsFor(item).get())), "tag"));
+    const tags = computed(() => uniqBy(flatten(collection.values().map((item) => tagsFor(item, { includeLocation: true }).get())), "tag"));
 
     return <>
         <h2>Tags</h2>

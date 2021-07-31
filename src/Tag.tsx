@@ -15,7 +15,7 @@ export enum TagKind {
     style = "style",
     list = "list",
     box = "box",
-    task = "box",
+    task = "task",
     shelf = "shelf",
     bay = "bay",
     unknown = "unknown",
@@ -51,7 +51,7 @@ export default function Tag({
     function content() {
         var count: number | undefined;
         var Icon: typeof FiTag;
-        var rte = "tag";
+        var rte = "tags";
         switch (kind) {
             case TagKind.format:
                 Icon = FiCircle;
@@ -125,6 +125,7 @@ export default function Tag({
         </Badge>;
     }
 }
+
 function ExtraBadge({ onClick, extra }: { onClick?: () => void, extra: Content }) {
     let title: string | undefined;
     if (onClick === undefined && typeof extra === "string" && extra.match(/[.!?]$/)) {

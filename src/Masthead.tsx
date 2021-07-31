@@ -1,17 +1,17 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
+import compact from "lodash/compact";
+import sum from "lodash/sum";
 import React from "react";
+import Image from "react-bootstrap/Image";
 import Form from "react-bootstrap/Form";
-import Spinner from "react-bootstrap/Spinner";
 import Navbar from "react-bootstrap/Navbar";
 import * as Router from "react-router-dom";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import "./Masthead.scss";
-import SearchBox from "./shared/SearchBox";
-import compact from "lodash/compact";
-import sum from "lodash/sum";
 import Loader from "./shared/Loader";
+import SearchBox from "./shared/SearchBox";
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);
@@ -45,17 +45,17 @@ function SpeedTracker() {
                 {label ?? "t}
             </div> */}
         </Navbar.Text>
-        {db && <Navbar.Text>
+        {!db ? null : <Navbar.Text>
             {db} db
         </Navbar.Text>}
-        {rpm && rpm > 0 && <Navbar.Text>
+        {!rpm ? null : <Navbar.Text>
             {rpm} rpm
         </Navbar.Text>}
-        {waiting && waiting > 0 && <Navbar.Text>
+        {!waiting ? null : <Navbar.Text>
             {waiting} blocked
         </Navbar.Text>}
-        {label && <Navbar.Text>
-            {pauseLabel ? `pausing for ${pauseLabel}` : "unpaused"}
+        {!label ? null : <Navbar.Text>
+            {pauseLabel ? `pausing for ${pauseLabel}` : null}
         </Navbar.Text>}
     </>;
 }
@@ -86,13 +86,21 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "me-2";
-    return <Navbar bg="dark" variant="dark" className="mb-3">
-        <Navbar.Brand className="ps-5" style={{
-            backgroundImage: `url(${logo})`,
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            backgroundPositionX: "0.3rem",
-        }}><Router.NavLink exact to="/">Elephant</Router.NavLink></Navbar.Brand>
+    return <Navbar bg="light" variant="light" className="mb-3">
+        <Navbar.Brand
+        // style={{
+        //     backgroundImage: `url(${logo})`,
+        //     backgroundSize: "contain",
+        //     backgroundRepeat: "no-repeat",
+        //     backgroundPositionX: "0.3rem",
+        //     backgroundBlendMode: "color-dodge",
+        // }}
+        >
+            <Router.NavLink exact to="/">
+                <Image className="logo" src={logo} />
+                Elephant
+            </Router.NavLink>
+        </Navbar.Brand>
         <Navbar.Text>
             <Router.NavLink exact to="/auth">Auth</Router.NavLink>
         </Navbar.Text>

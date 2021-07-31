@@ -11,6 +11,8 @@ import { Variant } from "./shared/Shared";
 import React from "react";
 import ElephantContext from "./ElephantContext";
 import LPDB from "./LPDB";
+import { DeepPendable } from "./shared/Pendable";
+import { parseLocation } from "./location";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -55,77 +57,6 @@ export function isPatch(list: List) {
 
 export function patches(lists: Lists) {
     return lists.values().filter(isPatch);
-}
-
-export type Location = {
-    type: TagKind,
-    label: string;
-    status: "remain" | "leave" | "listed" | "sold" | "unknown",
-}
-
-export function parseLocation(str: string): Location {
-    const [typeSrc, rest] = str.split(/- |, /, 2);
-    let type: Location["type"];
-    let label: Location["label"];
-    let status: Location["status"];
-    let labelSrc: string;
-    switch (typeSrc) {
-        case "Shelf":
-            type = TagKind.shelf;
-            labelSrc = rest;
-            break;
-        case "Box":
-        case "":
-            type = TagKind.box;
-            labelSrc = rest;
-            break;
-        case "Service Bay":
-            type = TagKind.bay;
-            labelSrc = "Remain (Service)";
-            break;
-        case "Sold":
-            type = TagKind.unknown;
-            labelSrc = "Sold";
-            break;
-        case "Uncategorized":
-            type = TagKind.unknown;
-            labelSrc = "";
-            break;
-        default:
-            type = TagKind.unknown;
-            labelSrc = str;
-            break;
-    }
-    const [statusSrc, boxNameSrc] = labelSrc.split(" ", 2);
-    const boxMatch = /\((?<label>.*)\)/.exec(boxNameSrc);
-    label = boxMatch?.groups?.label ?? boxNameSrc;
-    switch (statusSrc) {
-        case "Remain":
-        case "Top":
-        case "Bottom":
-            status = "remain";
-            break;
-        case "Leave":
-            status = "leave";
-            break;
-        case "Listed":
-            status = "listed";
-            break;
-        case "Sold":
-            status = "sold";
-            break;
-        case "":
-            status = "unknown";
-            break;
-        default:
-            status = statusSrc as any;
-            break;
-    }
-    return {
-        type,
-        label,
-        status,
-    };
 }
 
 export function autoVariant(str: string | undefined): Variant | undefined {
@@ -312,7 +243,10 @@ export function listEntryToTag({ list: { definition: { name: tag } }, entry: { c
 
 type CollectionNote = ElementType<CollectionItem["notes"]>;
 
-export const noteById = action("noteById", (notes: CollectionNote[], id: number) => {
+export const noteById = action("noteById", (notes: CollectionNote[], id: number): DeepPendable<{
+    field_id: number;
+    value: string;
+}> => {
     try {
         let result = notes.find(({ field_id }) => field_id === id);
         if (result) { return result; }
@@ -320,7 +254,10 @@ export const noteById = action("noteById", (notes: CollectionNote[], id: number)
         notes.push(result);
         return result;
     } catch (e) {
-        return e.toString();
+        return {
+            field_id: id,
+            value: e.message,
+        };
     }
 });
 
@@ -329,13 +266,22 @@ export const getNote = action("getNote", (notes: CollectionNote[], id: number): 
 });
 
 export function useTagsFor() {
-    const { lpdb } = React.useContext(ElephantContext);
-    return React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc } }: CollectionItem) => computed(() => compact([
-        ...formats(formatSrc).map((format) => formatToTag(format, false)),
-        ...(lpdb?.listsForRelease(id) ?? []).filter((list) => !isPatch(list.list)).map(listEntryToTag),
-        ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
-        ...styles.map((tag) => ({ tag, kind: TagKind.style })),
-    ])), [lpdb]);
+    const { lpdb, folders } = React.useContext(ElephantContext);
+    return React.useCallback(({ id, basic_information: { genres, styles, formats: formatSrc }, folder_id }: CollectionItem, {
+        includeLocation,
+    }: {
+        includeLocation?: boolean,
+    } = {}) => computed((): TagProps[] => {
+        const folderName = folders?.find(({ id }) => id === folder_id)?.name;
+        const location = folderName && includeLocation && parseLocation(folderName);
+        return compact([
+            ...formats(formatSrc).map((format) => formatToTag(format, false)),
+            ...(lpdb?.listsForRelease(id) ?? []).filter((list) => !isPatch(list.list)).map(listEntryToTag),
+            ...genres.map((tag) => ({ tag, kind: TagKind.genre })),
+            ...styles.map((tag) => ({ tag, kind: TagKind.style })),
+            location && { kind: location.type, tag: location.label },
+        ]);
+    }), [lpdb, folders]);
 }
 
 export function useTasks(fieldsByName?: FieldsByName) {
@@ -349,4 +295,15 @@ export function useTasks(fieldsByName?: FieldsByName) {
         return value.split("\n").sort();
     }, [tasksId]);
     return { tasks, tasksId };
+}
+
+export function variantFor(status: ReturnType<LPDB["details"]>["status"]): Variant {
+    switch (status) {
+        case "pending":
+            return "warning";
+        case "ready":
+            return "success";
+        case "error":
+            return "danger";
+    }
 }
