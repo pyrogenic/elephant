@@ -23,7 +23,6 @@ import Details from "./Details";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
-import IDiscogsCache from "./IDiscogsCache";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
@@ -407,7 +406,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         className: "centered-column",
         accessor: ({ basic_information: { labels } }) => uniqueLabels(labels),
         Cell: ({ value }: { value: Labels }) => {
-            return value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} alwaysShowName={false} />);
+            return value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} />);
         },
         sortType: autoSortBy("Label"),
     }), [autoSortBy]);
@@ -635,6 +634,7 @@ const KNOWN_TASKS = [
     "Entry",
     "Sleeve",
     "Spine",
+    "Own Sleeve",
 ];
 
 function TasksEditor(props: {

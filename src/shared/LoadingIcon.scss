@@ -1,0 +1,10 @@
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin linear 2s infinite;
+    vertical-align: text-bottom;
+}

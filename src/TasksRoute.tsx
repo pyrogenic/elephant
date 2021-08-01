@@ -37,7 +37,7 @@ const TasksIndex = observer(() => {
 
     return <>
         <h2>Tasks</h2>
-        {(sortBy(allTasks.get(), "name").map((task) => <Tag key={task} tag={task} kind={TagKind.box} />))}
+        {(sortBy(allTasks.get(), "name").map((task) => <Tag key={task} tag={task} kind={TagKind.task} />))}
     </>;
 });
 

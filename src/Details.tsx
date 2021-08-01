@@ -20,6 +20,7 @@ import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import Tag, { TagKind } from "./Tag";
 import { trackTuning } from "./Tuning";
+import Insert from "./Insert";
 
 // artists query
 // $..extraartists..*['name','id','role']
@@ -61,7 +62,6 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     //     ])!;
     //     // eslint-disable-next-line react-hooks/exhaustive-deps
     // }, [masterForItem?.status]);
-
     const artistInfo = React.useMemo(() => computed(() => {
         if (details?.status !== "ready") { return []; }
         const query = "$..extraartists..*['name','id','role']";
@@ -175,6 +175,9 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         })}
                     </Col>
                 </Row>
+            </Card.Body>
+            <Card.Body>
+                <Insert item={item} />
             </Card.Body>
         </Card>
     </>;

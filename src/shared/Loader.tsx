@@ -5,9 +5,9 @@ export default function Loader({ autoHide, children, hidden }: React.PropsWithCh
     if (hidden || (autoHide && React.Children.count(children) === 0)) {
         return null;
     }
-    return <div className="loader">
-        <div>
+    return <span className="loader">
+        <span>
             {children}
-        </div>
-    </div>;
+        </span>
+    </span>;
 }

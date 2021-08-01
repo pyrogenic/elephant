@@ -9,24 +9,12 @@ import { Artist, ArtistByIdReference, ArtistStore, ArtistStoreModel } from "./mo
 import { ReleaseByIdReference, ReleaseStore, ReleaseStoreModel } from "./model/Release";
 import StoreEnv from "./model/StoreEnv";
 import OrderedMap from "./OrderedMap";
+import { Remote } from "./Remote";
 import { PromiseType } from "./shared/TypeConstraints";
 import Worker from "./worker";
 
 const worker = new Worker();
 const osync = action(sync);
-
-type Remote<T> = {
-  status: "pending",
-  value?: T,
-} | {
-  status: "ready",
-  value: T,
-  refresh(): void,
-} | {
-  status: "error",
-  error: any,
-  refresh(): void,
-};
 
 export type Release = PromiseType<ReturnType<Discojs["getRelease"]>>;
 export type Releases = OrderedMap<number, Remote<Release>>;

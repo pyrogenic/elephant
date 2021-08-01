@@ -1,0 +1,81 @@
+@media print {
+    @page { size: landscape; }
+}
+
+div.insert {
+    @page { size: landscape; }
+    
+    width: 11in;
+    height: 8.5in;
+    outline: 2px solid black;
+    
+    .front {
+        float: left;
+        transform: rotate(-90deg) translate(-2.5in, -2in);
+        font-size: 48pt;
+        width: 5in;
+        height: 0;
+        .title-card {    
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            .artist {
+                flex-grow: 1;
+                font-weight: bold;
+            }
+            .title {
+                flex-grow: 1;
+                font-weight: normal;
+            }
+        }
+
+        img.front-cover {
+            margin-top: 8rem;
+            width: 4in;
+        }
+    }
+    
+    .spine {
+        text-transform: uppercase;
+        position: relative;
+        top: 6in;
+
+        width: 100%;
+        height: 5mm;
+        background-color: whitesmoke;
+        
+        display: flex;
+        align-content: space-around;
+        justify-content: space-between;
+        align-items: center;
+        
+        font-size: 12pt;
+
+        div {
+            margin-left: 1em;
+            margin-right: 1em;
+        }
+        .label {
+            display: flex;
+            align-content: space-around;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: lighter;
+            img {
+                height: 5mm;
+            }
+        }
+        .space {
+            flex-grow: 1;
+        }
+        .artist {
+            font-weight: 900;
+        }
+        .title {
+            font-weight: bold;
+        }
+        .cat-no {
+            font-weight: normal;
+        }
+    }
+}
