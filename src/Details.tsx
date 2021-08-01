@@ -21,6 +21,7 @@ import ElephantContext from "./ElephantContext";
 import Tag, { TagKind } from "./Tag";
 import { trackTuning } from "./Tuning";
 import Insert from "./Insert";
+import DiscoTag from "./DiscoTag";
 
 // artists query
 // $..extraartists..*['name','id','role']
@@ -108,6 +109,16 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         </pre> : <ReactJson src={result} collapsed={true} />} */}
         <Card className="drawer">
             {/* <Card.Header>Labels for {item.basic_information.title}</Card.Header> */}
+            <Card.Body>
+                <Row>
+                    <Col>
+                        {details?.status === "ready" && details.value.notes && <DiscoTag src={details.value.notes} uri={details.value.uri} />}
+                    </Col>
+                    <Col>
+                        {masterForItem?.status === "ready" && masterForItem.value !== "no-master-release" && masterForItem.value.notes && <DiscoTag src={masterForItem.value.notes} uri={masterForItem.value.uri} />}
+                    </Col>
+                </Row>
+            </Card.Body>
             <Card.Body>
                 {/* {labels.map((label, i) => {
                     if (!label) { return false; }

@@ -4,7 +4,7 @@ import { FiLoader } from "react-icons/fi";
 import { Remote } from "../Remote";
 import "./LoadingIcon.scss";
 import { Content, resolve } from "./resolve";
-import { PropertiesOfType, PropertyNamesOfType } from "./TypeConstraints";
+import { PropertyNamesOfType } from "./TypeConstraints";
 
 const SpinningIcon = <FiLoader className="spin" />;
 
