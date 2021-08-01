@@ -143,7 +143,7 @@ export default class LPDB {
     return result;
   }
 
-  public details({ id }: CollectionItem): Remote<Release> {
+  public details({ id }: Pick<CollectionItem, "id">): Remote<Release> {
     let result = this.releases.get(id);
     if (result !== undefined) {
       return result;

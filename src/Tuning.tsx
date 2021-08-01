@@ -33,6 +33,7 @@ export enum Source {
 }
 
 export function orderUri(source: Source, orderNumber: string) {
+    orderNumber = orderNumber.split("\n").pop()!;
     switch (source) {
         case Source.amazon:
             return {

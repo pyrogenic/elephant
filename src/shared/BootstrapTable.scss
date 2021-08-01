@@ -11,12 +11,36 @@ table.BootstrapTable {
     tr:not([role="row"]), td:not([role="cell"]) {
         border-top: none;
     }
-
+    @keyframes flash {
+        from {
+            background-color: transparent;
+        }     
+        10% {
+            background-color: yellow;
+        }     
+        to {
+            background-color: transparent;
+        }     
+    }
+    tr.flash {
+        animation: flash 1s linear    ;
+    }
     .drawer {
         border-top: none;
         margin-top: -1rem;
+        &.nav {
+            font-size: smaller;
+            margin-top: -2rem;
+            > :first-child {
+                margin-left: 4.5rem;
+            }
+        }
         margin-left: 1rem;
         margin-right: 1rem;
+        + div {
+            margin-left: 1rem;
+            margin-right: 1rem;
+        }
     }
 }
     

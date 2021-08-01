@@ -9,23 +9,39 @@ import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 import Tag, { TagKind } from "./Tag";
 import { useTasks } from "./Tuning";
+import Toast from "react-bootstrap/Toast";
+import Form from "react-bootstrap/Form";
+import Check from "./shared/Check";
 
 const TaskPanel = observer(() => {
     let { taskName } = Router.useParams<{ taskName: string; }>();
     taskName = decodeURIComponent(taskName);
     const { collection } = React.useContext(ElephantContext);
     const { tasks } = useTasks();
+    const [showCompleted, setShowCompleted] = React.useState(false);
     const collectionSubset = computed(() => {
         const result = collection.values().filter((item) => {
             const itemTasks = tasks(item);
-            const match = itemTasks.find((task) => task.split("] ").pop()! === taskName);
+            const match = itemTasks.find((task) => {
+                const parts = task.split("] ");
+                const thisTaskName = parts.pop();
+                const completed = parts.pop()?.endsWith("X");
+                if (completed && !showCompleted) {
+                    return false;
+                }
+                return thisTaskName === taskName;
+            });
             return match;
         });
         return result;
     });
     return <>
-        <h2>{taskName}</h2>
-
+        <h2>Task: {taskName}</h2>
+        <Toast className="m-2">
+            <Toast.Body className="pb-2">
+                <Check label="Show Completed" value={showCompleted} setValue={setShowCompleted} />
+            </Toast.Body>
+        </Toast>
         <CollectionTable collectionSubset={collectionSubset.get()} />
     </>;
 });

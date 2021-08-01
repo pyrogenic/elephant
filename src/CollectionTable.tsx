@@ -19,7 +19,7 @@ import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-
 import { Column } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
-import Details from "./Details";
+import Details from "./details/Details";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
@@ -29,6 +29,7 @@ import LPDB from "./LPDB";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
 import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
+import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
@@ -38,6 +39,7 @@ import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, noteById, orderUri, patches, Source, useTagsFor, useTasks } from "./Tuning";
+import * as Router from "react-router-dom";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -89,6 +91,28 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         lists,
         lpdb,
     } = React.useContext(ElephantContext);
+
+    const hash = Number(window.location.hash.split("#", 2)[1]);
+    if (hash && !isNaN(hash)) {
+        console.log({ hash });
+    } else {
+        console.log({ hash });
+    }
+
+    // Router.matchPath(match.path, `$`)
+    //     return (
+    //       <div>
+    //         <Router.Switch>
+    //           <Router.Route path={[`${match.path}/:artistId`, `${match.path}/:artistId/:artistName`]}>
+    //             <ArtistPanel />
+    //           </Router.Route>
+    //           <Router.Route path={match.path}>
+    //             <ArtistIndex />
+    //           </Router.Route>
+    //         </Router.Switch>
+    //       </div>
+    //     );
+    //   }
 
     const folderName = useFolderName();
 
@@ -328,6 +352,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return collectionSubset ?? collection.values();
     });
 
+    const hashItem = computed(() => collectionTableData.get().find(({ instance_id }) => instance_id === hash));
+
     const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
         const columns: Column<CollectionItem>[] = [];
         const handledFieldNames: string[] = [];
@@ -421,7 +447,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const releaseColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: ARTIST_COLUMN_TITLE,
-        accessor: ({ basic_information: { artists, title } }) => ({ artists, title }),
+        accessor: ({ instance_id, basic_information: { artists, title } }) => ({ artists, title, instance_id }),
         Cell: ({ value }: { value: ReleaseCellProps; }) => <ReleaseCell {...value} />,
         sortType: sortByArtist,
     }), [sortByArtist]);
@@ -507,7 +533,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     return <BootstrapTable
         sessionKey={collectionSubset ? undefined : "Collection"}
-        searchAndFilter={tableSearch}
+        searchAndFilter={{ goto: hashItem.get(), ...tableSearch }}
         columns={collectionTableColumns}
         data={collectionTableData.get()}
         mnemonic={mnemonic}
@@ -691,7 +717,7 @@ function TasksEditor(props: {
         return <>
             {tasks.map((taskObj) => {
                 const { task, checked } = taskObj;
-                return <Form.Check key={task} disabled={pending(pendable)} label={task} checked={checked} onChange={action(() => taskObj.checked = !taskObj.checked)} />;
+                return <Check key={task} disabled={pending(pendable)} label={task} value={checked} setValue={action((value) => taskObj.checked = value)} />;
             })}
             {availableTasks && <Dropdown onSelect={action((task) => task && tasks.push({ task, checked: false }))}>
                 <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>

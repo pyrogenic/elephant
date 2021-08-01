@@ -5,6 +5,7 @@ import LoadingIcon from "./shared/LoadingIcon";
 import { Content } from "./shared/resolve";
 import { wrap } from "./LabelRoute";
 import DiscogsLinkback from "./DiscogsLinkback";
+import ExternalLink from "./shared/ExternalLink";
 
 export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: string }) {
     const { lpdb } = React.useContext(ElephantContext);
@@ -43,7 +44,7 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
                 if (tag === "l") {
                     const label = numericId ? lpdb.label(Number(tagId)) : lpdb.labels.values().find((l) => l.status === "ready" && l.value.name === tagId) ?? { status: "error" };
                     if (label.status !== "error") {
-                        paragraph.push(<Router.NavLink key={paragraph.length} exact to={`/labels/${tagId}`}>{<LoadingIcon remote={[label, "name"]} placeholder={tagId} />}</Router.NavLink>);
+                        paragraph.push(<Router.NavLink key={paragraph.length} exact to={`/labels/${tagId}`}><LoadingIcon remote={[label, "name"]} placeholder={tagId} /></Router.NavLink>);
                     } else {
                         paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
                     }
@@ -53,6 +54,18 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
                         paragraph.push(<Router.NavLink key={paragraph.length} exact to={`/artists/${tagId}`}>{artist.name ?? <LoadingIcon placeholder={tagId} />}</Router.NavLink>);
                     } else {
                         paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                    }
+                } else if (tag === "r") {
+                    const collectionItem = numericId && lpdb.collection.values().find(({ id }) => id === numericId);
+                    if (collectionItem) {
+                        paragraph.push(<Router.NavLink key={paragraph.length} exact to={`#${collectionItem.instance_id}`}>{collectionItem.basic_information.title}</Router.NavLink>);
+                    } else {
+                        const release = numericId && lpdb.details({ id: numericId });
+                        if (release) {
+                            paragraph.push(<ExternalLink href={release.status === "ready" ? release.value.uri : undefined}><LoadingIcon remote={[release, "title"]} placeholder={tagId} /></ExternalLink>);
+                        } else {
+                            paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                        }
                     }
                 } else if (tag === "b") {
                     bold += 1;

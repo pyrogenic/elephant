@@ -45,6 +45,7 @@ export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column
 export type TableSearch<TElement extends {}> = {
     search?: string;
     filter?: (item: TElement) => boolean | undefined;
+    goto?: TElement;
 };
 
 export type Mnemonic = MinDiffSrc;
@@ -84,7 +85,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
+    const { data, detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -140,7 +141,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         }
         return rows;
     }), [deepSearchTargets]);
-    const lastSearch = React.useRef<string>();
+    const lastSearch = React.useRef<TableSearch<TElement>>({});
 
     const autoReset = false;//React.useMemo(() => lastSearch.current !== search, [search]);
     const {
@@ -187,15 +188,28 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 200, periodic: true });
     React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, searchAndFilter]);
     React.useEffect(() => {
-        if (lastSearch.current !== undefined && lastSearch.current !== searchAndFilter?.search) {
+        if (lastSearch.current.search && lastSearch.current.search !== searchAndFilter?.search) {
             setInitialPageIndex(0);
             gotoPage(0);
             setInitialSortBy([]);
             setSortBy([]);
         }
-        lastSearch.current = searchAndFilter?.search;
+        lastSearch.current.search = searchAndFilter?.search;
         return () => { };
-    }, [gotoPage, searchAndFilter, setInitialPageIndex, setInitialSortBy, setSortBy]);
+    }, [gotoPage, searchAndFilter?.search, setInitialPageIndex, setInitialSortBy, setSortBy]);
+    React.useEffect(() => {
+        if (searchAndFilter?.goto && lastSearch.current.goto !== searchAndFilter.goto) {
+            const targetItemIndex = rows.findIndex(({ original }) => {
+                return original === searchAndFilter.goto;
+            });
+            if (targetItemIndex >= 0) {
+                const newPageIndex = Math.floor(targetItemIndex / pageSize);
+                gotoPage(newPageIndex);
+                lastSearch.current.goto = searchAndFilter?.goto;
+            }
+        }
+        return () => { };
+    }, [gotoPage, pageSize, rows, searchAndFilter?.goto]);
     const spine = React.useCallback((page: number) => {
         if (!mnemonic) {
             throw new Error("missing mnemonic");
@@ -267,7 +281,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     };
                     const rowProps = row.getRowProps();
                     return [
-                        <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original))} onClick={onClick}>
+                        <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original), searchAndFilter?.goto === row.original && "flash")} onClick={onClick}>
                             {row.cells.map(cell => {
                                 const cellProps = cell.getCellProps();
                                 const column = cell.column as BootstrapTableColumn<TElement>;

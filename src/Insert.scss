@@ -41,8 +41,9 @@ div.insert {
         top: 6in;
 
         width: 100%;
-        height: 5mm;
-        background-color: whitesmoke;
+        height: 7mm;
+        border-top: double;
+        border-bottom: double;
         
         display: flex;
         align-content: space-around;

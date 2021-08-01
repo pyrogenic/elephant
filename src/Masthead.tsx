@@ -12,6 +12,7 @@ import ElephantContext from "./ElephantContext";
 import "./Masthead.scss";
 import Loader from "./shared/Loader";
 import SearchBox from "./shared/SearchBox";
+import Check from "./shared/Check";
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);
@@ -145,24 +146,24 @@ export default function Masthead({
         <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-end">
             <>
-                <Form.Check
+                <Check
                     className={formSpacing}
-                    checked={fluid}
+                    value={fluid}
                     id="Fluid"
                     label="Fluid"
-                    onChange={() => setFluid(!fluid)} />
-                <Form.Check
+                    setValue={setFluid} />
+                <Check
                     className={formSpacing}
-                    checked={bypassCache}
+                    value={bypassCache}
                     id="Bypass Cache"
                     label="Bypass Cache"
-                    onChange={() => setBypassCache(!bypassCache)} />
-                <Form.Check
+                    setValue={setBypassCache} />
+                <Check
                     className={formSpacing}
-                    checked={verbose}
+                    value={verbose}
                     id="Verbose"
                     label="Verbose"
-                    onChange={() => setVerbose(!verbose)} />
+                    setValue={setVerbose} />
             </>
         </Navbar.Collapse>
         {avatarUrl &&

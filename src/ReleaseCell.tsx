@@ -8,10 +8,11 @@ import { Artist } from "./CollectionTable";
 import "./shared/Shared.scss";
 
 export type ReleaseCellProps = {
+    instance_id: number;
     artists: Artist[];
     title: string;
 };
-export default function ReleaseCell({ artists, title }: ReleaseCellProps) {
+export default function ReleaseCell({ artists, title, instance_id }: ReleaseCellProps) {
     return <Container className="ArtistsCell">
         <Row className="artist">
             <Col>
@@ -20,7 +21,7 @@ export default function ReleaseCell({ artists, title }: ReleaseCellProps) {
         </Row>
         <Row className="title expand">
             <Col>
-            {autoFormat(title)}
+                <span id={instance_id.toString()}>{autoFormat(title)}</span>
             </Col>
         </Row>
     </Container>;
