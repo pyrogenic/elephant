@@ -3,16 +3,15 @@ import compact from "lodash/compact";
 import sum from "lodash/sum";
 import React from "react";
 import Image from "react-bootstrap/Image";
-import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
 import * as Router from "react-router-dom";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import "./Masthead.scss";
+import Check from "./shared/Check";
 import Loader from "./shared/Loader";
 import SearchBox from "./shared/SearchBox";
-import Check from "./shared/Check";
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);

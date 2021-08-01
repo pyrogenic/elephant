@@ -85,7 +85,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { data, detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
+    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);

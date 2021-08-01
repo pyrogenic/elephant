@@ -1,7 +1,6 @@
 import flatten from "lodash/flatten";
 import React, { HTMLProps } from "react";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useReactToPrint } from "react-to-print";
 import { CollectionItem } from "./Elephant";

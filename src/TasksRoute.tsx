@@ -4,14 +4,13 @@ import uniq from "lodash/uniq";
 import { computed } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
+import Toast from "react-bootstrap/Toast";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
+import Check from "./shared/Check";
 import Tag, { TagKind } from "./Tag";
 import { useTasks } from "./Tuning";
-import Toast from "react-bootstrap/Toast";
-import Form from "react-bootstrap/Form";
-import Check from "./shared/Check";
 
 const TaskPanel = observer(() => {
     let { taskName } = Router.useParams<{ taskName: string; }>();

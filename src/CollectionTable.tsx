@@ -39,7 +39,6 @@ import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, noteById, orderUri, patches, Source, useTagsFor, useTasks } from "./Tuning";
-import * as Router from "react-router-dom";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
