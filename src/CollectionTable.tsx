@@ -16,7 +16,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
-import { Column } from "react-table";
+import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./details/Details";
@@ -52,7 +52,7 @@ function uniqueLabels(labels: Labels) {
     return uniqBy(labels, "id");
 }
 
-function sortByTasks(ac: { values: { Tasks: string[] } }, bc: { values: { Tasks: string[] } }) {
+const sortByTasks: SortByFn<CollectionItem> = (ac, bc) => {
     const a = ac.values.Tasks;
     const b = bc.values.Tasks;
     const r = compare(a, b, { emptyLast: true });
@@ -91,11 +91,11 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         lpdb,
     } = React.useContext(ElephantContext);
 
-    const hash = Number(window.location.hash.split("#", 2)[1]);
+    let hash: number | undefined = Number(window.location.hash.split("#", 2)[1]);
     if (hash && !isNaN(hash)) {
         console.log({ hash });
     } else {
-        console.log({ hash });
+        hash = undefined;
     }
 
     // Router.matchPath(match.path, `$`)
@@ -162,7 +162,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     const mnemonic = React.useCallback((sortedBy, item: CollectionItem): Mnemonic => {
         switch (sortedBy) {
             case ARTIST_COLUMN_TITLE:
-                return `${item.basic_information.artists[0].name} ${item.basic_information.title}`;
+                return item.basic_information.artists[0].name;
             case "Rating":
                 return ["literal", `${pendingValue(item.rating)}${FILLED_STAR}`];
             case "Label":
@@ -328,14 +328,17 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const tasksColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && tasksId) {
-            return [{
+            const Cell: Renderer<CellProps<CollectionItem, string[]>> =
+                (({ row: { original } }) => <TasksEditor noteId={tasksId} row={original} />);
+            const col: BootstrapTableColumn<CollectionItem, "Tasks"> = {
                 Header: "Tasks",
-                accessor: (row) => <TasksEditor noteId={tasksId} row={row} />,
+                accessor: tasks,
                 sortType: sortByTasks,
-            } as BootstrapTableColumn<CollectionItem>,
-            [KnownFieldTitle.tasks]];
+                Cell,
+            };
+            return [col, [KnownFieldTitle.tasks]];
         }
-    }, [cache, client, tasksId]);
+    }, [cache, client, tasks, tasksId]);
 
     const collectionTableData = computed(() => {
         for (const list of patches(lists)) {
@@ -377,7 +380,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
     const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
-        return compare(ac.values[columnId].artists, bc.values[columnId].artists, { toString: ({ name }: Artist) => name });
+        const aa = ac.values[columnId].artists;
+        const ba = bc.values[columnId].artists;
+        return compare(aa, ba, {
+            toString: ({ name }: Artist) => name,
+            library: true,
+        });
     }, []);
     const sortByRating = React.useCallback((ac, bc) => {
         const a = pendingValue(ac.original.rating);
@@ -694,7 +702,6 @@ function TasksEditor(props: {
     const { folder_id, id: release_id, instance_id, notes } = row;
     const note = noteById(notes, noteId)!;
     React.useMemo(() => {
-        console.log(`Building reaction for ${row.basic_information.title}`);
         return reaction(() => tasks.map(({ checked, task }) => `[${checked ? "X" : " "}] ${task}`).join("\n"), async (floatingValue) => {
             console.log({ folder_id, release_id, instance_id, notes });
             console.log(`New value: ${floatingValue}`);

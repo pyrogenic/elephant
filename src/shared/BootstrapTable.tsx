@@ -4,6 +4,7 @@ import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import flatten from "lodash/flatten";
+import orderBy from "lodash/orderBy";
 import { matchSorter } from "match-sorter";
 import React, { MouseEventHandler } from "react";
 import Table from "react-bootstrap/Table";
@@ -30,14 +31,15 @@ import {
     UseSortByColumnOptions,
     UseSortByColumnProps,
     UseSortByInstanceProps,
-    UseSortByState, useTable,
+    UseSortByState,
+    useTable,
     UseTableOptions,
 } from "react-table";
 import "./BootstrapTable.scss";
 import Pager, { Spine } from "./Pager";
 import { Content, resolve } from "./resolve";
 
-export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column<TElement> & {
+export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column<TElement> & UseSortByColumnOptions<TElement> & {
     id?: TColumnIds,
     className?: ClassNames,
 };
@@ -73,7 +75,12 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     // & Pick<TableOptions<TElement>, "getSubRows">
     ;
 
-
+function mnemonicString(q: Mnemonic): string | undefined {
+    if (typeof q === "string") {
+        return q;
+    }
+    return q?.[1];
+}
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
     type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement>;
     type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
@@ -231,8 +238,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         }
         const mnemonicPreA = preA && mnemonic(key, preA);
         const mnemonicPostB = postB && mnemonic(key, postB);
-        const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicPreA?.[1], postB: mnemonicPostB?.[1] });
-        // console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
+        const result: Spine = minDiff(mnemonicA, mnemonicB, { preA: mnemonicString(mnemonicPreA), postB: mnemonicString(mnemonicPostB) });
+        // For keys that span pages, don't change abbreviations
+        if (mnemonicPreA === mnemonicA) {
+            result[0] = orderBy(compact([spine(page - 1)?.[1], result[0]]), "length").pop();
+        }
+        console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
     const keyRef = React.createRef<HTMLDivElement>();

@@ -78,16 +78,15 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             className="drawer"
             id="controlled-tab-example"
         >
+            <Tab eventKey="artists" title="Artists">
+                <AlbumArtists item={item} />
+            </Tab>
             <Tab eventKey="data" title="Data">
                 <Button
                     disabled={!cacheCount}
                     onClick={() => cache?.clear(cacheQuery)}>
                     Refresh Discogs Collection Item{cacheCount ? <> <Badge bg={"light"}>{cacheCount}</Badge></> : null}
                 </Button>
-                <Insert item={item} />
-            </Tab>
-            <Tab eventKey="artists" title="Artists">
-                <AlbumArtists item={item} />
             </Tab>
             <Tab eventKey="notes" title="Notes">
                 <Row>
@@ -98,6 +97,13 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     <Col>
                         <h5>Master</h5>
                         {masterForItem?.status === "ready" && masterForItem.value !== "no-master-release" && masterForItem.value.notes && <DiscoTag src={masterForItem.value.notes} uri={masterForItem.value.uri} />}
+                    </Col>
+                </Row>
+            </Tab>
+            <Tab eventKey="insert" title="Insert">
+                <Row>
+                    <Col>
+                        <Insert item={item} />
                     </Col>
                 </Row>
             </Tab>

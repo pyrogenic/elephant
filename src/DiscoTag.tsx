@@ -62,7 +62,7 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
                     } else {
                         const release = numericId && lpdb.details({ id: numericId });
                         if (release) {
-                            paragraph.push(<ExternalLink href={release.status === "ready" ? release.value.uri : undefined}><LoadingIcon remote={[release, "title"]} placeholder={tagId} /></ExternalLink>);
+                            paragraph.push(<ExternalLink key={paragraph.length} href={release.status === "ready" ? release.value.uri : undefined}><LoadingIcon remote={[release, "title"]} placeholder={tagId} /></ExternalLink>);
                         } else {
                             paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
                         }
@@ -80,7 +80,7 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
                 } else if (tag === "/url") {
                     url.pop();
                 } else if (fullTag) {
-                    paragraph.push(<span title={JSON.stringify({ fullTag, tag, tagId }, null, 2)}>[{fullTag}]</span>);
+                    paragraph.push(<span key={paragraph.length} title={JSON.stringify({ fullTag, tag, tagId }, null, 2)}>[{fullTag}]</span>);
                 }
             }
             let content: Content = wrap(paragraph, bold, italic, url);

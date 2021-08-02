@@ -1,7 +1,8 @@
 import flatten from "lodash/flatten";
 import React, { HTMLProps } from "react";
 import Button from "react-bootstrap/Button";
-import InputGroup from "react-bootstrap/InputGroup";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import { useReactToPrint } from "react-to-print";
 import { CollectionItem } from "./Elephant";
 import "./Insert.scss";
@@ -33,32 +34,31 @@ export default function Insert({ item }: { item: CollectionItem }) {
     });
     const [preview, setPreview] = React.useState(false);
     const [cover, setCover] = React.useState(true);
-    return <div>
-        <InputGroup>
-            <InputGroup.Text>Insert</InputGroup.Text>
+    return <Row>
+        <Col xs={1}>
             <Check label="Cover" value={cover} setValue={setCover} />
-            <Button
-                onClick={setPreview.bind(null, !preview)}
-                variant={preview ? "light" : "outline-secondary"}
-            >
-                Preview
-                <div style={
-                    preview ? {
-                        mixBlendMode: "luminosity",
-                    } : {
-                        display: "none",
-                    }
-                } >
-                    <InsertContent cover={cover} />
-                </div>
-            </Button>
+            <Check label="Preview" value={preview} setValue={setPreview} />
+        </Col>
+        <Col xs={1}>
             <Button
                 onClick={handlePrint}
             >
                 Print
             </Button>
-        </InputGroup>
-    </div>;
+        </Col>
+        <Col>
+            <div style={
+                preview ? {
+                    mixBlendMode: "luminosity",
+                } : {
+                    display: "none",
+                }
+            } >
+                <InsertContent cover={cover} />
+            </div>
+        </Col>
+    </Row >
+        ;
 
     function InsertContent(props: HTMLProps<HTMLDivElement> & { cover?: boolean }) {
         const headliner = item.basic_information.artists[0]?.name;
