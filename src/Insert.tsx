@@ -33,11 +33,13 @@ export default function Insert({ item }: { item: CollectionItem }) {
         content: () => componentRef.current,
     });
     const [preview, setPreview] = React.useState(false);
+    const [greyscale, setGreyscale] = React.useState(true);
     const [cover, setCover] = React.useState(true);
     return <Row>
         <Col xs={1}>
             <Check label="Cover" value={cover} setValue={setCover} />
             <Check label="Preview" value={preview} setValue={setPreview} />
+            <Check label="Greyscale" value={greyscale} setValue={setGreyscale} />
         </Col>
         <Col xs={1}>
             <Button
@@ -49,7 +51,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
         <Col>
             <div style={
                 preview ? {
-                    mixBlendMode: "luminosity",
+                    mixBlendMode: greyscale ? "luminosity" : undefined,
                 } : {
                     display: "none",
                 }
