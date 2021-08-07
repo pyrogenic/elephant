@@ -1,21 +1,17 @@
-// artists query
-// $..extraartists..*['name','id','role']
-// result is single array, needs to be split into 3-tuples
-
-import jsonpath from "jsonpath";
-import chunk from "lodash/chunk";
-import flatten from "lodash/flatten";
+import compact from "lodash/flatten";
 import uniqBy from "lodash/uniqBy";
 import { computed } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import * as Router from "react-router-dom";
+import autoFormat from "../autoFormat";
 import { CollectionItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
+import { Release } from "../LPDB";
 import Tag, { TagKind } from "../Tag";
 import { trackTuning } from "../Tuning";
 
-const MUSICAL_ARTISTS = /\b((?<_instrument>(?<strings>(?<guitar>((Acoustic|Electric|Bass) )?Guitar)|Bass\b|Celesta|Cello|Autoharp|Banjo|Harp|Mandolin|Sarangi|Sitar|Viol(|a|in)\b)|(?<percussion>Bongo|Conga|Cymbal|Drum|Percussion|Glock|Tabla\b|Tambourine|Timbales|Vibes|Vibraphone|Xylo)|(?<keys>Keys\b|Keyboard|Harmonium|Mellotron|Piano|Organ|Synth)|(?<brass>Horn|Flugelhorn|Trumpet|Trombone|Tuba)|(?<wind>Clarinet|Flute|Kazoo|Harmonica|Oboe|Sax(|ophone)\b|Woodwind)|(?<group>Choir$|Chorus$|Orchestra))|Scratches|Vocal|Voice)/;
+const MUSICAL_ARTISTS = /\b(?<lead>Album|Extra|Track)|((?<_instrument>(?<strings>(?<guitar>((Acoustic|Electric|Bass) )?Guitar)|Bass\b|Celesta|Cello|Autoharp|Banjo|Dobro|Harp|Mandolin|Sarangi|Sitar|Viol(|a|in)\b)|(?<percussion>Bongo|Conga|Cymbal|Drum|Percussion|Glock|Tabla\b|Tambourine|Timbales|Vibes|Vibraphone|Xylo)|(?<keys>Keys\b|Keyboard|Harmonium|Mellotron|Piano|Organ|Synth)|(?<brass>Horn|Flugelhorn|Trumpet|Trombone|Tuba)|(?<wind>Clarinet|Flute|Kazoo|Harmonica|Oboe|Sax(|ophone)\b|Woodwind)|(?<group>Choir$|Chorus$|Orchestra))|Scratches|Vocal|Voice)/;
 const CREATIVE_ARTISTS = /\b(Arrange|Conduct|Master\b|(?<originator>Compos|Lyric|Music|Writ|Words))/;
 const TECHNICAL_ARTISTS = /\b(Lacquer|Produce|Recorded|Mastered|Remaster)/;
 const IGNORE_ARTISTS = ["Directed By", "Mixed By", "Painting"];
@@ -25,19 +21,23 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
     const release = lpdb?.details(item);
     const artistInfo = React.useMemo(() => computed(() => {
         if (release?.status !== "ready") { return []; }
-        const query = "$..extraartists..*['name','id','role']";
-        const tuples: [name: string, id: number, role: string][] =
-            chunk(jsonpath.query(release.value, query), 3) as any;
-        return uniqBy(flatten(tuples.map(([name, id, role]) => {
-            // Ignore any [flavor text]
-            role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
-            // Split up comma, separated, roles
-            const roles = role.split(/,\s*/);
-            return roles.map((role) => {
-                role = role.replace("-By", " By");
-                return ({ name, id, role });
-            });
-        })), JSON.stringify.bind(JSON));
+        return uniqueArtistRoles(release.value);
+        // const queries = [
+        //     "$..artists..['name','id','role']",
+        //     "$..extraartists..['name','id','role']",
+        // ];
+        // const tuples: [name: string, id: number, role: string][] =
+        //     chunk(flatten(queries.map((query) => jsonpath.query(release.value, query))), 3) as any;
+        // return uniqBy(flatten(tuples.map(([name, id, role]) => {
+        //     // Ignore any [flavor text]
+        //     role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
+        //     // Split up comma, separated, roles
+        //     const roles = role.split(/,\s*/);
+        //     return roles.map((role) => {
+        //         role = role.replace("-By", " By");
+        //         return ({ name, id, role });
+        //     });
+    // }), JSON.stringify.bind(JSON));
     }), [release]);
 
     const history = Router.useHistory();
@@ -57,7 +57,7 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
                 trackTuning("roles", role);
             }
             const variant =
-                musicalArtist ? "primary"
+                (!role || musicalArtist) ? "primary"
                     : createArtist ? "secondary"
                         : techArtist ? "warning"
                             : "light";
@@ -79,3 +79,25 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
 }
 
 export default AlbumArtists;
+
+export function uniqueArtistRoles(response: Release) {
+    const artists = [
+        { fallbackRole: "Album", artistData: response.artists },
+        { fallbackRole: "Extra", artistData: response.extraartists ?? [] },
+        { fallbackRole: "Track", artistData: compact(response.tracklist?.flatMap(({ artists }) => artists ?? [])) ?? [] },
+    ];
+    const artistRolePairs: { name: string, id: number, role: string, }[] = [];
+    artists.forEach(({ fallbackRole, artistData }) => artistData.forEach(({ name, id, role }) => {
+        role = role || fallbackRole;
+        name = autoFormat(name);
+        // Ignore any [flavor text]
+        role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
+        // Split up comma, separated, roles
+        const roles = role.split(/,\s*/);
+        roles.forEach((role) => {
+            role = role.replace("-By", " By");
+            artistRolePairs.push({ name, id, role });
+        });
+    }));
+    return uniqBy(artistRolePairs, JSON.stringify.bind(JSON));
+}

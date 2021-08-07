@@ -50,12 +50,18 @@ $lbg: adjust-color($light, $lightness: -5%);
         //border: solid 0.25px $dark;
     }
 }
+
 svg.icon {
     vertical-align: -20%;
 }
 
+svg.inline {
+    vertical-align: -10%;
+    margin-inline: 0.1rem;
+}
+
 .comma-sep {
-    white-space: pre;
+    white-space: pre-wrap;
     &:not(:last-of-type)::after {
         content: ", ";
     }

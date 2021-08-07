@@ -86,7 +86,7 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "me-2";
-    return <Navbar bg="light" variant="light" className="mb-3">
+    return <Navbar bg="light" variant="light" className="mb-3" expand="xl">
         <Navbar.Brand
         // style={{
         //     backgroundImage: `url(${logo})`,
@@ -101,6 +101,8 @@ export default function Masthead({
                 Elephant
             </Router.NavLink>
         </Navbar.Brand>
+        <Navbar.Toggle />
+        <Navbar.Collapse className="justify-content-start">
         <Navbar.Text>
             <Router.NavLink exact to="/auth">Auth</Router.NavLink>
         </Navbar.Text>
@@ -141,8 +143,8 @@ export default function Masthead({
                 />
             </>;
         }} /> */}
-        <SpeedTracker />
-        <Navbar.Toggle />
+            <SpeedTracker />
+        </Navbar.Collapse>
         <Navbar.Collapse className="justify-content-end">
             <>
                 <Check
@@ -164,7 +166,6 @@ export default function Masthead({
                     label="Verbose"
                     setValue={setVerbose} />
             </>
-        </Navbar.Collapse>
         {avatarUrl &&
             <span
             className="pe-5 me-2"
@@ -175,5 +176,6 @@ export default function Masthead({
                     backgroundPosition: "right",
                     padding: 0,
                 }}>&nbsp;</span>}
+        </Navbar.Collapse>
     </Navbar>;
 }

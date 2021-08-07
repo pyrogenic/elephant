@@ -17,7 +17,11 @@ export const ArtistModel = types.model("Artist", {
     cacheKey: types.optional(types.string, "artist"),
     profile: types.optional(types.string, ""),
     images: types.optional(types.array(ImageModel), []),
-}).actions((self) => {
+}).views((self) => ({
+    get uri() {
+        return `https://www.discogs.com/artist/${self.id}`;
+    },
+})).actions((self) => {
     const actionState: {
         hydrating: boolean,
         promise: Promise<void> | undefined,

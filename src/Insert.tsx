@@ -4,6 +4,7 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import { useReactToPrint } from "react-to-print";
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CollectionItem } from "./Elephant";
 import "./Insert.scss";
 import LazyMusicLabel from "./LazyMusicLabel";
@@ -64,14 +65,14 @@ export default function Insert({ item }: { item: CollectionItem }) {
 
     function InsertContent(props: HTMLProps<HTMLDivElement> & { cover?: boolean }) {
         const headliner = item.basic_information.artists[0]?.name;
-        return <div ref={componentRef} className="insert" {...props}>
+        return <div ref={componentRef} className={classConcat("insert", cover ? undefined : "favor-back")} {...props}>
             <div className="front">
                 <div className="title-card">
                     {headliner !== title && <div className="artist">{multilineArtists}</div>}
                     <div className="title">{multilineTitle}</div>
+                    {cover && <img className="front-cover" src={item.basic_information.cover_image} alt="" />}
                 </div>
 
-                {cover && <img className="front-cover" src={item.basic_information.cover_image} alt="" />}
             </div>
             <div className="spine">
                 <div className="cat-no">{labels.map(({ catno }) => catno).join(SEP)}</div>

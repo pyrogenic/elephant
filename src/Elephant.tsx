@@ -147,6 +147,34 @@ export default function Elephant() {
         {!isEmpty(error) && <Alert variant="warning">
           <code>{error.toString()}</code>
         </Alert>}
+        <Row className="ruler">
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+          <Col xxl={1}>&nbsp;</Col>
+        </Row>
+        <Row className="ruler">
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+          <Col xs={1}>&nbsp;</Col>
+        </Row>
         <Router.Switch>
           <Router.Route path="/auth">
             <AuthRoute

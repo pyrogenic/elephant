@@ -20,6 +20,7 @@ import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./details/Details";
+import DiscoTag from "./DiscoTag";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
@@ -33,6 +34,7 @@ import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
+import { Variant } from "./shared/Shared";
 import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
@@ -478,9 +480,13 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             let { label, status, type } = parseLocation(value);
             let extra: Content = status;
             let className: string | undefined = undefined;
+            let bg: Variant | undefined = undefined;
             switch (status) {
                 case "remain":
+                    extra = false;
+                    break;
                 case "unknown":
+                    bg = "warning";
                     extra = false;
                     break;
                 case "leave":
@@ -497,7 +503,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     className = "badge-success";
                     break;
             }
-            return <Tag className={className} kind={type} tag={label} extra={extra} />;
+            return <Tag bg={bg} className={className} kind={type} tag={label} extra={extra} />;
         },
         sortType: sortByLocation,
     }), [folderName, sortByLocation]);
@@ -626,6 +632,7 @@ function FieldEditor<As = "text">(props: {
         setError,
     } = React.useContext(ElephantContext);
     const [floatingValue, setFloatingValue] = React.useState<string>();
+    const [editing, setEditing] = React.useState<boolean>(false);
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, notes } = row;
         const note = noteById(notes, noteId)!;
@@ -636,16 +643,28 @@ function FieldEditor<As = "text">(props: {
                 const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
                 mutate(note, "value", floatingValue, promise).then(() => {
                     setFloatingValue(undefined);
+                    setEditing(false);
                     clearCacheForCollectionItem(cache!, row);
                 }, (e) => {
                     setFloatingValue(undefined);
+                    setEditing(false);
                     setError(e);
                 });
+            } else {
+                setEditing(false);
             }
         };
         const pendable = note.value ?? "";
-        return <div className={props.as ? "flex flex-column" : undefined}>
-            <Form.Control
+        let control: JSX.Element;
+        if (props.as && !editing) {
+            control = <DiscoTag
+                src={pendingValue(pendable)}
+                uri={false}
+                prewrap={true}
+                onClick={setEditing.bind(null, true)}
+            />;
+        } else {
+            control = <Form.Control
                 {...omit(
                     props,
                     "row",
@@ -657,7 +676,11 @@ function FieldEditor<As = "text">(props: {
                 disabled={pending(pendable)}
                 value={floatingValue ?? pendingValue(pendable)}
                 onChange={({ target: { value } }) => setFloatingValue(value)}
-                onBlur={commit} />
+                onBlur={commit}
+            />;
+        }
+        return <div className={props.as ? "flex flex-column" : undefined}>
+            {control}
         </div>;
     }} />;
 }

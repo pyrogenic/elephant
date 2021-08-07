@@ -1,15 +1,17 @@
 // import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import sortBy from "lodash/sortBy";
 import { computed } from "mobx";
-import { observer } from "mobx-react";
+import { Observer, observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
+import CollectionItemLink from "./CollectionItemLink";
 import CollectionTable from "./CollectionTable";
+import DiscoTag from "./DiscoTag";
 import ElephantContext from "./ElephantContext";
 
-const ArtistPanel = observer(() => {
+const ArtistPanel = () => {
   const { artistId: artistIdSrc, artistName } = Router.useParams<{ artistId?: string; artistName?: string; }>();
   const { lpdb, collection } = React.useContext(ElephantContext);
   const artistId = Number(artistIdSrc);
@@ -17,10 +19,21 @@ const ArtistPanel = observer(() => {
   if (!lpdb) { return null; }
   const artist = lpdb.artist(artistId, artistName);
   const roles = lpdb.store.roles(artist.id);
-  const collectionSubset = computed(() => collection.values().filter(({ id }) => roles.find((role) => typeof role.release === "object" && role.release.id === id)));
-  const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)).map(({ id }) => lpdb.releaseStore.get(id)));
-  return <>
+  const collectionSubset = computed(() => {
+    return collection.values().filter(({ basic_information: { artists }, id }) => {
+      if (artists.find(({ id }) => id === artistId)) {
+        return true;
+      }
+      return roles.find((role) => {
+        return typeof role.release === "object" && role.release.id === id;
+      });
+    });
+  });
+  const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)));
+  return <Observer>{() => <>
     <h2>{artistName ?? artist.name}</h2>
+
+    {artist.profile && <DiscoTag src={artist.profile} uri={artist.uri} />}
 
     <CollectionTable collectionSubset={collectionSubset.get()} />
 
@@ -30,11 +43,11 @@ const ArtistPanel = observer(() => {
       <dt>Roles</dt>
       <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
       <dt>Primary Releases</dt>
-      <dd>{primaryArtistSubset.get().map(({ id, title }) => <pre key={id}>{title ?? id}</pre>)}</dd>
+      <dd>{primaryArtistSubset.get().map((item, i) => <CollectionItemLink key={i} item={item} />)}</dd>
     </dl>
     <Button onClick={artist.refresh}>Refresh</Button>
-  </>;
-});
+  </>}</Observer>;
+};
 // type GraphData = 
 // {
 //   nodes: {

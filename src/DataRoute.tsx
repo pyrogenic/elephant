@@ -10,7 +10,7 @@ import ElephantContext from "./ElephantContext";
 import Badge from "./shared/Badge";
 import { patches } from "./Tuning";
 import { FiRefreshCw } from "react-icons/fi";
-import * as Router from "react-router-dom";
+import CollectionItemLink from "./CollectionItemLink";
 
 // const progress = observable<{
 //     releaseId?: number,
@@ -56,7 +56,9 @@ export const DataIndex = observer(() => {
 
 
                     <Row>
-                        {patches(lists).map((list) => <Col key={list.definition.id}><Card >
+                        {patches(lists).map((list) =>
+                            <Col key={list.definition.id}>
+                                <Card >
                             <Card.Header title={list.definition.description}>
                                 {list.definition.name}
                                 {" "}
@@ -71,14 +73,15 @@ export const DataIndex = observer(() => {
                                     const item = lpdb.collection.values().find(({ id: i }) => id === i);
                                     if (item) {
                                         return <li key={id}>
-                                            <Router.NavLink exact to={`/collection#${item.instance_id}`}>{item.basic_information.title}</Router.NavLink>
+                                            <CollectionItemLink item={item} />
                                         </li>;
                                     }
                                     const title = lpdb.releaseStore.get(id).title;
                                     return <li key={id}>{title}</li>;
                                 })}
                             </Card.Body>
-                        </Card></Col>)}
+                                </Card>
+                            </Col>)}
                     </Row>
 
                     {/* {progress.releaseId ? <>

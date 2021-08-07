@@ -1,12 +1,7 @@
-@media print {
-    @page { size: landscape; }
-}
-
-div.insert {
-    @page { size: landscape; }
-    
+div.insert {    
     width: 11in;
     height: 8.5in;
+    overflow: hidden;
     outline: 2px solid black;
     
     .front {
@@ -27,23 +22,26 @@ div.insert {
                 flex-grow: 1;
                 font-weight: normal;
             }
+            img.front-cover {
+                padding-top: 20%;
+                width: 4in;
+            }
         }
+    }
 
-        img.front-cover {
-            margin-top: 8rem;
-            width: 4in;
-        }
+    &.favor-back .front {
+        display: none;
     }
     
     .spine {
         text-transform: uppercase;
         position: relative;
-        top: 6in;
-
+        
         width: 100%;
         height: 7mm;
         border-top: double;
         border-bottom: double;
+        border-color: lightgrey;
         
         display: flex;
         align-content: space-around;
@@ -51,10 +49,10 @@ div.insert {
         align-items: center;
         
         font-size: 12pt;
-
+        
         div {
-            margin-left: 1em;
-            margin-right: 1em;
+            margin-left: 1.5em !important;
+            margin-right: 1.5em !important;
         }
         .label {
             display: flex;
@@ -78,5 +76,15 @@ div.insert {
         .cat-no {
             font-weight: normal;
         }
+
+        top: 6in;
     }
+    &.favor-back .spine {
+        top: 2.5in;
+    }
+}
+
+@media print {
+    * { margin: 0 !important; }
+    @page { size: landscape; }
 }

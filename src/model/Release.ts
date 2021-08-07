@@ -6,6 +6,7 @@ import pick from "lodash/pick";
 import uniqBy from "lodash/uniqBy";
 import { action, observable, runInAction } from "mobx";
 import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotIn, SnapshotOrInstance, types } from "mobx-state-tree";
+import { uniqueArtistRoles } from "../details/AlbumArtists";
 import { ElephantMemory } from "../DiscogsIndexedCache";
 import { getStore } from "../LPDB";
 import { PromiseType } from "../shared/TypeConstraints";
@@ -24,7 +25,7 @@ const ArtistRoleModel = types.model("ArtistRoleModel", {
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 export const ReleaseModel = types.model("Release", {
     id: types.identifierNumber,
@@ -85,19 +86,9 @@ export const ReleaseModel = types.model("Release", {
         const patch: Partial<SnapshotIn<typeof ReleaseModel>> = pick(response, "title", "images", "thumb");
         patch.id = self.id;
         patch.cacheKey = response.resource_url;
-        const artists = flatten(compact([response.artists, response.extraartists]));
-        // connect master
-        patch.artists = uniqBy(flatten(artists.map(({ id, role }) => {
-            // Ignore any [flavor text]
-            role = role.replaceAll(/(\s*\[[^\]]*\])/g, "");
-            // Split up comma, separated, roles
-            const roles = role.split(/,\s*/);
-            return roles.map((role) => {
-                role = role.replace("-By", " By");
-                return ({ artist: id.toString(), role });
-            });
-        })), JSON.stringify.bind(JSON));
+        patch.artists = compact(uniqueArtistRoles(response as DiscogsRelease).map(({ id, role }) => id && ({ artist: id.toString(), role })));
         patch.version = CURRENT_VERSION;
+        // TODO: connect master
         console.log(`refresh ${self.title}: applying patch...`);
         applySnapshot(self, patch);
     });

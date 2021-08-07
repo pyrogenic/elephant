@@ -17,7 +17,7 @@ table {
     tbody tr {
         height: 6.8vh;
     }
-    textarea {
+    textarea, .disco-tagged {
         margin-top: inherit !important;
         font-size: small !important;
     }
@@ -244,4 +244,10 @@ a.music-label {
         border: 1px solid black;
     }
     
+}
+
+.ruler {
+    div:nth-of-type(even) {
+       background: whitesmoke;
+    }
 }

@@ -12,3 +12,10 @@ export type Remote<TValue> = {
 };
 
 export type RemoteType<TRemote> = TRemote extends Remote<infer TValue> ? TValue : never;
+
+export function remoteValue<T>(obj: Remote<T> | undefined) {
+    if (obj?.status !== "ready") {
+        return undefined;
+    }
+    return obj.value;
+}

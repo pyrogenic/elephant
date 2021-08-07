@@ -7,7 +7,7 @@ import { wrap } from "./LabelRoute";
 import DiscogsLinkback from "./DiscogsLinkback";
 import ExternalLink from "./shared/ExternalLink";
 
-export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: string }) {
+export default function DiscoTag({ onClick, prewrap, src, uri: discogsUrl }: { onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
     const { lpdb } = React.useContext(ElephantContext);
     if (!lpdb) { return null; }
     const result: JSX.Element[] = [];
@@ -19,7 +19,7 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
         if (result.length) {
             result.push(<hr key={result.length} />);
         }
-        sect.split(/[\r\n]\n/).forEach((para) => {
+        sect.split(/([\r\n]\n?)/).forEach((para) => {
             let matches: {
                 li?: string;
                 pre?: string;
@@ -45,15 +45,19 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
                     const label = numericId ? lpdb.label(Number(tagId)) : lpdb.labels.values().find((l) => l.status === "ready" && l.value.name === tagId) ?? { status: "error" };
                     if (label.status !== "error") {
                         paragraph.push(<Router.NavLink key={paragraph.length} exact to={`/labels/${tagId}`}><LoadingIcon remote={[label, "name"]} placeholder={tagId} /></Router.NavLink>);
+                    } else if (tagId) {
+                        paragraph.push(<ExternalLink key={paragraph.length} href={`https://www.discogs.com/label/${encodeURIComponent(tagId)}`}>{tagId}</ExternalLink>);
                     } else {
-                        paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                        paragraph.push(<span key={paragraph.length} className="text-warning">{tag}=undefined</span>);
                     }
                 } else if (tag === "a") {
                     const artist = numericId ? lpdb.artistStore.get(numericId) : lpdb.artistStore.all.find(({ name }) => name === tagId);
                     if (artist) {
                         paragraph.push(<Router.NavLink key={paragraph.length} exact to={`/artists/${tagId}`}>{artist.name ?? <LoadingIcon placeholder={tagId} />}</Router.NavLink>);
+                    } else if (tagId) {
+                        paragraph.push(<ExternalLink key={paragraph.length} href={`https://www.discogs.com/artist/${encodeURIComponent(tagId)}`}>{tagId}</ExternalLink>);
                     } else {
-                        paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                        paragraph.push(<span key={paragraph.length} className="text-warning">{tag}=undefined</span>);
                     }
                 } else if (tag === "r") {
                     const collectionItem = numericId && lpdb.collection.values().find(({ id }) => id === numericId);
@@ -94,7 +98,7 @@ export default function DiscoTag({ src, uri: discogsUrl }: { src: string, uri: s
     });
     return <>
         {/* <pre>{src}</pre> */}
-        <div className="disco-tagged">{result}</div>
-        <DiscogsLinkback uri={discogsUrl} />
+        <div className="disco-tagged" onClick={onClick}>{result}</div>
+        {discogsUrl && <DiscogsLinkback uri={discogsUrl} />}
     </>;
 }
