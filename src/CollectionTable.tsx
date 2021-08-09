@@ -429,6 +429,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const formatColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
         Header: "Type",
+        className: "minimal-column",
         accessor: ({ basic_information: { formats } }) => formats,
         Cell: ({ value }: { value: Formats }) => <>
             {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind }) => kind === TagKind.format).map(({ tag }) => tag).join(" ")}
@@ -449,6 +450,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     const coverColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: <>&nbsp;</>,
         id: "Cover",
+        className: "minimal-column",
         accessor: (row) => <ExternalLink href={releaseUrl(row)}>
             <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
         </ExternalLink>,
@@ -456,6 +458,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const releaseColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: ARTIST_COLUMN_TITLE,
+        className: "col-md-2 col-lg-3",
         accessor: ({ instance_id, basic_information: { artists, title } }) => ({ artists, title, instance_id }),
         Cell: ({ value }: { value: ReleaseCellProps; }) => <ReleaseCell {...value} />,
         sortType: sortByArtist,
@@ -475,6 +478,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: "Location",
+        className: "minimal-column",
         accessor: ({ folder_id }) => folderName(folder_id),
         Cell({ value }: { value: string; }) {
             let { label, status, type } = parseLocation(value);
@@ -510,6 +514,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const tagsColumn = React.useMemo(() => ({
         Header: "Tags",
+        className: "col-md-2",
         accessor: (e: CollectionItem) => tagsFor(e),
         Cell: ({ value, row: { original } }: { value: ReturnType<typeof tagsFor>, row: { original: CollectionItem } }) => <Observer render={() => {
             const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>);
@@ -658,6 +663,7 @@ function FieldEditor<As = "text">(props: {
         let control: JSX.Element;
         if (props.as && !editing) {
             control = <DiscoTag
+                className="hover-lined"
                 src={pendingValue(pendable)}
                 uri={false}
                 prewrap={true}

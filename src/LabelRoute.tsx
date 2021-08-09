@@ -13,6 +13,7 @@ import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
 import ExternalLink from "./shared/ExternalLink";
 import LoadingIcon from "./shared/LoadingIcon";
+import RefreshButton from "./shared/RefreshButton";
 import { Content, resolve } from "./shared/resolve";
 
 const LabelPanel = observer(() => {
@@ -36,6 +37,7 @@ const LabelPanel = observer(() => {
                 <DiscoTag src={label.value.profile} {...label.value} />
             </>
                 : <i>No information available.</i>}
+            <RefreshButton remote={label} />
         </div>
         <CollectionTable collectionSubset={collectionSubset.get()} />
     </>;

@@ -6,8 +6,9 @@ import { Content } from "./shared/resolve";
 import { wrap } from "./LabelRoute";
 import DiscogsLinkback from "./DiscogsLinkback";
 import ExternalLink from "./shared/ExternalLink";
+import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 
-export default function DiscoTag({ onClick, prewrap, src, uri: discogsUrl }: { onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
+export default function DiscoTag({ className, onClick, prewrap, src, uri: discogsUrl }: { className?: ClassNames, onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
     const { lpdb } = React.useContext(ElephantContext);
     if (!lpdb) { return null; }
     const result: JSX.Element[] = [];
@@ -98,7 +99,7 @@ export default function DiscoTag({ onClick, prewrap, src, uri: discogsUrl }: { o
     });
     return <>
         {/* <pre>{src}</pre> */}
-        <div className="disco-tagged" onClick={onClick}>{result}</div>
+        <div className={classConcat(className, "disco-tagged")} onClick={onClick}>{result}</div>
         {discogsUrl && <DiscogsLinkback uri={discogsUrl} />}
     </>;
 }

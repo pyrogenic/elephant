@@ -28,6 +28,7 @@ import AuthRoute from "./AuthRoute";
 import { LabelMode } from "./LabelRoute";
 import { TagsMode } from "./TagsRoute";
 import { TasksMode } from "./TasksRoute";
+import Ruler from "./shared/Ruler";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -81,6 +82,7 @@ export default function Elephant() {
   const [search, setSearch] = useStorageState<string>("session", "search", "");
   const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean | undefined }>({});
   const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
+  const [showRuler, setShowRuler] = useStorageState<boolean>("local", "showRuler", false);
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
@@ -130,6 +132,7 @@ export default function Elephant() {
         bypassCache={bypassCache}
         collection={collection}
         fluid={fluid}
+        showRuler={showRuler}
         avatarUrl={profile?.avatar_url}
         search={search}
         setBypassCache={setBypassCache}
@@ -139,6 +142,7 @@ export default function Elephant() {
           }
         }}
         setFluid={setFluid}
+        setShowRuler={setShowRuler}
         setSearch={setSearch}
         setVerbose={setVerbose}
         verbose={verbose}
@@ -147,34 +151,7 @@ export default function Elephant() {
         {!isEmpty(error) && <Alert variant="warning">
           <code>{error.toString()}</code>
         </Alert>}
-        <Row className="ruler">
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-          <Col xxl={1}>&nbsp;</Col>
-        </Row>
-        <Row className="ruler">
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-          <Col xs={1}>&nbsp;</Col>
-        </Row>
+        {showRuler && <Ruler />}
         <Router.Switch>
           <Router.Route path="/auth">
             <AuthRoute

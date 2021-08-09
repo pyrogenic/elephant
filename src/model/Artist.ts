@@ -161,6 +161,7 @@ export { ArtistStoreModel };
 export const ArtistByIdReference = types.maybe(
     types.reference(types.late((): IAnyModelType => ArtistModel), {
         get(id, parent: any) {
+            if (!id) { return undefined; }
             const { artistStore } = getStore(parent);
             return artistStore.get(Number(id));
         },

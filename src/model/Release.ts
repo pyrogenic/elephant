@@ -1,9 +1,7 @@
 import { arraySetRemove } from "@pyrogenic/asset/lib";
 import { Discojs } from "discojs";
 import compact from "lodash/compact";
-import flatten from "lodash/flatten";
 import pick from "lodash/pick";
-import uniqBy from "lodash/uniqBy";
 import { action, observable, runInAction } from "mobx";
 import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotIn, SnapshotOrInstance, types } from "mobx-state-tree";
 import { uniqueArtistRoles } from "../details/AlbumArtists";
@@ -64,14 +62,18 @@ export const ReleaseModel = types.model("Release", {
         const existingKeys: string[] = yield tx.db.getAllKeysFromIndex("artistRoles", "by-release", self.id);
         console.log(`persist ${self.title} result: ${result}`);
         for (const { artist, role } of self.artists) {
-            const [ar, id] = artistRole(artist.id, role, self.id);
-            if (!arraySetRemove(existingKeys, id)) {
-                result = yield tx.db.put("artistRoles", ar, id);
-                console.log(`persist ${id} result: ${result}`);
+            if (!artist) {
+                console.warn(`bogus element in ${self.title}'s artists, role is ${role}`);
+            } else {
+                const [ar, id] = artistRole(artist.id, role, self.id);
+                if (!arraySetRemove(existingKeys, id)) {
+                    result = yield tx.db.put("artistRoles", ar, id);
+                    console.log(`persist ${id} result: ${result}`);
+                }
             }
         }
         for (const id of existingKeys) {
-            console.log(`remove stale ${id}`);
+            console.warn(`remove stale ${id}`);
             yield tx.db.delete("artistRoles", id);
         }
         result = yield tx.done;

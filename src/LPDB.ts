@@ -248,7 +248,7 @@ export default class LPDB {
   });
 
   public label(labelId: number): Remote<Label> {
-    let refresh = () => { };
+    let refresh = (fromCache?: boolean) => { };
     let result = this.labels.get(labelId);
     if (result) {
       return result;
@@ -256,19 +256,24 @@ export default class LPDB {
     result = observable<Remote<Label>>({
       status: "pending",
     });
-    refresh = () => this.client.getLabel(labelId).then(
-      action((value) => {
-        set(result!, "status", "ready");
-        set(result!, "value", value);
-        set(result!, "refresh", refresh);
-      }),
-      action((error) => {
-        set(result!, "status", "error");
-        set(result!, "error", error);
-        set(result!, "refresh", refresh);
-      }));
+    refresh = (fromCache?: boolean) => {
+      this.cache.bypass = !fromCache;
+      const p = this.client.getLabel(labelId);
+      this.cache.bypass = false;
+      return p.then(
+        action((value) => {
+          set(result!, "status", "ready");
+          set(result!, "value", value);
+          set(result!, "refresh", refresh);
+        }),
+        action((error) => {
+          set(result!, "status", "error");
+          set(result!, "error", error);
+          set(result!, "refresh", refresh);
+        }));
+    };
     this.labels.set(labelId, result);
-    refresh();
+    refresh(true);
     return result;
   }
 

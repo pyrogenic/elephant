@@ -65,6 +65,8 @@ export default function Masthead({
     collection,
     search,
     setSearch,
+    showRuler,
+    setShowRuler,
     fluid,
     setFluid,
     bypassCache,
@@ -79,6 +81,8 @@ export default function Masthead({
         setSearch: SetState<string>,
         fluid: boolean,
         setFluid: SetState<boolean>,
+        showRuler: boolean,
+        setShowRuler: SetState<boolean>,
         bypassCache: boolean,
         setBypassCache: SetState<boolean>,
         verbose: boolean,
@@ -147,6 +151,12 @@ export default function Masthead({
         </Navbar.Collapse>
         <Navbar.Collapse className="justify-content-end">
             <>
+                <Check
+                    className={formSpacing}
+                    value={showRuler}
+                    id="Ruler"
+                    label="Ruler"
+                    setValue={setShowRuler} />
                 <Check
                     className={formSpacing}
                     value={fluid}

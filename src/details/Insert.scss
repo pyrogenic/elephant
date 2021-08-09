@@ -3,7 +3,8 @@ div.insert {
     height: 8.5in;
     overflow: hidden;
     outline: 2px solid black;
-    
+    white-space: pre;
+
     .front {
         float: left;
         transform: rotate(-90deg) translate(-2.5in, -2in);
@@ -50,9 +51,10 @@ div.insert {
         
         font-size: 12pt;
         
-        div {
-            margin-left: 1.5em !important;
-            margin-right: 1.5em !important;
+        padding-left: 1.5em !important;
+        padding-right: 1.5em !important;
+        div:not(:first-child):not(:last-child) {
+            padding-inline: 0.5em;
         }
         .label {
             display: flex;
@@ -61,6 +63,7 @@ div.insert {
             align-items: center;
             font-weight: lighter;
             img {
+                margin-left: 1.5mm;
                 height: 5mm;
             }
         }

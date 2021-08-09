@@ -7,18 +7,16 @@ import Figure from "react-bootstrap/Figure";
 import Row from "react-bootstrap/Row";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
-import { FiRefreshCw } from "react-icons/fi";
 import ReactJson from "react-json-view";
-// import { FiRefreshCw } from "react-icons/fi";
-// import ReactJson from "react-json-view";
 import { collectionItemCacheQuery } from "../collectionItemCache";
 import DiscoTag from "../DiscoTag";
 import { CollectionItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
-import Insert from "../Insert";
 import { remoteValue } from "../Remote";
 import Badge from "../shared/Badge";
+import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists from "./AlbumArtists";
+import Insert from "./Insert";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -119,14 +117,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                     name="Release"
                                     src={release.value}
                                     collapsed={true} />}
-                            <Button
-                                size="sm"
-                                variant="secondary"
-                                disabled={release?.status === "pending" || !release?.refresh}
-                                onClick={release?.status === "pending" ? undefined : release?.refresh}>
-                                <FiRefreshCw className="inline" />
-                                Refresh
-                            </Button>
+                            <RefreshButton remote={release} />
                         </Col>
                         <Col xs={4}>
                             {master?.status === "ready" && (
@@ -135,13 +126,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                         name="Master"
                                         src={master.value}
                                         collapsed={true} />)}
-                            <Button
-                                size="sm"
-                                variant="secondary"
-                                disabled={release?.status === "pending" || !release?.refresh}
-                                onClick={release?.status === "pending" ? undefined : release?.refresh}>
-                                Refresh
-                            </Button>
+                            <RefreshButton remote={master} />
                         </Col>
                     </Row>
                 </Tab>
@@ -222,3 +207,4 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
 const Details = observer(DetailsImpl);
 
 export default Details;
+

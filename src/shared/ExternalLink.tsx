@@ -11,6 +11,6 @@ export default function ExternalLink(props: ExternalLinkProps) {
         icon = typeof props.children === "string";
     }
     return <a {...{ ...props, children: undefined }} target="_blank" rel="noreferrer">{props.children}{
-        icon && <FiExternalLink className="inline" />
+        icon && <FiExternalLink className="append-inline-icon" />
     }</a>;
 }

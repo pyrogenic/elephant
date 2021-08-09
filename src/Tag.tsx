@@ -99,8 +99,7 @@ export default function Tag({
             title={title}
         >
             <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
-            <Icon
-                className="icon"
+                <Icon
                 onClick={onClickIcon}
             />
             &nbsp;

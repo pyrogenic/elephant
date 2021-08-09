@@ -17,21 +17,32 @@ table {
     tbody tr {
         height: 6.8vh;
     }
-    textarea, .disco-tagged {
+    textarea, .hover-lined {
         margin-top: inherit !important;
         font-size: small !important;
+        min-height: 2rem;
     }
-    .form-control {
+    .form-control, .hover-lined {
         padding: 0;
         border-radius: 0;
         border-top: none;
         border-left: none;
         border-right: none;
+        border-bottom: 1px dotted black;
+        // border: 1px dotted black;
         background: none;
         &:not(:active):not(:hover) {
             transition-property: border-color;
             transition-delay: 50ms;
             border-color: transparent;
+            resize: none;
+            overflow: hidden;
+        }
+        &:not(:active):not(:focus):hover {
+            transition-property: border-color;
+            transition-delay: 50ms;
+            border-color: grey;
+            //background: lightgrey;
             resize: none;
             overflow: hidden;
         }
@@ -60,6 +71,12 @@ a.active[aria-current="page"] {
 td {
     .badge {
         font-weight: 400;
+    }
+    > .badge:only-child {
+        min-width: 100%;
+        text-align: start;
+        // make further nested elements not overflow the column
+        box-sizing: border-box;
     }
 }
 

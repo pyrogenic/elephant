@@ -51,13 +51,19 @@ $lbg: adjust-color($light, $lightness: -5%);
     }
 }
 
-svg.icon {
+.tag svg {
     vertical-align: -20%;
 }
 
-svg.inline {
+svg.append-inline-icon {
     vertical-align: -10%;
-    margin-inline: 0.1rem;
+    margin-inline-start: 0.1rem;
+    //stroke-width: 1px;
+}
+
+svg.prepend-inline-icon {
+    vertical-align: -10%;
+    margin-inline-end: 0.25rem;
 }
 
 .comma-sep {
