@@ -7,6 +7,7 @@ import { wrap } from "./LabelRoute";
 import DiscogsLinkback from "./DiscogsLinkback";
 import ExternalLink from "./shared/ExternalLink";
 import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
+import { remoteValue } from "./Remote";
 
 export default function DiscoTag({ className, onClick, prewrap, src, uri: discogsUrl }: { className?: ClassNames, onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
     const { lpdb } = React.useContext(ElephantContext);
@@ -69,6 +70,22 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                         const release = numericId && lpdb.details({ id: numericId });
                         if (release) {
                             paragraph.push(<ExternalLink key={paragraph.length} href={release.status === "ready" ? release.value.uri : undefined}><LoadingIcon remote={[release, "title"]} placeholder={tagId} /></ExternalLink>);
+                        } else {
+                            paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                        }
+                    }
+                } else if (tag === "m") {
+                    const collectionItem = numericId && lpdb.collection.values().find(({ basic_information: { master_id } }) => master_id === numericId);
+                    if (collectionItem) {
+                        paragraph.push(<Router.NavLink key={paragraph.length} exact to={`#${collectionItem.instance_id}`}>{collectionItem.basic_information.title}</Router.NavLink>);
+                    } else {
+                        const master = numericId && lpdb.master(numericId);
+                        if (master && master.status === "ready" && master.value === "no-master-release") {
+                            paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
+                        } else if (master && master.status === "ready" && master.value !== "no-master-release") {
+                            paragraph.push(<ExternalLink key={paragraph.length} href={master.value.uri}></ExternalLink>);
+                        } else if (master && master.status !== "ready") {
+                            paragraph.push(<ExternalLink key={paragraph.length} href={undefined}><LoadingIcon placeholder={tagId} /></ExternalLink>);
                         } else {
                             paragraph.push(<span key={paragraph.length} className="text-warning">{tagId}</span>);
                         }
