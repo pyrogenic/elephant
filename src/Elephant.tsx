@@ -29,6 +29,7 @@ import { LabelMode } from "./LabelRoute";
 import { TagsMode } from "./TagsRoute";
 import { TasksMode } from "./TasksRoute";
 import Ruler from "./shared/Ruler";
+import Graph from "./shared/cytoscape/Graph";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -147,6 +148,7 @@ export default function Elephant() {
         setVerbose={setVerbose}
         verbose={verbose}
       />
+      <Graph />
       <Container fluid={fluid}>
         {!isEmpty(error) && <Alert variant="warning">
           <code>{error.toString()}</code>
