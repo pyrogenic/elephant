@@ -54,13 +54,16 @@ const LabelIndex = observer(() => {
     </>;
 });
 
-export function wrap(paragraph: Content, bold: number, italic: number, url: string[]) {
+export function wrap(paragraph: Content, bold: number, italic: number, underline: number, url: string[]) {
     let content = resolve(paragraph);
     if (bold > 0) {
         content = <b>{content}</b>;
     }
     if (italic > 0) {
         content = <i>{content}</i>;
+    }
+    if (underline > 0) {
+        content = <u>{content}</u>;
     }
     if (url.length) {
         content = <ExternalLink href={url[url.length - 1]}>{content}</ExternalLink>

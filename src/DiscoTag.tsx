@@ -15,6 +15,7 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
     let li = false;
     let bold = 0;
     let italic = 0;
+  let underline = 0;
     let url: string[] = [];
     src.split(/-{4,}/).forEach((sect) => {
         if (result.length) {
@@ -27,7 +28,7 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                 tag?: string;
             }[] = Array.from(para.matchAll(/(?<li>- )?(?<pre>[^[]*)(?:\[(?<tag>[^\]]+)\])?/g)).map(({ groups }) => groups) as any;
             if (matches.length === 0) {
-                result.push(<span key={result.length}>{wrap(para, bold, italic, url)}</span>);
+              result.push(<span key={result.length}>{wrap(para, bold, italic, underline, url)}</span>);
                 return;
             }
             const paragraph: JSX.Element[] = [];
@@ -37,7 +38,7 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                 }
                 const pre = groups.pre;
                 if (pre) {
-                    paragraph.push(<span key={paragraph.length}>{wrap(pre, bold, italic, url)}</span>);
+                  paragraph.push(<span key={paragraph.length}>{wrap(pre, bold, italic, underline, url)}</span>);
                 }
                 const fullTag = groups.tag;
                 const [, tag, tagId] = fullTag?.match(/^([/a-z]+)=?(.+)?$/) ?? [undefined, undefined];
@@ -76,6 +77,10 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                     bold += 1;
                 } else if (tag === "/b") {
                     bold -= 1;
+                } else if (tag === "u") {
+                  underline += 1;
+                } else if (tag === "/u") {
+                  underline -= 1;
                 } else if (tag === "i") {
                     italic += 1;
                 } else if (tag === "/i") {
@@ -88,7 +93,7 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                     paragraph.push(<span key={paragraph.length} title={JSON.stringify({ fullTag, tag, tagId }, null, 2)}>[{fullTag}]</span>);
                 }
             }
-            let content: Content = wrap(paragraph, bold, italic, url);
+          let content: Content = wrap(paragraph, bold, italic, underline, url);
             if (li) {
                 li = false;
                 result.push(<li key={result.length}>{content}</li>);
