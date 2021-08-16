@@ -10,6 +10,7 @@ import CollectionItemLink from "./CollectionItemLink";
 import CollectionTable from "./CollectionTable";
 import DiscoTag from "./DiscoTag";
 import ElephantContext from "./ElephantContext";
+import Disclosure from "./shared/Disclosure";
 
 const ArtistPanel = () => {
   const { artistId: artistIdSrc, artistName } = Router.useParams<{ artistId?: string; artistName?: string; }>();
@@ -31,9 +32,9 @@ const ArtistPanel = () => {
   });
   const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)));
   return <Observer>{() => <>
-    <h2>{artistName ?? artist.name}</h2>
-
-    {artist.profile && <DiscoTag src={artist.profile} uri={artist.uri} />}
+    <Disclosure title={(icon) => <h2>{artistName ?? artist.name}{icon}</h2>} content={() => <>
+      {artist.profile && <DiscoTag src={artist.profile} uri={artist.uri} />}
+    </>} />
 
     <CollectionTable collectionSubset={collectionSubset.get()} />
 
