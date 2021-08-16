@@ -24,7 +24,7 @@
     "@types/react-table": "~7.7.1",
     "@types/react": "~17.0.0",
     "bootstrap": "~5.0.2",
-    "webcola": "~3.4.0",
+    "cytoscape-cola": "~2.5.0",
     "cytoscape": "~3.14.0",
     "comlink-loader": "~2.0.0",
     "d3": "^5.5.0",

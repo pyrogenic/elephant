@@ -1,16 +1,21 @@
 // import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import flatten from "lodash/flatten";
+import groupBy from "lodash/groupBy";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { computed } from "mobx";
+import { computed, reaction } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
+import autoFormat from "./autoFormat";
 import CollectionTable from "./CollectionTable";
+import { uniqueArtistRoles } from "./details/AlbumArtists";
 import DiscoTag from "./DiscoTag";
 import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
+import { Release } from "./LPDB";
+import Graph, { DataType, Gener } from "./shared/cytoscape/Graph";
 import ExternalLink from "./shared/ExternalLink";
 import LoadingIcon from "./shared/LoadingIcon";
 import RefreshButton from "./shared/RefreshButton";
@@ -18,12 +23,66 @@ import { Content, resolve } from "./shared/resolve";
 
 const LabelPanel = observer(() => {
     const { labelId: labelIdSrc, labelName } = Router.useParams<{ labelId?: string; labelName?: string; }>();
-    const { lpdb, collection } = React.useContext(ElephantContext);
     const labelId = Number(labelIdSrc);
     if (!isFinite(labelId)) { return null; }
+
+    const { lpdb, collection } = React.useContext(ElephantContext);
     if (!lpdb) { return null; }
+
     const label = React.useMemo(() => lpdb?.label(labelId), [labelId, lpdb]);
-    const collectionSubset = computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id)));
+    const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), []);
+    const generateGraph = React.useMemo(() =>
+        function* (): Gener {
+            const pending = collectionSubset.get().map((e) => lpdb.details(e));
+            const ready: Release[] = [];
+            for (const item of pending) {
+                reaction(() => item.status === "ready" && item.value,
+                    (release) => {
+                        if (release) {
+                            pending.splice(pending.indexOf(item), 1);
+                            ready.push(release);
+                        }
+                    });
+            }
+            while (pending.length + ready.length > 0) {
+                const release = ready.pop();
+                const data: DataType = { nodes: [], edges: [] }
+                if (release) {
+                    console.log(`Processing ${release.title}`);
+                    const albumId = `r${release.id}`;
+                    data.nodes.push({
+                        data: {
+                            id: albumId,
+                            label: autoFormat(release.title),
+                        },
+                    });
+                    const uars = uniqueArtistRoles(release);
+                    Object.entries(groupBy(uars, "id")).forEach(([id, items]) => {
+                        let artistId: string | undefined;
+                        items.forEach((artist) => {
+                            if (artistId === undefined) {
+                                artistId = `a${id}`;
+                                data.nodes.push({
+                                    data: {
+                                        group: "nodes",
+                                        id: artistId,
+                                        label: artist.name,
+                                    },
+                                });
+                            }
+                            data.edges.push({
+                                data: {
+                                    target: albumId,
+                                    source: artistId,
+                                    label: artist.role,
+                                },
+                            });
+                        });
+                    })
+                }
+                yield data;
+            }
+        }, [collectionSubset]);
     return <>
         <div className="mb-3">
             <h2>
@@ -39,6 +98,7 @@ const LabelPanel = observer(() => {
                 : <i>No information available.</i>}
             <RefreshButton remote={label} />
         </div>
+        <Graph generator={generateGraph} />
         <CollectionTable collectionSubset={collectionSubset.get()} />
     </>;
 });

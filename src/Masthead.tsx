@@ -1,9 +1,11 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import sum from "lodash/sum";
-import React from "react";
+import React, { ButtonHTMLAttributes } from "react";
 import Image from "react-bootstrap/Image";
 import Navbar from "react-bootstrap/Navbar";
+import Dropdown from "react-bootstrap/dropdown";
+import Button, { ButtonProps } from "react-bootstrap/button";
 import * as Router from "react-router-dom";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
@@ -12,6 +14,18 @@ import "./Masthead.scss";
 import Check from "./shared/Check";
 import Loader from "./shared/Loader";
 import SearchBox from "./shared/SearchBox";
+import { FiMoreHorizontal } from "react-icons/fi";
+
+const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
+    return <div
+        ref={ref}
+        className="btn btn-sm btn-outline-dark"
+        onClick={(e) => {
+            e.preventDefault();
+            onClick?.(e);
+        }}
+    ><FiMoreHorizontal /></div>
+});
 
 function SpeedTracker() {
     const { cache } = React.useContext(ElephantContext);
@@ -105,7 +119,6 @@ export default function Masthead({
                 Elephant
             </Router.NavLink>
         </Navbar.Brand>
-        <Navbar.Toggle />
         <Navbar.Collapse className="justify-content-start">
         <Navbar.Text>
             <Router.NavLink exact to="/auth">Auth</Router.NavLink>
@@ -149,36 +162,47 @@ export default function Masthead({
         }} /> */}
             <SpeedTracker />
         </Navbar.Collapse>
-        <Navbar.Collapse className="justify-content-end">
-            <>
-                <Check
+        <Navbar.Text as={Dropdown} flip>
+            <Dropdown.Toggle as={OptionsMenuIcon} />
+
+            <Dropdown.Menu>
+                <Dropdown.ItemText>
+                    <Check
                     className={formSpacing}
                     value={showRuler}
                     id="Ruler"
                     label="Ruler"
-                    setValue={setShowRuler} />
+                        setValue={setShowRuler} />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
                 <Check
                     className={formSpacing}
                     value={fluid}
                     id="Fluid"
                     label="Fluid"
-                    setValue={setFluid} />
+                        setValue={setFluid} />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
                 <Check
                     className={formSpacing}
                     value={bypassCache}
                     id="Bypass Cache"
                     label="Bypass Cache"
                     setValue={setBypassCache} />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
                 <Check
                     className={formSpacing}
                     value={verbose}
                     id="Verbose"
                     label="Verbose"
                     setValue={setVerbose} />
-            </>
+                </Dropdown.ItemText>
+            </Dropdown.Menu>
+        </Navbar.Text>
         {avatarUrl &&
             <span
-            className="pe-5 me-2"
+            className="pe-5 me-2 justify-content-end"
                 style={{
                     backgroundImage: `url(${avatarUrl})`,
                     backgroundSize: "contain",
@@ -186,6 +210,6 @@ export default function Masthead({
                     backgroundPosition: "right",
                     padding: 0,
                 }}>&nbsp;</span>}
-        </Navbar.Collapse>
+        <Navbar.Toggle />
     </Navbar>;
 }

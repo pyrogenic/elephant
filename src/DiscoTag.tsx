@@ -1,13 +1,12 @@
+import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import React from "react";
 import * as Router from "react-router-dom";
+import DiscogsLinkback from "./DiscogsLinkback";
 import ElephantContext from "./ElephantContext";
+import { wrap } from "./LabelRoute";
+import ExternalLink from "./shared/ExternalLink";
 import LoadingIcon from "./shared/LoadingIcon";
 import { Content } from "./shared/resolve";
-import { wrap } from "./LabelRoute";
-import DiscogsLinkback from "./DiscogsLinkback";
-import ExternalLink from "./shared/ExternalLink";
-import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
-import { remoteValue } from "./Remote";
 
 export default function DiscoTag({ className, onClick, prewrap, src, uri: discogsUrl }: { className?: ClassNames, onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
     const { lpdb } = React.useContext(ElephantContext);

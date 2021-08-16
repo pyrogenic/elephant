@@ -14,9 +14,14 @@ import { CollectionItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
 import { remoteValue } from "../Remote";
 import Badge from "../shared/Badge";
+import Graph from "../shared/cytoscape/Graph";
 import RefreshButton from "../shared/RefreshButton";
-import AlbumArtists from "./AlbumArtists";
+import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
 import Insert from "./Insert";
+import cytoscape from "cytoscape";
+import autoFormat from "../autoFormat";
+import { computed } from "mobx";
+import { groupBy } from "lodash";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -58,6 +63,66 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         cache?.count(cacheQuery).then((r) => effectCleanupSemaphore.current && setCacheCount(r));
         return () => { effectCleanupSemaphore.current = false };
     }, [cache, cacheQuery, release, item, master]);
+
+    const elements = computed(() =>
+        function* (): Generator<cytoscape.ElementsDefinition> {
+            if (release?.status !== "ready") {
+                yield {
+                    nodes: [{
+                        data: {
+                            id: "loading",
+                            label: release?.status,
+                        },
+                    }],
+                    edges: [],
+                };
+            }
+            while (release?.status !== "ready") {
+                yield ({
+                    nodes: [],
+                    edges: [],
+                });
+            }
+            const albumId = `r${release.value.id}`;
+            yield {
+                nodes: [{
+                    data: {
+                        id: albumId,
+                        label: release.value.title,
+                    },
+                }],
+                edges: [],
+            };
+            const uars = uniqueArtistRoles(release.value);
+            const nodes: cytoscape.ElementsDefinition["nodes"] = [];
+            const edges: cytoscape.ElementsDefinition["edges"] = [];
+            Object.entries(groupBy(uars, "id")).forEach(([id, items]) => {
+                let artistId: string | undefined;
+                items.forEach((artist) => {
+                    if (artistId === undefined) {
+                        artistId = `a${id}`;
+                        nodes.push({
+                            data: {
+                                id: artistId,
+                                label: artist.name,
+                            },
+                        });
+                    }
+                    edges.push({
+                        data: {
+                            target: albumId,
+                            source: artistId,
+                            label: artist.role,
+                        },
+                    });
+                });
+            })
+            yield ({
+                nodes,
+                edges,
+            });
+        });
+
     // const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
     // const result = React.useMemo(() => {
     //     if (details?.status === "ready") {
@@ -146,6 +211,15 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     <Row>
                         <Col>
                             <Insert item={item} />
+                        </Col>
+                    </Row>
+                </Tab>
+                <Tab eventKey="graph" title="Graph">
+                    <Row>
+                        <Col>
+                            <Observer render={() =>
+                                <Graph generator={elements.get()} />
+                            } />
                         </Col>
                     </Row>
                 </Tab>
