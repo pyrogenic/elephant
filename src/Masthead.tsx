@@ -83,6 +83,8 @@ export default function Masthead({
     setShowRuler,
     fluid,
     setFluid,
+    reactive,
+    setReactive,
     bypassCache,
     setBypassCache,
     verbose,
@@ -95,6 +97,8 @@ export default function Masthead({
         setSearch: SetState<string>,
         fluid: boolean,
         setFluid: SetState<boolean>,
+        reactive: boolean,
+        setReactive: SetState<boolean>,
         showRuler: boolean,
         setShowRuler: SetState<boolean>,
         bypassCache: boolean,
@@ -185,6 +189,14 @@ export default function Masthead({
                 <Dropdown.ItemText>
                 <Check
                     className={formSpacing}
+                        value={reactive}
+                        id="Reactive"
+                        label="Reactive"
+                        setValue={setReactive} />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
+                    <Check
+                        className={formSpacing}
                     value={bypassCache}
                     id="Bypass Cache"
                     label="Bypass Cache"

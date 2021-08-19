@@ -30,7 +30,7 @@ const LabelPanel = observer(() => {
     if (!lpdb) { return null; }
 
     const label = React.useMemo(() => lpdb?.label(labelId), [labelId, lpdb]);
-    const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), []);
+    const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), [collection, labelId]);
     const generateGraph = React.useMemo(() =>
         function* (): Gener {
             const pending = collectionSubset.get().map((e) => lpdb.details(e));
@@ -82,7 +82,7 @@ const LabelPanel = observer(() => {
                 }
                 yield data;
             }
-        }, [collectionSubset]);
+        }, [collectionSubset, lpdb]);
     return <>
         <div className="mb-3">
             <h2>

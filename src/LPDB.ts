@@ -367,19 +367,19 @@ export default class LPDB {
   constructor(public readonly client: Discojs, public readonly cache: DiscogsIndexedCache) {
     const storeEnv: StoreEnv = { cache, client, db: cache.storage };
     this.store = StoreModel.create({}, storeEnv);
-    reaction(() => {
-      const collectionItems = Array.from(this.collection.values());
-      const collectionItemsJs = JSON.stringify(collectionItems.map((e) => toJS(e)));
-      return collectionItemsJs;
-    }, (collectionItemsJs) => {
-      worker.setCollection(collectionItemsJs).then(() => {
-        worker.tags().then((tags) => sync(tags.sort(), this.tags));
-        this.byTagCache.forEach((result, tag) => this.refresh(tag, result));
-      });
-    }, {
-      name: "worker.setCollection",
-      delay: 1000,
-    });
+    // reaction(() => {
+    //   const collectionItems = Array.from(this.collection.values());
+    //   const collectionItemsJs = JSON.stringify(collectionItems.map((e) => toJS(e)));
+    //   return collectionItemsJs;
+    // }, (collectionItemsJs) => {
+    //   worker.setCollection(collectionItemsJs).then(() => {
+    //     worker.tags().then((tags) => sync(tags.sort(), this.tags));
+    //     this.byTagCache.forEach((result, tag) => this.refresh(tag, result));
+    //   });
+    // }, {
+    //   name: "worker.setCollection",
+    //   delay: 1000,
+    // });
   }
 
   private refresh(tag: string, result: number[]) {

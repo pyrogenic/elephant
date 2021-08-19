@@ -81,6 +81,7 @@ export default function Elephant() {
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
   const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean | undefined }>({});
+  const [reactive, setReactive] = useStorageState<boolean>("local", "reactive", false);
   const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
   const [showRuler, setShowRuler] = useStorageState<boolean>("local", "showRuler", false);
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
@@ -132,6 +133,7 @@ export default function Elephant() {
         bypassCache={bypassCache}
         collection={collection}
         fluid={fluid}
+        reactive={reactive}
         showRuler={showRuler}
         avatarUrl={profile?.avatar_url}
         search={search}
@@ -142,6 +144,7 @@ export default function Elephant() {
           }
         }}
         setFluid={setFluid}
+        setReactive={setReactive}
         setShowRuler={setShowRuler}
         setSearch={setSearch}
         setVerbose={setVerbose}
@@ -225,12 +228,15 @@ export default function Elephant() {
     updateLists();
     const p1 = updateCustomFields();
     const p2 = updateCollection();
-    Promise.all([p1, p2]).then(() =>
-      updateCollectionReaction.current = reaction(
-        () => cache.version,
-        updateCollection,
-        { delay: 1000 },
-      ))
+    Promise.all([p1, p2]).then(() => {
+      if (reactive) {
+        updateCollectionReaction.current = reaction(
+          () => cache.version,
+          updateCollection,
+          { delay: 1000 },
+        );
+      }
+    })
   }
 
   function updateInventory() {

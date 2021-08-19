@@ -78,7 +78,7 @@ export default function Graph({ generator }: {
             setImmediate(getThem, iter, result, generator());
         }
         return result;
-    }, [generator]);
+    }, [generator, getThem]);
 
     React.useLayoutEffect(() => {
         cy.mount(ref.current!);
@@ -95,7 +95,7 @@ export default function Graph({ generator }: {
             nodeSpacing: 5,
             edgeLengthVal: 45,
             randomize: false,
-            maxSimulationTime: 1500,
+            maxSimulationTime: 60000,
             stop() {
                 cy.fit();
             },
@@ -108,6 +108,6 @@ export default function Graph({ generator }: {
     }, [cy]);
     return <>
         <Button onClick={refresh}>Layout</Button>
-        <div ref={ref} style={{ height: "20rem" }}>Graph goes here.</div>
+        <div ref={ref} style={{ height: "40rem", marginLeft: "4rem", marginRight: "4rem", background: "whitesmoke" }}>Graph goes here.</div>
     </>;
 }
