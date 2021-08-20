@@ -31,6 +31,20 @@ $grid-breakpoints-xl: 1200px;
     }
 }
 
+.spine.btn {
+    //outline: 1px solid red;
+    //border-right: none;
+    box-sizing: content-box;
+    +.spine.btn {
+        //outline: 1px solid red;
+        border-left: none;
+    }
+}
+input.spine {
+    border-left: none;
+    border-right: none;
+}
+
 .Pager:first-of-type {
     .input-group button {
         border-bottom-left-radius: 0;
