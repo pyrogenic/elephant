@@ -1,6 +1,6 @@
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { Discojs } from "discojs";
-import { action, autorun, computed, observable, reaction, runInAction, set, toJS } from "mobx";
+import { action, autorun, computed, observable, runInAction, set } from "mobx";
 import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types } from "mobx-state-tree";
 import { ElementType } from "../../asset/lib";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
@@ -247,7 +247,7 @@ export default class LPDB {
     return result;
   });
 
-  public label(labelId: number): Remote<Label> {
+  public label = action((labelId: number): Remote<Label> => {
     let refresh = (fromCache?: boolean) => { };
     let result = this.labels.get(labelId);
     if (result) {
@@ -275,7 +275,7 @@ export default class LPDB {
     this.labels.set(labelId, result);
     refresh(true);
     return result;
-  }
+  });
 
   // public masterForRelease(item: Release): Remote<MasterRelease> {
   // let refresh = () => { };

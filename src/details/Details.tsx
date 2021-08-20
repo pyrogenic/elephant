@@ -1,4 +1,7 @@
 //import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import cytoscape from "cytoscape";
+import { groupBy } from "lodash";
+import { computed } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
@@ -18,10 +21,6 @@ import Graph from "../shared/cytoscape/Graph";
 import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
 import Insert from "./Insert";
-import cytoscape from "cytoscape";
-import autoFormat from "../autoFormat";
-import { computed } from "mobx";
-import { groupBy } from "lodash";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);

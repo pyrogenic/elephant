@@ -1,7 +1,7 @@
-import React, { Children } from "react";
-import { Content, resolve } from "./resolve";
+import React from "react";
 import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 import "./Disclosure.scss";
+import { Content, resolve } from "./resolve";
 
 type Props = {
     title: string | ((icon: Content) => Content);

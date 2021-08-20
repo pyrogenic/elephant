@@ -43,21 +43,9 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
     const history = Router.useHistory();
     return <Observer>
         {() => <>{artistInfo.get().map(({ id, name, role }, index) => {
-            const musicalArtist = MUSICAL_ARTISTS.exec(role);
-            const createArtist = CREATIVE_ARTISTS.test(role);
-            const techArtist = TECHNICAL_ARTISTS.test(role);
-            const ignoredArtist = IGNORE_ARTISTS.includes(role);
-            if (musicalArtist?.groups) {
-                const tags = Object.entries(musicalArtist.groups).filter(([k, v]) => k[0] !== "_" && v).map(([k]) => k).join(", ");
-                if (tags) {
-                    role = `${role} (${tags})`;
-                }
-            }
-            if (!musicalArtist && !createArtist && !techArtist && !ignoredArtist) {
-                trackTuning("roles", role);
-            }
+            const { musicalArtist, createArtist, techArtist, conciseRole } = categorizeRoleInternal(role);
             const variant =
-                (!role || musicalArtist) ? "primary"
+                (!conciseRole || musicalArtist) ? "primary"
                     : createArtist ? "secondary"
                         : techArtist ? "warning"
                             : "light";
@@ -71,11 +59,45 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
                 bg={variant}
                 kind={tagKind}
                 tag={name}
-                extra={role}
+                extra={conciseRole}
                 onClickTag={() => history.push(`/artists/${id}/${name}`)}
             />;
         })}</>}
     </Observer>;
+
+}
+
+function categorizeRoleInternal(role: string) {
+    const musicalArtist = MUSICAL_ARTISTS.exec(role);
+    const createArtist = CREATIVE_ARTISTS.test(role);
+    const techArtist = TECHNICAL_ARTISTS.test(role);
+    const ignoredArtist = IGNORE_ARTISTS.includes(role);
+    let tags: string[] | undefined;
+    let conciseRole = role;
+    if (musicalArtist?.groups) {
+        tags = Object.entries(musicalArtist.groups).filter(([k, v]) => k[0] !== "_" && v).map(([k]) => k);
+        if (tags) {
+            conciseRole = `${role} (${tags.join(", ")})`;
+        }
+    }
+    if (!musicalArtist && !createArtist && !techArtist && !ignoredArtist) {
+        trackTuning("roles", role);
+    }
+    return { musicalArtist, createArtist, techArtist, conciseRole, tags };
+}
+
+export function categorizeRole(role: string) {
+    const { musicalArtist, createArtist, techArtist, conciseRole, tags } = categorizeRoleInternal(role);
+    if (musicalArtist) {
+        return { category: "musician", conciseRole, tags };
+    }
+    if (createArtist) {
+        return { category: "creative", conciseRole };
+    }
+    if (techArtist) {
+        return { category: "technical", conciseRole };
+    }
+    return { category: "other", conciseRole };
 }
 
 export default AlbumArtists;

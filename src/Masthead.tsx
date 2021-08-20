@@ -1,11 +1,12 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import sum from "lodash/sum";
-import React, { ButtonHTMLAttributes } from "react";
+import React from "react";
+import { ButtonProps } from "react-bootstrap/button";
+import Dropdown from "react-bootstrap/dropdown";
 import Image from "react-bootstrap/Image";
 import Navbar from "react-bootstrap/Navbar";
-import Dropdown from "react-bootstrap/dropdown";
-import Button, { ButtonProps } from "react-bootstrap/button";
+import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
@@ -14,7 +15,6 @@ import "./Masthead.scss";
 import Check from "./shared/Check";
 import Loader from "./shared/Loader";
 import SearchBox from "./shared/SearchBox";
-import { FiMoreHorizontal } from "react-icons/fi";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -166,10 +166,10 @@ export default function Masthead({
         }} /> */}
             <SpeedTracker />
         </Navbar.Collapse>
-        <Navbar.Text as={Dropdown} flip>
+        <Navbar.Text as={Dropdown}>
             <Dropdown.Toggle as={OptionsMenuIcon} />
 
-            <Dropdown.Menu>
+            <Dropdown.Menu flip={true}>
                 <Dropdown.ItemText>
                     <Check
                     className={formSpacing}

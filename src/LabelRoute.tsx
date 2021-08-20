@@ -3,18 +3,19 @@ import flatten from "lodash/flatten";
 import groupBy from "lodash/groupBy";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { computed, reaction } from "mobx";
+import { autorun, computed, reaction } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
 import autoFormat from "./autoFormat";
 import CollectionTable from "./CollectionTable";
-import { uniqueArtistRoles } from "./details/AlbumArtists";
+import { categorizeRole, uniqueArtistRoles } from "./details/AlbumArtists";
 import DiscoTag from "./DiscoTag";
 import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { Release } from "./LPDB";
+import { Remote } from "./Remote";
 import Graph, { DataType, Gener } from "./shared/cytoscape/Graph";
 import ExternalLink from "./shared/ExternalLink";
 import LoadingIcon from "./shared/LoadingIcon";
@@ -32,28 +33,43 @@ const LabelPanel = observer(() => {
     const label = React.useMemo(() => lpdb?.label(labelId), [labelId, lpdb]);
     const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), [collection, labelId]);
     const generateGraph = React.useMemo(() =>
-        function* (): Gener {
-            const pending = collectionSubset.get().map((e) => lpdb.details(e));
+    {
+        console.log("Buiding new graph generator");
+        return function* (): Gener {
+            const pending: Remote<Release>[] = [];
             const ready: Release[] = [];
-            for (const item of pending) {
-                reaction(() => item.status === "ready" && item.value,
-                    (release) => {
-                        if (release) {
-                            pending.splice(pending.indexOf(item), 1);
-                            ready.push(release);
-                        }
-                    });
-            }
-            while (pending.length + ready.length > 0) {
+            const done: Release[] = [];
+            autorun(() => {
+                const subset = collectionSubset.get();
+                subset.forEach((e) => {
+                    const item = lpdb.details(e);
+                    if (!pending.includes(item) && (item.status !== "ready" || !ready.includes(item.value) || !done.includes(item.value))) {
+                        pending.push(item);
+                        reaction(
+                            () => item.status === "ready" && item.value,
+                            (release) => {
+                                if (release) {
+                                    pending.splice(pending.indexOf(item), 1);
+                                    if (!ready.includes(release) && !done.includes(release)) {
+                                        ready.push(release);
+                                    }
+                                }
+                            });
+                    }
+                });
+            });
+            while (true) { //pending.length + ready.length > 0) {
                 const release = ready.pop();
-                const data: DataType = { nodes: [], edges: [] }
+                const data: DataType = { nodes: [], edges: [] };
                 if (release) {
-                    console.log(`Processing ${release.title}`);
+                    done.push(release);
+                    // console.log(`Processing ${release.title}`);
                     const albumId = `r${release.id}`;
                     data.nodes.push({
                         data: {
                             id: albumId,
                             label: autoFormat(release.title),
+                            category: "album",
                         },
                     });
                     const uars = uniqueArtistRoles(release);
@@ -67,21 +83,30 @@ const LabelPanel = observer(() => {
                                         group: "nodes",
                                         id: artistId,
                                         label: artist.name,
+                                        category: "artist",
                                     },
                                 });
                             }
+                            const { category, conciseRole } = categorizeRole(artist.role);
                             data.edges.push({
                                 data: {
                                     target: albumId,
                                     source: artistId,
-                                    label: artist.role,
+                                    label: conciseRole,
+                                    category,
                                 },
                             });
                         });
-                    })
+                    });
                 }
-                yield data;
+                const exit = yield data;
+                if (exit) {
+                    console.log("Exiting graph generator.");
+                    break;
+                }
+                console.log(`${pending.length} pending + ${ready.length} ready + ${done.length} done`);
             }
+        };
         }, [collectionSubset, lpdb]);
     return <>
         <div className="mb-3">
