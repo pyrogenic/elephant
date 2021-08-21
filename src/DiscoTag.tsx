@@ -21,14 +21,14 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
         if (result.length) {
             result.push(<hr key={result.length} />);
         }
-        sect.split(/([\r\n]\n?)/).forEach((para) => {
+        sect.split(/(?<=[.!?])([\r\n]\n?)/).forEach((para) => {
             let matches: {
-                li?: string;
-                pre?: string;
-                tag?: string;
+                li?: string,
+                pre?: string,
+                tag?: string,
             }[] = Array.from(para.matchAll(/(?<li>- )?(?<pre>[^[]*)(?:\[(?<tag>[^\]]+)\])?/g)).map(({ groups }) => groups) as any;
             if (matches.length === 0) {
-              result.push(<span key={result.length}>{wrap(para, bold, italic, underline, url)}</span>);
+                result.push(<span key={result.length}>{wrap(para, bold, italic, underline, url)}</span>);
                 return;
             }
             const paragraph: JSX.Element[] = [];
@@ -38,7 +38,12 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                 }
                 const pre = groups.pre;
                 if (pre) {
-                  paragraph.push(<span key={paragraph.length}>{wrap(pre, bold, italic, underline, url)}</span>);
+                    const brs = pre.split(/[\r\n]\n?/);
+                    paragraph.push(<span key={paragraph.length}>{wrap(brs.pop(), bold, italic, underline, url)}</span>);
+                    while (brs.length) {
+                        paragraph.push(<br key={paragraph.length} />);
+                        paragraph.push(<span key={paragraph.length}>{wrap(brs.pop(), bold, italic, underline, url)}</span>);
+                    }
                 }
                 const fullTag = groups.tag;
                 const [, tag, tagId] = fullTag?.match(/^([/a-z]+)=?(.+)?$/) ?? [undefined, undefined];
