@@ -4,6 +4,8 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import Check from "../Check";
+import { action, observable } from "mobx";
+import { Observer } from "mobx-react";
 
 cytoscape.use(require("cytoscape-cola"));
 
@@ -20,16 +22,36 @@ export default function Graph({ generator }: {
     const mounted = React.useRef<boolean>();
     const backoff = React.useRef(100);
     const liveCy = React.useRef<cytoscape.Core>();
-    let refresh: ((force?: boolean) => void) | undefined;
+    const layout = React.useRef<cytoscape.Layouts>();
+    const options = React.useRef<cytoscape.LayoutOptions>();
+    const [run, setRun] = React.useState<boolean>(true);
+
+    const refresh = React.useCallback((force?: boolean) => {
+        console.log("refresh");
+        layout.current?.stop();
+        if ((run || force) && options.current) {
+            layout.current = liveCy.current?.layout(options.current);
+            layout.current?.start();
+        } else {
+            layout.current = undefined;
+        }
+    }, [layout, liveCy, options, run]);
 
     const getThem = React.useCallback((tracker: number, cy: cytoscape.Core, g: Gener) => {
         if (cy && g && cy === liveCy.current) {
             const { done, value } = g.next(false);
             if (value && (!("edges" in value) || value?.edges?.length || value?.nodes?.length)) {
+                layout.current?.stop();
                 cy.add(value);
+                if (run && options.current) {
+                    layout.current = liveCy.current?.layout(options.current);
+                    layout.current?.start();
+                } else {
+                    layout.current = undefined;
+                }
                 console.log(`${tracker} add data: nodes: ${cy.nodes().length} edges: ${cy.edges().length}`);
                 backoff.current = 100;
-                refresh?.();
+                // refresh();
             }
             if (!done) {
                 if (backoff.current < 5000) {
@@ -120,7 +142,6 @@ export default function Graph({ generator }: {
                 rows: 20,
                 cols: 20,
             },
-
         });
         liveCy.current = result;
         console.log(`created cy, generator: ${!!generator}`);
@@ -130,12 +151,18 @@ export default function Graph({ generator }: {
         return result;
     }, [generator, getThem]);
 
+    const allCategories = React.useMemo(() => observable(new Set<string>()), []);
+    const hiddenElements = React.useMemo(() => observable(new Map<string, cytoscape.Collection>()), []);
+
     React.useLayoutEffect(() => {
         if (ref.current && !mounted.current) {
             console.log("Mounted cy.");
             cy.mount(ref.current);
             mounted.current = true;
-            cy.on("dragfree", () => refresh?.());
+            cy.on("dragfree", () => refresh());
+            cy.on("add", action((e) => {
+                allCategories.add(e.target.data().category);
+            }));
         }
         return () => {
             console.log("Unmounted cy.");
@@ -143,32 +170,33 @@ export default function Graph({ generator }: {
             liveCy.current = undefined;
             cy.unmount();
         };
-    }, [cy]);
+    }, [cy, refresh, allCategories]);
 
     React.useEffect(() => {
         cy.style(style);
     }, [cy, style]);
 
     const [fit, setFit] = useStorageState<boolean>("session", ["graph", "fit"], false);
-    const [run, setRun] = React.useState<boolean>(true);
     const [animate, setAnimate] = useStorageState<boolean>("session", ["graph", "animate"], true);
     const [randomize, setRandomize] = useStorageState<boolean>("session", ["graph", "randomize"], false);
     const [spaceForLabels, setSpaceForLabels] = useStorageState<boolean>("session", ["graph", "spaceForLabels"], false);
-    const options = React.useMemo((): cytoscape.LayoutOptions => {
+    React.useEffect(() => {
         const retval = {//: Partial<cytoscape.CoseLayoutOptions> = {
             name: "cola",
             animate,
             fit,
-            padding: 0,
+            // padding: 0,
             randomize,
-            avoidOverlap: true,
-            nodeDimensionsIncludeLabels: spaceForLabels,
-            idealEdgeLength({ category }: any) {
-                if (category === "musician") {
-                    return 100;
-                }
-                return 50;
-            },
+            // avoidOverlap: true,
+            // nodeOverlap: 20,
+            // nodeDimensionsIncludeLabels: spaceForLabels,
+            // idealEdgeLength({ category }: any) {
+            //     if (category === "musician") {
+            //         return 100;
+            //     }
+            //     return 50;
+            // },
+            // minTemp: 0.1,
             //maxSimulationTime: 60 * 1000,
             // stop() {
             //     if (fit) {
@@ -178,19 +206,8 @@ export default function Graph({ generator }: {
         };
         console.log(`Options: ${JSON.stringify(retval)}`);
         console.log(`Graph Size: nodes: ${cy.nodes().length} edges: ${cy.edges().length}`);
-        return retval as cytoscape.CoseLayoutOptions;
-    }, [animate, cy, fit, randomize, spaceForLabels]);
-    const layout = React.useRef<cytoscape.Layouts>();
-    refresh = React.useCallback((force?: boolean) => {
-        console.log("refresh");
-        layout.current?.stop();
-        if (run || force) {
-            layout.current = cy.layout(options);
-            layout.current.start();
-        } else {
-            layout.current = undefined;
-        }
-    }, [cy, options, run]);
+        options.current = retval as cytoscape.CoseLayoutOptions;
+    }, [animate, cy, fit, randomize, spaceForLabels, refresh]);
 
     React.useEffect(refresh, [cy, refresh, options]);
     const [styleJson, setStyleJson] = React.useState(() => JSON.stringify(style, null, 2));
@@ -209,8 +226,20 @@ export default function Graph({ generator }: {
         <Check label="Run" value={run} setValue={setRun} />
         <Button onClick={refresh.bind(null, true)}>Layout</Button>
         <Button onClick={() => cy.fit()}>Fit</Button>
-        <Form.Control type="textarea" value={styleJson} onChange={({ target: { value } }) => setStyleJson(value)} />
-        <Button disabled={!jsonValid} onClick={() => setStyle(JSON.parse(styleJson))}>Apply Style</Button>
-        <div ref={ref} style={{ height: "40rem", marginLeft: "4rem", marginRight: "4rem", background: "whitesmoke" }}>Graph goes here.</div>
+        {/* <Form.Control type="textarea" value={styleJson} onChange={({ target: { value } }) => setStyleJson(value)} />
+        <Button disabled={!jsonValid} onClick={() => setStyle(JSON.parse(styleJson))}>Apply Style</Button> */}
+        <Observer render={() => <>{Array.from(allCategories).sort().map((category) => <Check key={category} label={category} value={!hiddenElements.has(category)} setValue={action((show) => {
+            if (!show) {
+                const removed = cy.remove(`[category = '${category}']`);
+                hiddenElements.set(category, removed);
+            } else {
+                const removed = hiddenElements.get(category);
+                hiddenElements.delete(category);
+                if (removed) {
+                    cy.add(removed.not(cy.elements()));
+                }
+            }
+        })} />)}</>} />
+        <div ref={ref} style={{ height: "80rem", marginLeft: "4rem", marginRight: "4rem", background: "#fefefe" }}>Graph goes here.</div>
     </>;
 }
