@@ -243,7 +243,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         if (mnemonicPreA === mnemonicA) {
             result[0] = orderBy(compact([spine(page - 1)?.[1], result[0]]), "length").pop();
         }
-        console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
+        // console.log(`minDiff("${mnemonicA}", "${mnemonicB}", { preA: "${mnemonicPreA}", postB: "${mnemonicPostB}" })`, result);
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
     const keyRef = React.createRef<HTMLDivElement>();
