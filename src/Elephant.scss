@@ -206,6 +206,10 @@ tr.sold {
     max-width: 4em;
 }
 
+a {
+    white-space: nowrap;
+}
+
 a.quiet {
     color: initial;
     &:hover {
