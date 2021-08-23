@@ -12,7 +12,7 @@ import LazyMusicLabel from "../LazyMusicLabel";
 import Check from "../shared/Check";
 import Spinner from "../shared/Spinner";
 
-const BAD_SEPS = / - |: /g;
+const BAD_SEPS = / - |: | \(/g;
 const SEP = " ⋄ ";
 
 const BAD_LABELS = / Record(ings?)?s?/g;
@@ -37,6 +37,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
     });
     const [preview, setPreview] = useStorageState<boolean>("session", ["Elephant", "insert", "preview"], false);
     const [greyscale, setGreyscale] = useStorageState<boolean>("session", ["Elephant", "insert", "greyscale"], true);
+    const [logos, setLogos] = useStorageState<boolean>("session", ["Elephant", "insert", "logos"], true);
     const [cover, setCover] = useStorageState<boolean>("session", ["Elephant", "insert", "cover"], false);
     const [singleLabel, setSingleLabel] = useStorageState<boolean>("session", ["Elephant", "insert", "singleLabel"], false);
     const [trimTitle, setTrimTitle] = useStorageState<boolean>("session", ["Elephant", "insert", "trimTitle"], false);
@@ -45,6 +46,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
         <Col xs={1}>
             <Check label="Greyscale" value={greyscale} setValue={setGreyscale} />
             <Check label="Cover" value={cover} setValue={setCover} />
+            <Check label="Logos" value={logos} setValue={setLogos} />
             <Check label="Trim Title" value={trimTitle} setValue={setTrimTitle} />
             <Check label="Single Label" value={singleLabel} setValue={setSingleLabel} />
             <Spinner value={fontSize} onChange={setFontSize} />
@@ -88,7 +90,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
                 <div className="title">{trimTitle ? title.split(BAD_SEPS).shift() : title.replace(BAD_SEPS, SEP)}</div>
                 <div className="space" />
                 <div className="label">
-                    {labels.map((l, i) => <React.Fragment key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div> <LazyMusicLabel label={l} showName={false} /></React.Fragment>)}
+                    {labels.map((l, i) => <React.Fragment key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div>{logos && <> <LazyMusicLabel label={l} showName={false} /></>}</React.Fragment>)}
                 </div>
             </div>
         </div>;
