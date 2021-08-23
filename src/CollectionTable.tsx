@@ -129,10 +129,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
     const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
-    const plays = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
+    const playCount = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
         if (playsId) {
             const playsNote = noteById(notes, playsId)!;
-            let plays = Number(pendingValue(playsNote.value ?? "0"));
+            let plays = Number(pendingValue(playsNote.value?.split("\n", 2)[0] ?? "0"));
             if (!plays) {
                 if (rating) {
                     plays = 1;
@@ -174,7 +174,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             case "Location":
                 return ["literal", parseLocation(folderName(item.folder_id) || "Uncategorized").label];
             case "Plays":
-                return ["literal", `${plays(item)}`];
+                return ["literal", `${playCount(item)}`];
             case "Tasks":
                 return ["words", tasks(item).join(" ")];
             case "Tags":
@@ -186,7 +186,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             default:
                 return undefined;
         }
-    }, [sourceMnemonicFor, folderName, plays, tasks, tagsFor]);
+    }, [sourceMnemonicFor, folderName, playCount, tasks, tagsFor]);
 
     const autoSortBy = React.useCallback((column: string) => ((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
         const aStr = mnemonicToString(mnemonic(column, ac.original));
@@ -272,10 +272,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     }, [cache, client, orderNumberId, priceId, sourceId, sortBySource]);
 
     const sortByPlays = React.useCallback((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
-        const a = plays(ac.original) ?? -1;
-        const b = plays(bc.original) ?? -1;
+        const a = playCount(ac.original) ?? -1;
+        const b = playCount(bc.original) ?? -1;
         return a - b;
-    }, [plays]);
+    }, [playCount]);
     const playCountColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && playsId) {
             return [{
