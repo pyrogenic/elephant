@@ -16,7 +16,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
@@ -247,12 +247,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                 });
                                 return orderItem ? [order, orderItem] : [];
                             });
-                            let needsMoveToSoldButton = false;
+                            let newFolderId: number | undefined;
                             const listingElements = compact(listings.map(([order, orderItem], i) => {
                                 if (!order || !orderItem) { return undefined; }
                                 const status = autoFormat(order.status);
                                 if (status === "Sold" && !inSoldFolder(item)) {
-                                    needsMoveToSoldButton = true;
+                                    newFolderId = soldFolder;
                                 }
                                 return <div className="d-flex d-flex-row" key={i}>
                                     <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/order/${order.id}`}>
@@ -261,41 +261,55 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                     </div>
                                 </div>;
                             }));
-                            if (needsMoveToSoldButton) {
-                                listingElements.push(<Button
-                                    key={listingElements.length}
-                                    size="sm"
-                                    disabled={!client || !soldFolder}
-                                    onClick={
-                                        () => {
-                                            if (!client || !soldFolder) {
-                                                return;
+                            if (!listingElements.length) {
+                                const listing = inventory.get(id);
+                                if (listing) {
+                                    const status = autoFormat(pendingValue(listing.status));
+                                    const listingLocation = folders?.find(({ name }) => name.match(listing.location))?.id;
+                                    if (listingLocation && listingLocation !== item.folder_id) {
+                                        newFolderId = listingLocation;
+                                    }
+                                    listingElements.push(<div className="d-flex d-flex-row" key={listingElements.length}>
+                                        <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
+                                            <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}>{status}</Badge>
+                                        </ExternalLink>
+                                        </div>
+                                    </div>);
+                                }
+                            }
+                            if (newFolderId) {
+                                listingElements.push(
+                                    <Button
+                                        as={Badge}
+                                        variant={"dark"}
+                                        //bg={"warning"}
+                                        key={listingElements.length}
+                                        size="sm"
+                                        disabled={!client || !newFolderId}
+                                        onClick={
+                                            () => {
+                                                if (!client || !newFolderId) {
+                                                    return;
+                                                }
+                                                const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId).then(action(() => {
+                                                    cache?.clear(collectionItemCacheQuery(item));
+                                                    item.folder_id = newFolderId!;
+                                                }));
+                                                mutate(item, "folder_id", newFolderId, promise);
                                             }
-                                            client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, soldFolder).then(() => cache?.clear(collectionItemCacheQuery(item)));
-                                        }
-                                    }>move</Button>)
+                                    }
+                                    >
+                                        <FiArrowRight />{parseLocation(folderName(newFolderId)).label}
+                                    </Button>);
                             }
-                            if (listingElements.length) {
-                                return <>{listingElements}</>;
-                            }
-
-                            const listing = inventory.get(id);
-                            if (!listing) { return null; }
-
-                            const status = autoFormat(pendingValue(listing.status));
-                            return <div className="d-flex d-flex-row">
-                                <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
-                                    <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}>{status}</Badge>
-                                </ExternalLink>
-                                </div>
-                            </div>;
+                            return <>{listingElements}</>;
                         }} />
                     </>;
                 },
                 ...{ sortType: sortByCondition } as any,
             }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
         }
-    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inventory, inSoldFolder, client, soldFolder, cache]);
+    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inSoldFolder, soldFolder, inventory, folders, client, folderName, cache]);
 
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
