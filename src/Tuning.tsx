@@ -138,6 +138,8 @@ export const FORMATS: {
         name?: string,
     } | false
 } = {
+    "CD": { as: TagKind.format },
+
     "10\"": { as: TagKind.format },
     "12\"": { as: TagKind.format },
 

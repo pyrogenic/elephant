@@ -101,20 +101,24 @@ tr.sold {
         width: 100%;
         border: solid 0.2px rgb(162, 162, 162);
         text-transform: uppercase;
-        &.for-sale::after {
-            content: "listed";
-        }
+        padding-left: 0;
+        padding-right: 0;
+        overflow: visible;
+        // needs to line up with other badges that don't have borders
+        box-sizing: border-box;
         &.sold {
-            background-color: #f0fff0;
-            &::after {
-                content: "sold";
-            }
+            background-color: #f0fff0 !important;
+            // &::after {
+            //     content: "sold";
+            // }
+        }
+        &.listed {
+            border: solid 0.2px rgb(162, 162, 162) !important;
+            // &::after {
+            //     content: "sold";
+            // }
         }
     }
-}
-
-.listed.badge {
-    border: solid 0.2px rgb(162, 162, 162);
 }
 
 .grade-media .badge {

@@ -34,7 +34,7 @@ export type TagProps = {
     onClickTag?: () => void;
 };
 
-export default function Tag({
+const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & TagProps>(({
     className,
     tag,
     kind,
@@ -42,10 +42,10 @@ export default function Tag({
     title,
     bg,
     onClickIcon,
-    onClickTag,
+    onClick: onClickTag,
     onClickCount,
     onClickExtra,
-}: TagProps) {
+}, ref) => {
     const { lpdb } = React.useContext(ElephantContext);
     return <Observer render={content} />;
     function content() {
@@ -92,6 +92,7 @@ export default function Tag({
                 break;
         }
         return <Badge
+            ref={ref}
             className={classConcat(kind, "tag", className)}
             bg={bg ?? "secondary"}
             text={bg === "light" ? "dark" : undefined}
@@ -100,30 +101,32 @@ export default function Tag({
         >
             <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
                 <Icon
-                onClick={onClickIcon}
-            />
-            &nbsp;
-            {tag}
-            {count ? <>
+                    onClick={onClickIcon}
+                />
                 &nbsp;
-                <Badge
-                    className="count"
-                    bg="light"
-                    text="dark"
-                    onClick={onClickCount}>
-                    {count}
-                </Badge>
-            </> : null}
-            {extra ? <>
-                &nbsp;
-                {typeof extra === "function"
-                    ? resolve(extra)
-                    : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
-            </> : null}
+                {tag}
+                {count ? <>
+                    &nbsp;
+                    <Badge
+                        className="count"
+                        bg="light"
+                        text="dark"
+                        onClick={onClickCount}>
+                        {count}
+                    </Badge>
+                </> : null}
+                {extra ? <>
+                    &nbsp;
+                    {typeof extra === "function"
+                        ? resolve(extra)
+                        : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
+                </> : null}
             </Router.NavLink>
         </Badge>;
     }
-}
+});
+
+export default Tag;
 
 function ExtraBadge({ onClick, extra }: { onClick?: () => void, extra: Content }) {
     let title: string | undefined;

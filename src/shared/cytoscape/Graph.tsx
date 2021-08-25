@@ -1,11 +1,10 @@
-import cytoscape from "cytoscape";
-import React from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import Check from "../Check";
+import cytoscape from "cytoscape";
 import { action, observable } from "mobx";
 import { Observer } from "mobx-react";
+import React from "react";
+import Button from "react-bootstrap/Button";
+import Check from "../Check";
 
 cytoscape.use(require("cytoscape-cola"));
 
@@ -68,8 +67,9 @@ export default function Graph({ generator }: {
                 g.next(true);
             }
         }
-    }, [liveCy, refresh]);
+    }, [run]);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [style, setStyle] = React.useState<cytoscape.Stylesheet[]>([//useStorageState<cytoscape.Stylesheet[]>("local", ["graph", "style"], [
         {
             selector: "node",
@@ -210,7 +210,10 @@ export default function Graph({ generator }: {
     }, [animate, cy, fit, randomize, spaceForLabels, refresh]);
 
     React.useEffect(refresh, [cy, refresh, options]);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [styleJson, setStyleJson] = React.useState(() => JSON.stringify(style, null, 2));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const jsonValid = React.useMemo(() => {
         try {
             return JSON.parse(styleJson);
@@ -218,6 +221,7 @@ export default function Graph({ generator }: {
             return undefined;
         }
     }, [styleJson]);
+
     return <>
         <Check label="Fit" value={fit} setValue={setFit} />
         <Check label="Animate" value={animate} setValue={setAnimate} />

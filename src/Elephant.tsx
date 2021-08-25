@@ -44,9 +44,13 @@ type CollectionItems = Folder["releases"];
 /** listings for sale */
 type InventoryResponse = PromiseType<ReturnType<Discojs["getInventory"]>>
 type InventoryItems = InventoryResponse["listings"];
+/** listings that were sold */
+type OrdersResponse = PromiseType<ReturnType<Discojs["listOrders"]>>
+type OrdersList = OrdersResponse["orders"]
+export type Order = ElementType<OrdersList>;
+export type OrderItem = ElementType<Order["items"]>;
 
 type DiscogsListItems = DiscogsList["items"];
-
 type ListDefinition = ElementType<DiscogsLists["lists"]>;
 
 export type List = DeepPendable<{
@@ -61,6 +65,7 @@ export type DiscogsInventoryItem = ElementType<InventoryItems>;
 export type InventoryItem = DeepPendable<DiscogsInventoryItem>;
 export type Inventory = OrderedMap<number, InventoryItem>;
 export type Lists = OrderedMap<number, List>;
+export type Orders = OrderedMap<string, Order>;
 export type Profile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 export type Field = ElementType<FieldsResponse["fields"]>;
 export type FieldsById = Map<number, Field>;
@@ -89,6 +94,8 @@ export default function Elephant() {
   const [error, setError] = React.useState<any>();
   // const [identity, setIdentity] = React.useState<Identity>();
   const [folders, setFolders] = React.useState<Folders>();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const orders = React.useMemo<Orders>(() => new OrderedMap(), [client]);
   const [fieldsById, setFieldsById] = React.useState<FieldsById>();
   const fieldsByName = React.useMemo(() => {
     const result: FieldsByName = new Map<string, Field>();
@@ -122,11 +129,12 @@ export default function Elephant() {
     fieldsByName,
     fieldsById,
     folders,
+    orders,
     inventory,
     lists,
     lpdb,
     setError,
-  }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb]);
+  }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb, orders]);
   return <ElephantContext.Provider value={context}>
     <Router.BrowserRouter basename="/elephant">
       <Masthead
@@ -217,6 +225,11 @@ export default function Elephant() {
     setCollectionTimestamp(new Date());
   }
 
+  function addToOrders(items: OrdersList) {
+    items.forEach(action((item) => orders.set(item.id, item)));
+    setCollectionTimestamp(new Date());
+  }
+
   function addToLists(items: DiscogsLists["lists"]) {
     items.forEach((item) => client.getListItems(item.id).then(({ items }) => items).then(action((items) => lists.set(item.id, { definition: item, items }))));
     setCollectionTimestamp(new Date());
@@ -240,7 +253,9 @@ export default function Elephant() {
   }
 
   function updateInventory() {
-    return client.getInventory().then(((r) => client.all("listings", r, addToInventory)), setError);
+    const listings = client.getInventory().then(((r) => client.all("listings", r, addToInventory)), setError);
+    const orders = client.listOrders().then(((r) => client.all<OrdersResponse, ElementType<OrdersResponse["orders"]>, "orders">("orders", r, addToOrders)), setError);
+    return Promise.all([listings, orders]);
   }
 
   function updateLists() {

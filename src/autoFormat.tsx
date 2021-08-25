@@ -26,6 +26,10 @@ export default function autoFormat(str: string | undefined) {
         case "Generic":
         case "No Cover":
             return "—";
+        case "For Sale":
+            return "Listed";
+        case "Shipped":
+            return "Sold";
         case undefined:
             return "";
         default:

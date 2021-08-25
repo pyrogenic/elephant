@@ -12,16 +12,17 @@ import { action, computed, observable, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
+import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
-import { clearCacheForCollectionItem } from "./collectionItemCache";
+import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
 import Details from "./details/Details";
 import DiscoTag from "./DiscoTag";
-import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem } from "./Elephant";
+import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, Order, OrderItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
@@ -88,7 +89,9 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         collection,
         fieldsById,
         fieldsByName,
+        folders,
         inventory,
+        orders,
         lists,
         lpdb,
     } = React.useContext(ElephantContext);
@@ -202,6 +205,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     //const sortByTasks = autoSortBy("Tasks");
     //const sortByTags = autoSortBy("Tags");
 
+    const inSoldFolder = React.useCallback((item: CollectionItem) => {
+        return parseLocation(folderName(item.folder_id)).status === "sold";
+    }, [folderName]);
+
     const sortByCondition = React.useCallback((ac, bc) => {
         const mca = mediaCondition(ac.original.notes);
         const sca = sleeveCondition(ac.original.notes);
@@ -213,12 +220,14 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         const bb = autoOrder(scb);
         return (aa - ba) || (ab - bb);
     }, [mediaCondition, sleeveCondition]);
+    const soldFolder = React.useMemo(() => folders?.find(({ name }) => name === "Sold")?.id, [folders]);
     const conditionColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
             return [{
                 Header: "Cond.",
                 className: "centered-column",
-                accessor({ id, notes }) {
+                accessor(item) {
+                    const { id, notes } = item;
                     const media = mediaCondition(notes);
                     const sleeve = sleeveCondition(notes);
                     return <>
@@ -231,12 +240,52 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             </div>
                         </div>
                         <Observer render={() => {
+                            const listings: ([Order, OrderItem] | [])[] = orders.values().map((order) => {
+                                const orderItem = order.items.find((q) => {
+                                    const { release: { id: itemId } } = q;
+                                    return itemId === id;
+                                });
+                                return orderItem ? [order, orderItem] : [];
+                            });
+                            let needsMoveToSoldButton = false;
+                            const listingElements = compact(listings.map(([order, orderItem], i) => {
+                                if (!order || !orderItem) { return undefined; }
+                                const status = autoFormat(order.status);
+                                if (status === "Sold" && !inSoldFolder(item)) {
+                                    needsMoveToSoldButton = true;
+                                }
+                                return <div className="d-flex d-flex-row" key={i}>
+                                    <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/order/${order.id}`}>
+                                        <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(orderItem.price)}>{status}</Badge>
+                                    </ExternalLink>
+                                    </div>
+                                </div>;
+                            }));
+                            if (needsMoveToSoldButton) {
+                                listingElements.push(<Button
+                                    key={listingElements.length}
+                                    size="sm"
+                                    disabled={!client || !soldFolder}
+                                    onClick={
+                                        () => {
+                                            if (!client || !soldFolder) {
+                                                return;
+                                            }
+                                            client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, soldFolder).then(() => cache?.clear(collectionItemCacheQuery(item)));
+                                        }
+                                    }>move</Button>)
+                            }
+                            if (listingElements.length) {
+                                return <>{listingElements}</>;
+                            }
+
                             const listing = inventory.get(id);
                             if (!listing) { return null; }
-                            const status = pendingValue(listing.status);
+
+                            const status = autoFormat(pendingValue(listing.status));
                             return <div className="d-flex d-flex-row">
                                 <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
-                                    <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}></Badge>
+                                    <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}>{status}</Badge>
                                 </ExternalLink>
                                 </div>
                             </div>;
@@ -246,7 +295,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 ...{ sortType: sortByCondition } as any,
             }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
         }
-    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, inventory]);
+    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inventory, inSoldFolder, client, soldFolder, cache]);
 
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
@@ -476,11 +525,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         sortType: sortByRating,
     }), [sortByRating]);
 
+    type CollectionCell<V> = { value: V, row: { original: CollectionItem } };
     const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: "Location",
         className: "minimal-column",
-        accessor: ({ folder_id }) => folderName(folder_id),
-        Cell({ value }: { value: string; }) {
+        accessor: ({ folder_id }) => folderName(pendingValue(folder_id)),
+        Cell({ row: { original: item }, value }: CollectionCell<string>) {
             let { label, status, type } = parseLocation(value);
             let extra: Content = status;
             let className: string | undefined = undefined;
@@ -507,16 +557,31 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     className = "badge-success";
                     break;
             }
-            return <Tag bg={bg} className={className} kind={type} tag={label} extra={extra} />;
+            return <Dropdown onSelect={(newFolderIdStr) => {
+                const newFolderId = Number(newFolderIdStr);
+                if (!client || !newFolderIdStr || isNaN(newFolderId)) {
+                    return;
+                }
+                const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId).then(action(() => {
+                    cache?.clear(collectionItemCacheQuery(item));
+                    item.folder_id = newFolderId;
+                }));
+                mutate(item, "folder_id", newFolderId, promise);
+            }}>
+                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "xno-toggle")} kind={type} tag={label} extra={extra} />
+                <Dropdown.Menu>
+                    {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name}</Dropdown.Item>)}
+                </Dropdown.Menu>
+            </Dropdown>;
         },
         sortType: sortByLocation,
-    }), [folderName, sortByLocation]);
+    }), [cache, client, folderName, folders, sortByLocation]);
 
     const tagsColumn = React.useMemo(() => ({
         Header: "Tags",
         className: "col-md-2",
         accessor: (e: CollectionItem) => tagsFor(e),
-        Cell: ({ value, row: { original } }: { value: ReturnType<typeof tagsFor>, row: { original: CollectionItem } }) => <Observer render={() => {
+        Cell: ({ value, row: { original } }: CollectionCell<ReturnType<typeof tagsFor>>) => <Observer render={() => {
             const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>);
             // const add = availableTags && <Dropdown onSelect={(list) => addToList(original, list)}>
             //     <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
@@ -543,11 +608,11 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     ], [coverColumn, fieldColumns, formatColumn, labelColumn, locationColumn, ratingColumn, releaseColumn, tagsColumn, yearColumn]);
 
     const rowClassName = React.useCallback((item: CollectionItem) => {
-        if (parseLocation(folderName(item.folder_id)).status === "sold") {
+        if (inSoldFolder(item)) {
             return "sold";
         }
         return undefined;
-    }, [folderName]);
+    }, [inSoldFolder]);
 
     return <BootstrapTable
         sessionKey={collectionSubset ? undefined : "Collection"}
@@ -557,6 +622,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         mnemonic={mnemonic}
         detail={(item) => <Details item={item} />}
         rowClassName={rowClassName} />;
+
 }
 
 // function addToList(item: CollectionItem, { definition: list }: List) {

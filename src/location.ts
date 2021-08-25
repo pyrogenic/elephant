@@ -1,4 +1,5 @@
 import React from "react";
+import { FOLDER_NAMES_QUERY } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
 import IDiscogsCache from "./IDiscogsCache";
 import { TagKind } from "./Tag";
@@ -83,5 +84,8 @@ export function useFolderName() {
         };
         return s;
     }, [cache]);
-    return React.useCallback((folder_id: number) => folders?.find(({ id }) => id === folder_id)?.name ?? stale({ url: "folder" }, "Unknown"), [folders, stale]);
+    return React.useCallback((folder_id: number) => {
+        const name = folders?.find(({ id }) => id === folder_id)?.name;
+        return name ?? stale(FOLDER_NAMES_QUERY, "Unknown");
+    }, [folders, stale]);
 }
