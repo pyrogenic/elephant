@@ -153,7 +153,7 @@ export function ArtistMode() {
   return (
     <div>
       <Router.Switch>
-        <Router.Route path={[`${match.path}/:artistId`, `${match.path}/:artistId/:artistName`]}>
+        <Router.Route path={artistRoutePath(match.path)}>
           <ArtistPanel />
         </Router.Route>
         <Router.Route path={match.path}>
@@ -163,3 +163,8 @@ export function ArtistMode() {
     </div>
   );
 }
+
+export function artistRoutePath(path: string): Router.RouteProps["path"] & Parameters<typeof Router.useRouteMatch>[0] {
+  return [`${path}/:artistId`, `${path}/:artistId/:artistName`];
+}
+

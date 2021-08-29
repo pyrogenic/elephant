@@ -1,13 +1,17 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import sum from "lodash/sum";
+import { computed } from "mobx";
+import { Observer } from "mobx-react";
 import React from "react";
 import { ButtonProps } from "react-bootstrap/button";
+import Breadcrumb from "react-bootstrap/Breadcrumb";
 import Dropdown from "react-bootstrap/dropdown";
 import Image from "react-bootstrap/Image";
 import Navbar from "react-bootstrap/Navbar";
 import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
+import { artistRoutePath } from "./ArtistRoute";
 import { Collection, CollectionItem } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
@@ -74,6 +78,7 @@ function SpeedTracker() {
     </>;
 }
 
+const ARTISTS_PATH = "/artists";
 export default function Masthead({
     avatarUrl,
     collection,
@@ -108,6 +113,26 @@ export default function Masthead({
         setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
 }) {
     const formSpacing = "me-2";
+
+    const { lpdb } = React.useContext(ElephantContext);
+
+    type AllParams = {
+        artistId?: string;
+        artistName?: string;
+        labelId?: string;
+        labelName?: string;
+        tagName?: string;
+        taskName?: string;
+    };
+
+    const match: { params: AllParams } = Router.useRouteMatch<AllParams>(artistRoutePath(ARTISTS_PATH)) ?? { params: {} };
+
+    console.log(match);
+
+    const { params: { artistId: artistIdSrc, artistName, labelId: labelIdSrc, labelName, tagName, taskName } } = match;
+
+    const artist = React.useMemo(() => computed(() => lpdb?.artist(Number(artistIdSrc), artistName)), [artistIdSrc, artistName, lpdb]);
+
     return <Navbar bg="light" variant="light" className="mb-3" expand="xl">
         <Navbar.Brand
         // style={{
@@ -127,9 +152,13 @@ export default function Masthead({
         <Navbar.Text>
             <Router.NavLink exact to="/auth">Auth</Router.NavLink>
         </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/artists">Artists</Router.NavLink>
-        </Navbar.Text>
+            <Navbar.Text>
+                <Router.NavLink exact to={ARTISTS_PATH}>Artists</Router.NavLink>
+                {artistIdSrc && <>
+                    &nbsp;/&nbsp;
+                    <Observer render={() => <Router.NavLink to={`/artists/${artistIdSrc}`}>{artist.get()?.name}</Router.NavLink>} />
+                </>}
+            </Navbar.Text>
         <Navbar.Text>
             <Router.NavLink exact to="/labels">Labels</Router.NavLink>
         </Navbar.Text>
