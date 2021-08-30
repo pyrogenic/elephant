@@ -10,13 +10,13 @@ import Figure from "react-bootstrap/Figure";
 import Row from "react-bootstrap/Row";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
+import { FiRefreshCw } from "react-icons/fi";
 import ReactJson from "react-json-view";
 import { collectionItemCacheQuery } from "../collectionItemCache";
 import DiscoTag from "../DiscoTag";
 import { CollectionItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
 import { remoteValue } from "../Remote";
-import Badge from "../shared/Badge";
 import Graph from "../shared/cytoscape/Graph";
 import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
@@ -172,7 +172,8 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                 variant="secondary"
                                 disabled={!cacheCount}
                                 onClick={() => cache?.clear(cacheQuery)}>
-                                Refresh {cacheCount ? <> <Badge bg={"light"}>{cacheCount}</Badge></> : null}
+                                {cacheCount ? <FiRefreshCw className="prepend-inline-icon" /> : false}
+                                Refresh
                             </Button>
                         </Col>
                         <Col xs={4}>

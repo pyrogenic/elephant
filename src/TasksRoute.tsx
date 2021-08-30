@@ -52,7 +52,6 @@ const TasksIndex = observer(() => {
     const allTasks = computed(() => uniq(flatten(collection.values().map((item) => tasks(item))).map((e) => e.split("] ").pop()!)));
 
     return <>
-        <h2>Tasks</h2>
         {(sortBy(allTasks.get(), "name").map((task) => <Tag key={task} tag={task} kind={TagKind.task} />))}
     </>;
 });

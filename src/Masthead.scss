@@ -3,8 +3,17 @@ nav {
         white-space: nowrap;
     }
 
+    a:hover {
+        text-decoration: none !important;
+        padding-bottom: 0.25rem;
+        border-bottom: 0.15rem solid lightgrey;
+    }
+
     a.active {
-        font-weight: bold;
+        //font-weight: bold;
+        color: black !important;
+        padding-bottom: 0.25rem;
+        border-bottom: 0.15rem solid grey;
     }
 }
 

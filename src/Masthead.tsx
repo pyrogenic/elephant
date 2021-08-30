@@ -13,7 +13,7 @@ import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import { artistRoutePath as artistRoutePaths } from "./ArtistRoute";
 import autoFormat from "./autoFormat";
-import { ARTISTS_PATH, Collection, CollectionItem, LABELS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
+import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import { labelRoutePaths } from "./LabelRoute";
@@ -140,8 +140,6 @@ export default function Masthead({
         params: {} as AllParams,
     };
 
-    console.log(match);
-
     const { params: { artistId: artistIdSrc, artistName, labelId: labelIdSrc, labelName, tagName, taskName } } = match;
     const artistId = Number(artistIdSrc);
     const artist = React.useMemo(() => isNaN(artistId) ? undefined : computed(() => lpdb?.artist(artistId, artistName)), [artistId, artistName, lpdb]);
@@ -150,9 +148,9 @@ export default function Masthead({
             Artists
         </Router.NavLink>
         {artist && <>
-            &nbsp;/&nbsp;
             <Observer render={() =>
                 <Router.NavLink activeClassName="active" to={`${ARTISTS_PATH}/${artistIdSrc}`}>
+                    &nbsp;/&nbsp;
                     {autoFormat(artist.get()?.name)}
                 </Router.NavLink>
             } />
@@ -166,9 +164,9 @@ export default function Masthead({
             Labels
         </Router.NavLink>
         {label && <>
-            &nbsp;/&nbsp;
             <Observer render={() =>
                 <Router.NavLink activeClassName="active" to={`${LABELS_PATH}/${labelIdSrc}`}>
+                    &nbsp;/&nbsp;
                     <LoadingIcon remote={[label, "name"]} placeholder={autoFormat(labelName ?? labelIdSrc)} />
                 </Router.NavLink>
             } />
@@ -180,8 +178,8 @@ export default function Masthead({
             Tags
         </Router.NavLink>
         {tagName && <>
-            &nbsp;/&nbsp;
             <Router.NavLink activeClassName="active" to={`${TAGS_PATH}/${tagName}`}>
+                &nbsp;/&nbsp;
                 {tagName}
             </Router.NavLink>
         </>}
@@ -192,26 +190,17 @@ export default function Masthead({
             Tasks
         </Router.NavLink>
         {taskName && <>
-            &nbsp;/&nbsp;
             <Router.NavLink activeClassName="active" to={`${TASKS_PATH}/${taskName}`}>
+                &nbsp;/&nbsp;
                 {taskName}
             </Router.NavLink>
         </>}
     </>;
 
     return <Navbar bg="light" variant="light" className="mb-3" expand="xl">
-        <Navbar.Brand
-        // style={{
-        //     backgroundImage: `url(${logo})`,
-        //     backgroundSize: "contain",
-        //     backgroundRepeat: "no-repeat",
-        //     backgroundPositionX: "0.3rem",
-        //     backgroundBlendMode: "color-dodge",
-        // }}
-        >
-            <Router.NavLink exact to="/">
-                <Image className="logo" src={logo}
-                />
+        <Navbar.Brand>
+            <Router.NavLink exact to={COLLECTION_PATH}>
+                <Image className="logo" src={logo} />
                 Elephant
             </Router.NavLink>
         </Navbar.Brand>

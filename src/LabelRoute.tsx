@@ -135,7 +135,6 @@ const LabelIndex = observer(() => {
     const labelsAcrossCollection = flatten(collection.values().map(({ basic_information: { labels } }) => labels));
     const labels = sortBy(uniqBy(labelsAcrossCollection, "id"), "name");
     return <>
-        <h2>Labels</h2>
         {labels.map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>)}
     </>;
 });

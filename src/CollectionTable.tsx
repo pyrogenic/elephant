@@ -153,6 +153,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const tagsFor = useTagsFor();
 
+    const isCD = React.useCallback((item) => tagsFor(item).get().find(({ tag }) => tag === "CD") !== undefined, [tagsFor]);
+
     const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
         if (!sourceId || !orderNumberId) {
             return undefined;
@@ -355,6 +357,9 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                         if (!plays && media) {
                             plays = 1;
                         }
+                        if (isCD(row)) {
+                            return null;
+                        }
                         return <Spinner value={plays} min={0} onChange={change} title={history.join("\n")} />;
 
                         function change(value: number) {
@@ -377,7 +382,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             } as BootstrapTableColumn<CollectionItem>,
             [KnownFieldTitle.plays]];
         }
-    }, [client, mediaCondition, playsId, sortByPlays]);
+    }, [client, isCD, mediaCondition, playsId, sortByPlays]);
 
     const notesColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && notesId) {

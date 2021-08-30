@@ -71,6 +71,7 @@ export type Field = ElementType<FieldsResponse["fields"]>;
 export type FieldsById = Map<number, Field>;
 export type FieldsByName = Map<string, Field>;
 
+const COLLECTION_PATH = "/";
 const AUTH_PATH = "/auth";
 const ARTISTS_PATH = "/artists";
 const LABELS_PATH = "/labels";
@@ -79,7 +80,7 @@ const TASKS_PATH = "/tasks";
 const DATA_PATH = "/data";
 const TUNING_PATH = "/tuning";
 
-export { AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, DATA_PATH, TUNING_PATH };
+export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, DATA_PATH, TUNING_PATH };
 
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
@@ -199,7 +200,7 @@ export default function Elephant() {
           <Router.Route path="/tuning">
             <Tuning />
           </Router.Route>
-          <Router.Route path={["/", "/collection"]}>
+    < Router.Route path = { COLLECTION_PATH } >
             <CollectionTable tableSearch={tableSearch} />
           </Router.Route>
         </Router.Switch>

@@ -37,7 +37,6 @@ const TagsIndex = observer(() => {
     const tags = computed(() => uniqBy(flatten(collection.values().map((item) => tagsFor(item, { includeLocation: true }).get())), "tag"));
 
     return <>
-        <h2>Tags</h2>
         {(sortBy(tags.get(), "name").map((tag) => <Tag key={tag.tag} {...tag} />))}
     </>;
 });

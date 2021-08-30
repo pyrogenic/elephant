@@ -125,7 +125,6 @@ const ArtistIndex = observer(() => {
   // const graphData = graph.get();
   // console.log(graphData);
   return <>
-    <h2>Artists</h2>
     {/* <textarea onChange={({ target: { value } }) => {
           setFloat(value);
           try {
