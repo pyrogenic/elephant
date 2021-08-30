@@ -1,24 +1,29 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
+import flatten from "lodash/flatten";
 import sum from "lodash/sum";
 import { computed } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import { ButtonProps } from "react-bootstrap/button";
-import Breadcrumb from "react-bootstrap/Breadcrumb";
 import Dropdown from "react-bootstrap/dropdown";
 import Image from "react-bootstrap/Image";
 import Navbar from "react-bootstrap/Navbar";
 import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
-import { artistRoutePath } from "./ArtistRoute";
-import { Collection, CollectionItem } from "./Elephant";
+import { artistRoutePath as artistRoutePaths } from "./ArtistRoute";
+import autoFormat from "./autoFormat";
+import { ARTISTS_PATH, Collection, CollectionItem, LABELS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
+import { labelRoutePaths } from "./LabelRoute";
 import "./Masthead.scss";
 import Check from "./shared/Check";
 import Loader from "./shared/Loader";
+import LoadingIcon from "./shared/LoadingIcon";
 import SearchBox from "./shared/SearchBox";
+import { tagRoutePaths } from "./TagsRoute";
+import { taskRoutePaths } from "./TasksRoute";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -78,7 +83,6 @@ function SpeedTracker() {
     </>;
 }
 
-const ARTISTS_PATH = "/artists";
 export default function Masthead({
     avatarUrl,
     collection,
@@ -125,13 +129,75 @@ export default function Masthead({
         taskName?: string;
     };
 
-    const match: { params: AllParams } = Router.useRouteMatch<AllParams>(artistRoutePath(ARTISTS_PATH)) ?? { params: {} };
+    const paths = React.useMemo(() => flatten([
+        artistRoutePaths(ARTISTS_PATH),
+        labelRoutePaths(LABELS_PATH),
+        tagRoutePaths(TAGS_PATH),
+        taskRoutePaths(TASKS_PATH),
+    ]), []);
+
+    const match = Router.useRouteMatch<AllParams>(paths) ?? {
+        params: {} as AllParams,
+    };
 
     console.log(match);
 
     const { params: { artistId: artistIdSrc, artistName, labelId: labelIdSrc, labelName, tagName, taskName } } = match;
+    const artistId = Number(artistIdSrc);
+    const artist = React.useMemo(() => isNaN(artistId) ? undefined : computed(() => lpdb?.artist(artistId, artistName)), [artistId, artistName, lpdb]);
+    const artistsNav = <>
+        <Router.NavLink activeClassName="active" to={ARTISTS_PATH}>
+            Artists
+        </Router.NavLink>
+        {artist && <>
+            &nbsp;/&nbsp;
+            <Observer render={() =>
+                <Router.NavLink activeClassName="active" to={`${ARTISTS_PATH}/${artistIdSrc}`}>
+                    {autoFormat(artist.get()?.name)}
+                </Router.NavLink>
+            } />
+        </>}
+    </>;
 
-    const artist = React.useMemo(() => computed(() => lpdb?.artist(Number(artistIdSrc), artistName)), [artistIdSrc, artistName, lpdb]);
+    const labelId = Number(labelIdSrc);
+    const label = React.useMemo(() => isNaN(labelId) ? undefined : computed(() => lpdb?.label(labelId)), [labelId, lpdb])?.get();
+    const labelsNav = <>
+        <Router.NavLink activeClassName="active" to={LABELS_PATH}>
+            Labels
+        </Router.NavLink>
+        {label && <>
+            &nbsp;/&nbsp;
+            <Observer render={() =>
+                <Router.NavLink activeClassName="active" to={`${LABELS_PATH}/${labelIdSrc}`}>
+                    <LoadingIcon remote={[label, "name"]} placeholder={autoFormat(labelName ?? labelIdSrc)} />
+                </Router.NavLink>
+            } />
+        </>}
+    </>;
+
+    const tagsNav = <>
+        <Router.NavLink activeClassName="active" to={TAGS_PATH}>
+            Tags
+        </Router.NavLink>
+        {tagName && <>
+            &nbsp;/&nbsp;
+            <Router.NavLink activeClassName="active" to={`${TAGS_PATH}/${tagName}`}>
+                {tagName}
+            </Router.NavLink>
+        </>}
+    </>;
+
+    const tasksNav = <>
+        <Router.NavLink activeClassName="active" to={TASKS_PATH}>
+            Tasks
+        </Router.NavLink>
+        {taskName && <>
+            &nbsp;/&nbsp;
+            <Router.NavLink activeClassName="active" to={`${TASKS_PATH}/${taskName}`}>
+                {taskName}
+            </Router.NavLink>
+        </>}
+    </>;
 
     return <Navbar bg="light" variant="light" className="mb-3" expand="xl">
         <Navbar.Brand
@@ -144,43 +210,40 @@ export default function Masthead({
         // }}
         >
             <Router.NavLink exact to="/">
-                <Image className="logo" src={logo} />
+                <Image className="logo" src={logo}
+                />
                 Elephant
             </Router.NavLink>
         </Navbar.Brand>
         <Navbar.Collapse className="justify-content-start">
-        <Navbar.Text>
-            <Router.NavLink exact to="/auth">Auth</Router.NavLink>
-        </Navbar.Text>
             <Navbar.Text>
-                <Router.NavLink exact to={ARTISTS_PATH}>Artists</Router.NavLink>
-                {artistIdSrc && <>
-                    &nbsp;/&nbsp;
-                    <Observer render={() => <Router.NavLink to={`/artists/${artistIdSrc}`}>{artist.get()?.name}</Router.NavLink>} />
-                </>}
+                <Router.NavLink exact to="/auth">Auth</Router.NavLink>
             </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/labels">Labels</Router.NavLink>
-        </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/tags">Tags</Router.NavLink>
-        </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/tasks">Tasks</Router.NavLink>
-        </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/data">Data</Router.NavLink>
-        </Navbar.Text>
-        <Navbar.Text>
-            <Router.NavLink exact to="/tuning">Tuning</Router.NavLink>
-        </Navbar.Text>
-        <SearchBox
-            className="me-3"
-            collection={collection}
-            search={search}
-            setSearch={setSearch}
-        />
-        {/* <Observer render={() => {
+            <Navbar.Text>
+                {artistsNav}
+            </Navbar.Text>
+            <Navbar.Text>
+                {labelsNav}
+            </Navbar.Text>
+            <Navbar.Text>
+                {tagsNav}
+            </Navbar.Text>
+            <Navbar.Text>
+                {tasksNav}
+            </Navbar.Text>
+            <Navbar.Text>
+                <Router.NavLink exact to="/data">Data</Router.NavLink>
+            </Navbar.Text>
+            <Navbar.Text>
+                <Router.NavLink exact to="/tuning">Tuning</Router.NavLink>
+            </Navbar.Text>
+            <SearchBox
+                className="me-3"
+                collection={collection}
+                search={search}
+                setSearch={setSearch}
+            />
+            {/* <Observer render={() => {
             const items = computed(() => Array.from(collection.values()));
             if (!items.get() || !lpdb?.tags) {
                 return null;
@@ -201,43 +264,48 @@ export default function Masthead({
             <Dropdown.Menu flip={true}>
                 <Dropdown.ItemText>
                     <Check
-                    className={formSpacing}
-                    value={showRuler}
-                    id="Ruler"
-                    label="Ruler"
-                        setValue={setShowRuler} />
-                </Dropdown.ItemText>
-                <Dropdown.ItemText>
-                <Check
-                    className={formSpacing}
-                    value={fluid}
-                    id="Fluid"
-                    label="Fluid"
-                        setValue={setFluid} />
-                </Dropdown.ItemText>
-                <Dropdown.ItemText>
-                <Check
-                    className={formSpacing}
-                        value={reactive}
-                        id="Reactive"
-                        label="Reactive"
-                        setValue={setReactive} />
+                        className={formSpacing}
+                        value={showRuler}
+                        id="Ruler"
+                        label="Ruler"
+                        setValue={setShowRuler}
+                    />
                 </Dropdown.ItemText>
                 <Dropdown.ItemText>
                     <Check
                         className={formSpacing}
-                    value={bypassCache}
-                    id="Bypass Cache"
-                    label="Bypass Cache"
-                    setValue={setBypassCache} />
+                        value={fluid}
+                        id="Fluid"
+                        label="Fluid"
+                        setValue={setFluid}
+                    />
                 </Dropdown.ItemText>
                 <Dropdown.ItemText>
-                <Check
-                    className={formSpacing}
-                    value={verbose}
-                    id="Verbose"
-                    label="Verbose"
-                    setValue={setVerbose} />
+                    <Check
+                        className={formSpacing}
+                        value={reactive}
+                        id="Reactive"
+                        label="Reactive"
+                        setValue={setReactive}
+                    />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
+                    <Check
+                        className={formSpacing}
+                        value={bypassCache}
+                        id="Bypass Cache"
+                        label="Bypass Cache"
+                        setValue={setBypassCache}
+                    />
+                </Dropdown.ItemText>
+                <Dropdown.ItemText>
+                    <Check
+                        className={formSpacing}
+                        value={verbose}
+                        id="Verbose"
+                        label="Verbose"
+                        setValue={setVerbose}
+                    />
                 </Dropdown.ItemText>
             </Dropdown.Menu>
         </Navbar.Text>

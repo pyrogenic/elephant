@@ -71,6 +71,16 @@ export type Field = ElementType<FieldsResponse["fields"]>;
 export type FieldsById = Map<number, Field>;
 export type FieldsByName = Map<string, Field>;
 
+const AUTH_PATH = "/auth";
+const ARTISTS_PATH = "/artists";
+const LABELS_PATH = "/labels";
+const TAGS_PATH = "/tags";
+const TASKS_PATH = "/tasks";
+const DATA_PATH = "/data";
+const TUNING_PATH = "/tuning";
+
+export { AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, DATA_PATH, TUNING_PATH };
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
@@ -135,6 +145,7 @@ export default function Elephant() {
     lpdb,
     setError,
   }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb, orders]);
+
   return <ElephantContext.Provider value={context}>
     <Router.BrowserRouter basename="/elephant">
       <Masthead
@@ -170,7 +181,7 @@ export default function Elephant() {
               token={token}
             />
           </Router.Route>
-          <Router.Route path="/artists">
+    < Router.Route path = { ARTISTS_PATH } >
             <ArtistMode />
           </Router.Route>
           <Router.Route path="/labels">

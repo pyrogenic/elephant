@@ -7,6 +7,7 @@ import React from "react";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
+import RouterPaths from "./RouterPaths";
 import Tag from "./Tag";
 import { useTagsFor } from "./Tuning";
 
@@ -42,17 +43,22 @@ const TagsIndex = observer(() => {
 });
 
 export function TagsMode() {
-    let match = Router.useRouteMatch();
+    let { path } = Router.useRouteMatch();
     return (
         <div>
             <Router.Switch>
-                <Router.Route path={`${match.path}/:tagName`}>
+                <Router.Route path={tagRoutePaths(path)}>
                     <TagPanel />
                 </Router.Route>
-                <Router.Route path={match.path}>
+                <Router.Route path={path}>
                     <TagsIndex />
                 </Router.Route>
             </Router.Switch>
         </div>
     );
 }
+
+export function tagRoutePaths(path: string): RouterPaths {
+    return `${path}/:tagName`;
+}
+

@@ -8,6 +8,7 @@ import Toast from "react-bootstrap/Toast";
 import * as Router from "react-router-dom";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
+import RouterPaths from "./RouterPaths";
 import Check from "./shared/Check";
 import Tag, { TagKind } from "./Tag";
 import { useTasks } from "./Tuning";
@@ -57,17 +58,22 @@ const TasksIndex = observer(() => {
 });
 
 export function TasksMode() {
-    let match = Router.useRouteMatch();
+    let { path } = Router.useRouteMatch();
     return (
         <div>
             <Router.Switch>
-                <Router.Route path={`${match.path}/:taskName`}>
+                <Router.Route path={taskRoutePaths(path)}>
                     <TaskPanel />
                 </Router.Route>
-                <Router.Route path={match.path}>
+                <Router.Route path={path}>
                     <TasksIndex />
                 </Router.Route>
             </Router.Switch>
         </div>
     );
 }
+
+export function taskRoutePaths(path: string): RouterPaths {
+    return `${path}/:taskName`;
+}
+

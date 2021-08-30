@@ -16,6 +16,7 @@ import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { Release } from "./LPDB";
 import { Remote } from "./Remote";
+import RouterPaths from "./RouterPaths";
 import Graph, { DataType, Gener } from "./shared/cytoscape/Graph";
 import ExternalLink from "./shared/ExternalLink";
 import LoadingIcon from "./shared/LoadingIcon";
@@ -157,17 +158,22 @@ export function wrap(paragraph: Content, bold: number, italic: number, underline
 }
 
 export function LabelMode() {
-    let match = Router.useRouteMatch();
+    let { path } = Router.useRouteMatch();
     return (
         <div>
             <Router.Switch>
-                <Router.Route path={[`${match.path}/:labelId`, `${match.path}/:labelId/:labelName`]}>
+                <Router.Route path={labelRoutePaths(path)}>
                     <LabelPanel />
                 </Router.Route>
-                <Router.Route path={match.path}>
+                <Router.Route path={path}>
                     <LabelIndex />
                 </Router.Route>
             </Router.Switch>
         </div>
     );
 }
+
+export function labelRoutePaths(path: string): RouterPaths {
+    return [`${path}/:labelId`, `${path}/:labelId/:labelName`];
+}
+

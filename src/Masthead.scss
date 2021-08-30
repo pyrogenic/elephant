@@ -2,7 +2,12 @@ nav {
     * {
         white-space: nowrap;
     }
+
+    a.active {
+        font-weight: bold;
+    }
 }
+
 .navbar-text {
     margin-right: 1em;
 }

@@ -10,6 +10,7 @@ import CollectionItemLink from "./CollectionItemLink";
 import CollectionTable from "./CollectionTable";
 import DiscoTag from "./DiscoTag";
 import ElephantContext from "./ElephantContext";
+import RouterPaths from "./RouterPaths";
 import Disclosure from "./shared/Disclosure";
 
 const ArtistPanel = () => {
@@ -164,7 +165,7 @@ export function ArtistMode() {
   );
 }
 
-export function artistRoutePath(path: string): Router.RouteProps["path"] & Parameters<typeof Router.useRouteMatch>[0] {
+export function artistRoutePath(path: string): RouterPaths {
   return [`${path}/:artistId`, `${path}/:artistId/:artistName`];
 }
 
