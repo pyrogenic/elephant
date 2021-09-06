@@ -17,10 +17,12 @@ import DiscoTag from "../DiscoTag";
 import { CollectionItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
 import { remoteValue } from "../Remote";
+import useRoon from "../roon/useRoon";
 import Graph from "../shared/cytoscape/Graph";
 import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
 import Insert from "./Insert";
+import RoonLink from "./RoonLink";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -122,6 +124,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
             });
         });
 
+
     // const [q, setQ] = useStorageState<string>("session", "test-q", "$..");
     // const result = React.useMemo(() => {
     //     if (details?.status === "ready") {
@@ -220,6 +223,13 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                             <Observer render={() =>
                                 <Graph generator={elements.get()} />
                             } />
+                        </Col>
+                    </Row>
+                </Tab>
+                <Tab eventKey="roon" title="Roon">
+                    <Row>
+                        <Col>
+                            <RoonLink item={item} />
                         </Col>
                     </Row>
                 </Tab>

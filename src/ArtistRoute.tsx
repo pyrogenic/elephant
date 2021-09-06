@@ -1,5 +1,7 @@
 // import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import compact from "lodash/compact";
 import sortBy from "lodash/sortBy";
+import uniq from "lodash/uniq";
 import { computed } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
@@ -35,19 +37,18 @@ const ArtistPanel = () => {
   return <Observer>{() => <>
     <Disclosure title={(icon) => <h2>{artistName ?? artist.name}{icon}</h2>} content={() => <>
       {artist.profile && <DiscoTag src={artist.profile} uri={artist.uri} />}
+      <dl>
+      <dt>Roles</dt>
+        <dd>{uniq(compact(roles.map(({ role }) => role))).sort().join(", ")}</dd>
+      <dt>Primary Releases</dt>
+        <dd>{primaryArtistSubset.get().sort((a, b) => a.basic_information.title.localeCompare(b.basic_information.title)).map((item, i) => <li key={i}>
+          <CollectionItemLink item={item} />
+        </li>)}</dd>
+    </dl>
+    <Button onClick={artist.refresh}>Refresh</Button>
     </>} />
 
     <CollectionTable collectionSubset={collectionSubset.get()} />
-
-    <dl>
-      <dt>ID</dt>
-      <dd>{artist.id}</dd>
-      <dt>Roles</dt>
-      <dd>{roles.map((role, i) => <pre key={i}>{role.role}</pre>)}</dd>
-      <dt>Primary Releases</dt>
-      <dd>{primaryArtistSubset.get().map((item, i) => <CollectionItemLink key={i} item={item} />)}</dd>
-    </dl>
-    <Button onClick={artist.refresh}>Refresh</Button>
   </>}</Observer>;
 };
 // type GraphData = 
