@@ -16,7 +16,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowRight, FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
@@ -499,11 +499,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         Header: "Type",
         className: "minimal-column",
         accessor: ({ basic_information: { formats } }) => formats,
-        Cell: ({ value }: { value: Formats }) => <>
-            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind }) => kind === TagKind.format).map(({ tag }) => tag).join(" ")}
+        Cell: ({ row: { original }, value }: CollectionCell<Formats>) => <>
+            {isCD(original) ? <FiDisc className="cd" title="CD" /> : <FiDisc className="vinyl" title="Vinyl" />}
+            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }) => tag).join(" ")}
         </>,
         sortType: autoSortBy("Type"),
-    }), [autoSortBy]);
+    }), [autoSortBy, isCD]);
 
     const labelColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
         Header: "Label",
@@ -587,7 +588,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 }));
                 mutate(item, "folder_id", newFolderId, promise);
             }}>
-                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "xno-toggle")} kind={type} tag={label} extra={extra} />
+                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row", "xno-toggle")} kind={type} tag={label} extra={extra} />
                 <Dropdown.Menu>
                     {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name}</Dropdown.Item>)}
                 </Dropdown.Menu>
