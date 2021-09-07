@@ -60,7 +60,7 @@ function AlbumArtists({ item }: { item: CollectionItem }) {
                 kind={tagKind}
                 tag={name}
                 extra={conciseRole}
-                onClickTag={() => history.push(`/artists/${id}/${name}`)}
+                onClick={() => history.push(`/artists/${id}/${name}`)}
             />;
         })}</>}
     </Observer>;

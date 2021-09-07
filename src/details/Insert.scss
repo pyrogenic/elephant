@@ -42,6 +42,8 @@ div.insert {
         height: 7mm;
         border-top: double;
         border-bottom: double;
+        padding-top: 3mm;
+        padding-bottom: 3mm;
         border-color: lightgrey;
         
         display: flex;
@@ -49,12 +51,17 @@ div.insert {
         justify-content: space-between;
         align-items: center;
         
-        font-size: 12pt;
+        font-size: 10pt !important;
         
         padding-left: 1.5em !important;
         padding-right: 1.5em !important;
         div:not(:first-child):not(:last-child) {
-            padding-inline: 0.5em;
+            padding-inline: 0.5em !important;
+        }
+        .music-label-logo-inline {
+            padding-left: 0.5em !important;
+            vertical-align: baseline;
+            border-radius: 0;
         }
         .label {
             display: flex;

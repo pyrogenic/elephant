@@ -780,6 +780,7 @@ function FieldEditor<As = "text">(props: {
 const KNOWN_TASKS = [
     "Clean",
     "Entry",
+    "Replace",
     "Sleeve",
     "Spine",
     "Own Sleeve",

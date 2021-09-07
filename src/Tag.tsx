@@ -31,7 +31,6 @@ export type TagProps = {
     onClickCount?: () => void;
     onClickExtra?: () => void;
     onClickIcon?: () => void;
-    onClickTag?: () => void;
 };
 
 const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & TagProps>(({
@@ -91,6 +90,32 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
                 Icon = FiSquare;
                 break;
         }
+        let contents = <>
+            <Icon onClick={onClickIcon} />
+            &nbsp;
+            {tag}
+            {count ? <>
+                &nbsp;
+                <Badge
+                    className="count"
+                    bg="light"
+                    text="dark"
+                    onClick={onClickCount}>
+                    {count}
+                </Badge>
+            </> : null}
+            {extra ? <>
+                &nbsp;
+                {typeof extra === "function"
+                    ? resolve(extra)
+                    : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
+            </> : null}
+        </>;
+        if (onClickTag === undefined) {
+            contents = <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
+                {contents}
+            </Router.NavLink>;
+        }
         return <Badge
             ref={ref}
             className={classConcat(kind, "tag", className)}
@@ -99,29 +124,7 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
             onClick={onClickTag}
             title={title}
         >
-            <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
-                <Icon
-                    onClick={onClickIcon}
-                />
-                &nbsp;
-                {tag}
-                {count ? <>
-                    &nbsp;
-                    <Badge
-                        className="count"
-                        bg="light"
-                        text="dark"
-                        onClick={onClickCount}>
-                        {count}
-                    </Badge>
-                </> : null}
-                {extra ? <>
-                    &nbsp;
-                    {typeof extra === "function"
-                        ? resolve(extra)
-                        : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
-                </> : null}
-            </Router.NavLink>
+            {contents}
         </Badge>;
     }
 });

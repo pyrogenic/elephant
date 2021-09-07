@@ -1,12 +1,5 @@
 import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
-import compact from "lodash/compact";
-import { computed } from "mobx";
-import React from "react";
-import Badge from "./Badge";
-import MultiSelect from "react-multi-select-component";
-import "./SelectBox.scss";
-
-type Options = Parameters<typeof MultiSelect>[0]["options"];
+import Dropdown from "react-bootstrap/Dropdown";
 
 export default function SelectBox({
     className,
@@ -18,25 +11,13 @@ export default function SelectBox({
     className?: ClassNames,
     options: string[],
     placeholder: string,
-    value: string[],
-    setValue(newValue: string[]): void,
+        value: string | undefined,
+        setValue: (newValue: string) => void,
 }) {
-    const multiOptions = computed(() =>
-        options.map((str) => ({
-            label: str,
-            value: str,
-        })));
-
-    const multiValue = computed(() => compact(value.map((str) =>
-        multiOptions.get().find(({ value }) =>
-            value === str))));
-
-    return <MultiSelect
-        className={classConcat("search-box", className)}
-        options={multiOptions.get()}
-        value={multiValue.get()}
-        onChange={(newValue: Options) => setValue(newValue.map(({ value }) => value))}
-        labelledBy={placeholder}
-        valueRenderer={(selected) => selected.map(({ label }) => <Badge pill bg="secondary">{label}</Badge>)}
-    />;
+    return <Dropdown onSelect={(eventKey) => eventKey ? setValue(eventKey) : undefined}>
+        <Dropdown.Toggle className={classConcat(className)}>{value?.length ? value : placeholder}</Dropdown.Toggle>
+        <Dropdown.Menu>
+            {options.map((option) => <Dropdown.Item key={option} eventKey={option} active={value === option}>{option}</Dropdown.Item>)}
+        </Dropdown.Menu>
+    </Dropdown>;
 }
