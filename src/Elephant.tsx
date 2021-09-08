@@ -29,6 +29,7 @@ import { LabelMode } from "./LabelRoute";
 import { TagsMode } from "./TagsRoute";
 import { TasksMode } from "./TasksRoute";
 import Ruler from "./shared/Ruler";
+import { FiCircle } from "react-icons/fi";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -208,6 +209,11 @@ export default function Elephant() {
         <Row>
           <Col>
             This application uses Discogs’ API but is not affiliated with, sponsored or endorsed by Discogs. ‘Discogs’ is a trademark of Zink Media, LLC.
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <FiCircle >xx</FiCircle>
           </Col>
         </Row>
       </Container>

@@ -41,7 +41,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, noteById, orderUri, patches, Source, useTagsFor, useTasks } from "./Tuning";
+import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useTagsFor, useTasks } from "./Tuning";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -130,7 +130,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const { tasks, tasksId } = useTasks();
 
-    const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
+    const mediaCondition = React.useCallback((notes) => mediaConditionId ? getNote(notes, mediaConditionId) : "", [mediaConditionId]);
     const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
     const playCount = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
         if (playsId) {
@@ -155,7 +155,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const isCD = React.useCallback((item) => tagsFor(item).get().find(({ tag }) => tag === "CD") !== undefined, [tagsFor]);
 
-    const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
+    const sourceMnemonicFor = React.useCallback((item: CollectionItem): undefined | ["literal", string] => {
         if (!sourceId || !orderNumberId) {
             return undefined;
         }
@@ -235,10 +235,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     return <>
                         <div className="d-flex d-flex-row">
                             <div className="grade grade-media">
-                                <Badge as="div" bg={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
+                                <ConditionBadge condition={media} kind="media" item={item} noteId={mediaConditionId} />
                             </div>
                             <div className="grade grade-sleeve">
-                                <Badge as="div" bg={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
+                                <ConditionBadge condition={sleeve} kind="sleeve" item={item} noteId={sleeveConditionId} />
                             </div>
                         </div>
                         <Observer render={() => {
@@ -643,6 +643,26 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         detail={(item) => <Details item={item} />}
         rowClassName={rowClassName} />;
 
+}
+
+function ConditionBadge({ condition, kind, item, noteId }: { condition: string | undefined, kind: "media" | "sleeve", item: CollectionItem, noteId: number }) {
+    const { client, cache } = React.useContext(ElephantContext);
+    const options = React.useMemo(() => (kind === "media") ? MEDIA_CONDITIONS : SLEEVE_CONDITIONS, [kind]);
+    return <Dropdown onSelect={(newCondition) => {
+        if (!client || !newCondition) {
+            return;
+        }
+        const note = noteById(item.notes, noteId);
+        const promise = client!.editCustomFieldForInstance(item.folder_id, item.id, item.instance_id, noteId, newCondition);
+        mutate(note, "value", newCondition, promise).then(() => {
+            cache?.clear(collectionItemCacheQuery(item));
+        });
+    }}>
+        <Dropdown.Toggle as={"div"} className={classConcat("badge", "bg-" + autoVariant(condition), "no-toggle")}>{autoFormat(condition) || <>&nbsp;</>}</Dropdown.Toggle>
+        <Dropdown.Menu>
+            {options.map((cond) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
+        </Dropdown.Menu>
+    </Dropdown>;
 }
 
 // function addToList(item: CollectionItem, { definition: list }: List) {

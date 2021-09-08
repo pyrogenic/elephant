@@ -60,6 +60,31 @@ export function patches(lists: Lists) {
     return lists.values().filter(isPatch);
 }
 
+export const MEDIA_CONDITIONS = [
+    "Mint (M)",
+    "Near Mint (NM or M-)",
+    "Very Good Plus (VG+)",
+    "Very Good (VG)",
+    "Good Plus (G+)",
+    "Good (G)",
+    "Fair (F)",
+    "Poor (P)",
+];
+
+export const SLEEVE_CONDITIONS = [
+    "Mint (M)",
+    "Near Mint (NM or M-)",
+    "Very Good Plus (VG+)",
+    "Very Good (VG)",
+    "Good Plus (G+)",
+    "Good (G)",
+    "Fair (F)",
+    "Poor (P)",
+    "Generic",
+    "Not Graded",
+    "No Cover",
+];
+
 export function autoVariant(str: string | undefined): Variant | undefined {
     switch (str) {
         case "Mint (M)":
@@ -250,6 +275,12 @@ export const noteById = action("noteById", (notes: CollectionNote[], id: number)
     field_id: number;
     value: string;
 }> => {
+    if (notes === undefined) {
+        return {
+            field_id: id,
+            value: "",
+        };
+    }
     try {
         let result = notes.find(({ field_id }) => field_id === id);
         if (result) { return result; }
