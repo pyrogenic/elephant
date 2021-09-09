@@ -8,28 +8,29 @@ import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
 import Col from "react-bootstrap/Col";
-import Row from "react-bootstrap/Row";
 import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
 import * as Router from "react-router-dom";
+import { ArtistMode } from "./ArtistRoute";
+import AuthRoute from "./AuthRoute";
 import CollectionTable from "./CollectionTable";
+import { DataIndex } from "./DataRoute";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
+import { LabelMode } from "./LabelRoute";
 import LPDB from "./LPDB";
 import Masthead from "./Masthead";
 import OrderedMap from "./OrderedMap";
 import { DeepPendable } from "./shared/Pendable";
+import Ruler from "./shared/Ruler";
 import "./shared/Shared.scss";
 import { ElementType, PromiseType } from "./shared/TypeConstraints";
-import Tuning from "./Tuning";
-import { ArtistMode } from "./ArtistRoute";
-import { DataIndex } from "./DataRoute";
-import AuthRoute from "./AuthRoute";
-import { LabelMode } from "./LabelRoute";
+import { StatsMode } from "./StatsRoute";
 import { TagsMode } from "./TagsRoute";
 import { TasksMode } from "./TasksRoute";
-import Ruler from "./shared/Ruler";
-import { FiCircle } from "react-icons/fi";
+import Testbed from "./Testbed";
+import Tuning from "./Tuning";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
@@ -78,10 +79,11 @@ const ARTISTS_PATH = "/artists";
 const LABELS_PATH = "/labels";
 const TAGS_PATH = "/tags";
 const TASKS_PATH = "/tasks";
+const STATS_PATH = "/stats";
 const DATA_PATH = "/data";
 const TUNING_PATH = "/tuning";
 
-export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, DATA_PATH, TUNING_PATH };
+export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, STATS_PATH, DATA_PATH, TUNING_PATH };
 
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
@@ -195,6 +197,9 @@ export default function Elephant() {
           <Router.Route path="/tasks">
             <TasksMode />
           </Router.Route>
+          <Router.Route path="/stats">
+            <StatsMode />
+          </Router.Route>
           <Router.Route path="/data">
             <DataIndex />
           </Router.Route>
@@ -213,7 +218,7 @@ export default function Elephant() {
         </Row>
         <Row>
           <Col>
-            <FiCircle >xx</FiCircle>
+            <Testbed />
           </Col>
         </Row>
       </Container>

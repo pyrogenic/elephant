@@ -13,7 +13,7 @@ import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import { artistRoutePath as artistRoutePaths } from "./ArtistRoute";
 import autoFormat from "./autoFormat";
-import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
+import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, STATS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import { labelRoutePaths } from "./LabelRoute";
@@ -22,6 +22,7 @@ import Check from "./shared/Check";
 import Loader from "./shared/Loader";
 import LoadingIcon from "./shared/LoadingIcon";
 import SearchBox from "./shared/SearchBox";
+import { statRoutePaths } from "./StatsRoute";
 import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
 
@@ -126,6 +127,7 @@ export default function Masthead({
         labelId?: string;
         labelName?: string;
         tagName?: string;
+        statName?: string;
         taskName?: string;
     };
 
@@ -134,13 +136,14 @@ export default function Masthead({
         labelRoutePaths(LABELS_PATH),
         tagRoutePaths(TAGS_PATH),
         taskRoutePaths(TASKS_PATH),
+        statRoutePaths(STATS_PATH),
     ]), []);
 
     const match = Router.useRouteMatch<AllParams>(paths) ?? {
         params: {} as AllParams,
     };
 
-    const { params: { artistId: artistIdSrc, artistName, labelId: labelIdSrc, labelName, tagName, taskName } } = match;
+    const { params: { artistId: artistIdSrc, artistName, labelId: labelIdSrc, labelName, tagName, statName, taskName } } = match;
     const artistId = Number(artistIdSrc);
     const artist = React.useMemo(() => isNaN(artistId) ? undefined : computed(() => lpdb?.artist(artistId, artistName)), [artistId, artistName, lpdb]);
     const artistsNav = <>
@@ -197,6 +200,18 @@ export default function Masthead({
         </>}
     </>;
 
+    const statsNav = <>
+        <Router.NavLink activeClassName="active" to={STATS_PATH}>
+            Stats
+        </Router.NavLink>
+        {statName && <>
+            <Router.NavLink activeClassName="active" to={`${STATS_PATH}/${statName}`}>
+                &nbsp;/&nbsp;
+                {statName}
+            </Router.NavLink>
+        </>}
+    </>;
+
     return <Navbar bg="light" variant="light" className="mb-3" expand="xl">
         <Navbar.Brand>
             <Router.NavLink exact to={COLLECTION_PATH}>
@@ -219,6 +234,9 @@ export default function Masthead({
             </Navbar.Text>
             <Navbar.Text>
                 {tasksNav}
+            </Navbar.Text>
+            <Navbar.Text>
+                {statsNav}
             </Navbar.Text>
             <Navbar.Text>
                 <Router.NavLink exact to="/data">Data</Router.NavLink>

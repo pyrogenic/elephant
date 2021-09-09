@@ -1,3 +1,4 @@
+import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import React from "react";
 import RoonApi, { Core as RoonCore, RoonWebSocketConfig, RoonZone } from "./RoonApi";
 
@@ -9,13 +10,17 @@ const RoonApiTransport = require("node-roon-api-transport");
 // }
 
 // const RoonContext = React.createContext<IRoonContext>({});
+export function useRoonId() {
+    return useStorageState<string>("local", ["roon", "roonId"], "Anonymous");
+}
 
 export default function useRoon(config: RoonWebSocketConfig) {
     const [activeCore, setActiveCore] = React.useState<RoonCore>();
+    const [roonId] = useRoonId();
     React.useMemo(() => {
         var roon = new RoonApi({
             extension_id: "org.pico.elephant",
-            display_name: "Elephant Roon Connection",
+            display_name: `Elephant Roon Connection from ${roonId}`,
             display_version: "1.0.0",
             publisher: "Joshua Pollak",
             email: "abottomlesspit@gmail.com",

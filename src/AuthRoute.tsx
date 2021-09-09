@@ -8,6 +8,7 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import InputGroup from "react-bootstrap/InputGroup";
 import { Container } from "react-bootstrap";
+import { useRoonId } from "./roon/useRoon";
 
 export default function AuthRoute({
     token,
@@ -19,6 +20,8 @@ export default function AuthRoute({
     const r = useRouteMatch();
     const [key, setKey] = useStorageState<string | null>("session", r.path, null);
 
+    const [roonId, setRoonId] = useRoonId();
+
     return <Container fluid={false}>
         <Tabs
             id="controlled-tab-example"
@@ -29,12 +32,20 @@ export default function AuthRoute({
             <Tab eventKey="home" title="Auth">
                 <Form>
                     <Form.Group>
-                        <Form.FloatingLabel label="User Token" />
                         <Form.Control
                             type="text"
                             value={token}
                             onChange={({ target: { value } }) => setToken(value)}
                         />
+                        <Form.FloatingLabel label="User Token" />
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Control
+                            type="text"
+                            value={roonId}
+                            onChange={({ target: { value } }) => setRoonId(value)}
+                        />
+                        <Form.FloatingLabel label="Roon Extension Identitfier" />
                     </Form.Group>
                 </Form>
             </Tab>
