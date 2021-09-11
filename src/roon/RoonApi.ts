@@ -287,6 +287,28 @@ export type RoonZone = {
     display_name: string,
     ouputs: RoonOutput[],
     state: "playing" | "paused" | "loading" | "stopped",
+    now_playing?: {
+        seek_position: number,
+
+        length: number,
+        one_line: {
+            //line1: Secret Channel - Tabla Beat Science
+            line1: string,
+        },
+        two_line: {
+            // title
+            line1: string,
+            // artist
+            line2: string
+        },
+        three_line: {
+            line1: string,
+            line2: string,
+            // album
+            line3: string,
+        },
+        image_key: string,
+    },
 };
 export type RoonOutput = {};
 export type RoonZoneSettings = {};
