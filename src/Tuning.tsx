@@ -1,6 +1,6 @@
 import { uniq, flattenDeep, compact } from "lodash";
 import { observable, runInAction, computed, action } from "mobx";
-import { observer } from "mobx-react";
+import { Observer, observer } from "mobx-react";
 import { Card } from "react-bootstrap";
 import { arraySetAddAll, ElementType } from "@pyrogenic/asset/lib";
 import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
@@ -13,6 +13,7 @@ import ElephantContext from "./ElephantContext";
 import LPDB from "./LPDB";
 import { DeepPendable } from "./shared/Pendable";
 import { parseLocation } from "./location";
+import { FiCircle } from "react-icons/fi";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -23,6 +24,18 @@ export enum KnownFieldTitle {
     price = "Price",
     plays = "Plays",
     tasks = "Task",
+}
+
+export function useNoteIds() {
+    const { fieldsByName } = React.useContext(ElephantContext);
+    const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
+    const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
+    const sourceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.source)?.id, [fieldsByName]);
+    const orderNumberId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.orderNumber)?.id, [fieldsByName]);
+    const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
+    const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
+    const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
+    return { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId };
 }
 
 export enum Source {
@@ -59,6 +72,31 @@ export function isPatch(list: List) {
 export function patches(lists: Lists) {
     return lists.values().filter(isPatch);
 }
+
+export const MEDIA_CONDITIONS = [
+    "Mint (M)",
+    "Near Mint (NM or M-)",
+    "Very Good Plus (VG+)",
+    "Very Good (VG)",
+    "Good Plus (G+)",
+    "Good (G)",
+    "Fair (F)",
+    "Poor (P)",
+];
+
+export const SLEEVE_CONDITIONS = [
+    "Mint (M)",
+    "Near Mint (NM or M-)",
+    "Very Good Plus (VG+)",
+    "Very Good (VG)",
+    "Good Plus (G+)",
+    "Good (G)",
+    "Fair (F)",
+    "Poor (P)",
+    "Generic",
+    "Not Graded",
+    "No Cover",
+];
 
 export function autoVariant(str: string | undefined): Variant | undefined {
     switch (str) {
@@ -213,21 +251,25 @@ const IDIOMS = [
     "№",
 ];
 
-const Tuning = observer(() => {
+function Tuning() {
     return <Card>
         <Card.Header>Tuning</Card.Header>
         <Card.Body>
             <dl>
-                <dt>Novel Roles</dt>
-                <dd>{novelRoles.get().join(", ")}</dd>
-                <dt>Novel Formats</dt>
-                <dd>{novelFormats.get().join(", ")}</dd>
-                <dt>Idioms</dt>
-                <dd>{IDIOMS.map((s, i) => <code key={i}>{s}</code>)}</dd>
+                <Observer>
+                    {() => <>
+                        <dt>Novel Roles</dt>
+                        <dd>{novelRoles.get().join(", ")}</dd>
+                        <dt>Novel Formats</dt>
+                        <dd>{novelFormats.get().join(", ")}</dd>
+                        <dt>Idioms</dt>
+                        <dd>{IDIOMS.map((s, i) => <code key={i}>{s}</code>)}</dd>
+                    </>}
+                </Observer>
             </dl>
         </Card.Body>
     </Card>;
-})
+}
 
 export default Tuning;
 
@@ -250,6 +292,12 @@ export const noteById = action("noteById", (notes: CollectionNote[], id: number)
     field_id: number;
     value: string;
 }> => {
+    if (notes === undefined) {
+        return {
+            field_id: id,
+            value: "",
+        };
+    }
     try {
         let result = notes.find(({ field_id }) => field_id === id);
         if (result) { return result; }

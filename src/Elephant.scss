@@ -93,6 +93,18 @@ tr.sold {
     }
 }
 
+svg.vinyl, svg.cd {
+    vertical-align: text-bottom;
+    margin-inline: 0.2rem;
+}
+
+svg.vinyl {
+    fill: black;
+    color: white;
+    transform: scale(1.3);
+    margin-inline: 0.15rem;
+}
+
 .listed {
     box-sizing: content-box;
     width: 3.6rem;
@@ -260,6 +272,25 @@ a.music-label {
     content: inherit;
 }
 
+.badge.d-flex.dropdown-toggle {
+    a {
+        width: 100%;
+        padding-right: auto;
+        text-align: left;
+    }
+
+    &::after {
+        margin-top: auto;
+        margin-bottom: auto;
+        margin-left: 0.5rem;
+        transform: scale(1.25);
+    }
+    // &:hover::after {
+    //     transition-property: transform;
+    //     transition-duration: 200ms;
+    // }
+}
+
 .graph {
     width: 100%;
     svg {
@@ -274,5 +305,21 @@ a.music-label {
 .ruler {
     div:nth-of-type(even) {
        background: whitesmoke;
+    }
+}
+
+
+.overlay-container {
+    position: relative;
+    display: inline-block;
+
+    .overlay {
+        position: absolute;
+        //outline: red solid 1px;
+        width: 100%;
+        text-align: center;
+        font-size: 50%;
+        font-weight: bold;
+        top: 33%;
     }
 }

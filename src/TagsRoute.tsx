@@ -2,16 +2,17 @@ import flatten from "lodash/flatten";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
 import { computed } from "mobx";
-import { observer } from "mobx-react";
+import { Observer, observer } from "mobx-react";
 import React from "react";
 import * as Router from "react-router-dom";
+import CollectionStats from "./CollectionStats";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 import RouterPaths from "./RouterPaths";
 import Tag from "./Tag";
 import { useTagsFor } from "./Tuning";
 
-const TagPanel = observer(() => {
+const TagPanel = () => {
     let { tagName } = Router.useParams<{ tagName: string; }>();
     tagName = decodeURIComponent(tagName);
     const { collection } = React.useContext(ElephantContext);
@@ -23,13 +24,18 @@ const TagPanel = observer(() => {
             return match;
         });
         return result;
-    });
-    return <>
-        <h2>{tagName}</h2>
+    }, {
 
-        <CollectionTable collectionSubset={collectionSubset.get()} />
-    </>;
-});
+    });
+    return <Observer render={() => {
+        const items = collectionSubset.get();
+        return <>
+            <h2>{tagName}</h2>
+            <CollectionStats items={items} />
+            <CollectionTable collectionSubset={items} />
+        </>;
+    }} />;
+};
 
 const TagsIndex = observer(() => {
     const { collection } = React.useContext(ElephantContext);

@@ -16,7 +16,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowRight, FiCheck, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
@@ -41,7 +41,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, noteById, orderUri, patches, Source, useTagsFor, useTasks } from "./Tuning";
+import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -120,17 +120,11 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const folderName = useFolderName();
 
-    const mediaConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.mediaCondition)?.id, [fieldsByName]);
-    const sleeveConditionId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.sleeveCondition)?.id, [fieldsByName]);
-    const sourceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.source)?.id, [fieldsByName]);
-    const orderNumberId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.orderNumber)?.id, [fieldsByName]);
-    const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
-    const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
-    const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
+    const { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId } = useNoteIds();
 
     const { tasks, tasksId } = useTasks();
 
-    const mediaCondition = React.useCallback((notes) => mediaConditionId ? autoFormat(getNote(notes, mediaConditionId)) : "", [mediaConditionId]);
+    const mediaCondition = React.useCallback((notes) => mediaConditionId ? getNote(notes, mediaConditionId) : "", [mediaConditionId]);
     const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
     const playCount = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
         if (playsId) {
@@ -155,7 +149,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const isCD = React.useCallback((item) => tagsFor(item).get().find(({ tag }) => tag === "CD") !== undefined, [tagsFor]);
 
-    const sourceMnemonicFor = React.useCallback((item): undefined | ["literal", string] => {
+    const sourceMnemonicFor = React.useCallback((item: CollectionItem): undefined | ["literal", string] => {
         if (!sourceId || !orderNumberId) {
             return undefined;
         }
@@ -235,10 +229,10 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     return <>
                         <div className="d-flex d-flex-row">
                             <div className="grade grade-media">
-                                <Badge as="div" bg={autoVariant(media)}>{media || <>&nbsp;</>}</Badge>
+                                <ConditionBadge condition={media} kind="media" item={item} noteId={mediaConditionId} />
                             </div>
                             <div className="grade grade-sleeve">
-                                <Badge as="div" bg={autoVariant(sleeve)}>{sleeve || <>&nbsp;</>}</Badge>
+                                <ConditionBadge condition={sleeve} kind="sleeve" item={item} noteId={sleeveConditionId} />
                             </div>
                         </div>
                         <Observer render={() => {
@@ -499,11 +493,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         Header: "Type",
         className: "minimal-column",
         accessor: ({ basic_information: { formats } }) => formats,
-        Cell: ({ value }: { value: Formats }) => <>
-            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind }) => kind === TagKind.format).map(({ tag }) => tag).join(" ")}
+        Cell: ({ row: { original }, value }: CollectionCell<Formats>) => <>
+            {isCD(original) ? <FiDisc className="cd" title="CD" /> : <FiDisc className="vinyl" title="Vinyl" />}
+            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }) => tag).join(" ")}
         </>,
         sortType: autoSortBy("Type"),
-    }), [autoSortBy]);
+    }), [autoSortBy, isCD]);
 
     const labelColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
         Header: "Label",
@@ -587,7 +582,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 }));
                 mutate(item, "folder_id", newFolderId, promise);
             }}>
-                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "xno-toggle")} kind={type} tag={label} extra={extra} />
+                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row", "xno-toggle")} kind={type} tag={label} extra={extra} />
                 <Dropdown.Menu>
                     {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name}</Dropdown.Item>)}
                 </Dropdown.Menu>
@@ -644,6 +639,28 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
 }
 
+function ConditionBadge({ condition, kind, item, noteId }: { condition: string | undefined, kind: "media" | "sleeve", item: CollectionItem, noteId: number }) {
+    const { client, cache } = React.useContext(ElephantContext);
+    const options = React.useMemo(() => (kind === "media") ? MEDIA_CONDITIONS : SLEEVE_CONDITIONS, [kind]);
+    return <Dropdown onSelect={(newCondition) => {
+        if (!client || !newCondition) {
+            return;
+        }
+        const note = noteById(item.notes, noteId);
+        const promise = client!.editCustomFieldForInstance(item.folder_id, item.id, item.instance_id, noteId, newCondition);
+        mutate(note, "value", newCondition, promise).then(() => {
+            cache?.clear(collectionItemCacheQuery(item));
+        });
+    }}>
+        <Dropdown.Toggle as={"div"} className={classConcat("badge", "bg-" + autoVariant(condition), "no-toggle")}>{autoFormat(condition) || <>&nbsp;</>}</Dropdown.Toggle>
+        <Dropdown.Menu>
+            {options.map((cond) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
+        </Dropdown.Menu>
+    </Dropdown>;
+}
+
+export type DiscogsPrice = InventoryItem["price"];
+
 // function addToList(item: CollectionItem, { definition: list }: List) {
 //     const { client } = React.useContext(ElephantContext);
 // }
@@ -657,8 +674,8 @@ $ Canadian Dollar
 $ Australian Dollar 
 ¥ Japanese Yen 
 */
-function priceToString(price: InventoryItem["price"]): string | undefined {
-    return `${priceUnit(price.currency)}${price.value}`;
+export function priceToString(price: DiscogsPrice): string | undefined {
+    return price.value === undefined ? "" : `${priceUnit(price.currency)}${Math.round(price.value * 100) / 100}`;
 }
 
 function priceUnit(currency: CurrenciesEnum | undefined) {
@@ -779,6 +796,8 @@ function FieldEditor<As = "text">(props: {
 const KNOWN_TASKS = [
     "Clean",
     "Entry",
+    "Replace",
+    "Sell",
     "Sleeve",
     "Spine",
     "Own Sleeve",

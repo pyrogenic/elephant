@@ -2,6 +2,9 @@ import { KnownFieldTitle } from "./Tuning";
 
 
 export default function autoFormat(str: string | undefined) {
+    if (typeof str !== "string") {
+        str = `${str}`;
+    }
     switch (str) {
         case KnownFieldTitle.mediaCondition:
             return "Media";
