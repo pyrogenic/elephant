@@ -16,7 +16,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiMinus, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
@@ -227,12 +227,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                 });
                                 return orderItem ? [order, orderItem] : [];
                             });
-                            let newFolderId: number | undefined;
+                            let numSold = 0;
                             const listingElements = compact(listings.map(([order, orderItem], i) => {
                                 if (!order || !orderItem) { return undefined; }
                                 const status = autoFormat(order.status);
-                                if (status === "Sold" && !inSoldFolder(item)) {
-                                    newFolderId = soldFolder;
+                                if (status === "Sold") {
+                                    numSold++;
                                 }
                                 return <div className="d-flex d-flex-row" key={i}>
                                     <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/order/${order.id}`}>
@@ -241,6 +241,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                     </div>
                                 </div>;
                             }));
+                            let newFolderId: number | undefined;
                             if (!listingElements.length) {
                                 const listing = inventory.get(id);
                                 if (listing) {
@@ -255,6 +256,15 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                         </ExternalLink>
                                         </div>
                                     </div>);
+                                }
+                            } else {
+                                if (numSold) {
+                                    const numInSoldFolder = lpdb?.entriesForRelease(item.id)?.filter(inSoldFolder).length ?? 0;
+                                    if (numSold > numInSoldFolder) {
+                                        newFolderId = soldFolder;
+                                    } else if (!inSoldFolder(item)) {
+                                        listingElements.pop();
+                                    }
                                 }
                             }
                             if (newFolderId) {
@@ -394,7 +404,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             list.items.forEach((item) => {
                 const instruction = item.comment;
                 const applyThisInstruction = applyInstruction.bind(null, instruction);
-                for (const entry of lpdb!.entriesForRelease(item.id)) {
+                const entries = lpdb?.entriesForRelease(item.id);
+                if (entries) for (const entry of entries) {
                     runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
                 }
             });

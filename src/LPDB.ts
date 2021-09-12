@@ -1,8 +1,9 @@
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { Discojs } from "discojs";
+import merge from "lodash/merge";
 import { action, autorun, computed, observable, runInAction, set } from "mobx";
 import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types } from "mobx-state-tree";
-import { ElementType } from "../../asset/lib";
+import { arraySetAdd, ElementType } from "@pyrogenic/asset/lib";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
 import { Artist, ArtistByIdReference, ArtistStore, ArtistStoreModel } from "./model/Artist";
@@ -89,7 +90,20 @@ export function getStore(node: IAnyStateTreeNode): IStore {
 }
 
 export default class LPDB {
+  public addToCollection = action((item: CollectionItem) => {
+    const existing = this.collection.get(item.instance_id);
+    if (existing) {
+      merge(existing, item);
+      item = existing;
+    } else {
+      this.collection.set(item.instance_id, item);
+    }
+    const byId = this.entriesByReleaseId.getOrCreate(item.id, Array);
+    arraySetAdd(byId, item);
+  });
+
   public readonly collection: Collection = new OrderedMap<number, CollectionItem>();
+  public readonly entriesByReleaseId = new OrderedMap<number, CollectionItem[]>();
   public readonly releases: Releases = new OrderedMap<number, Remote<Release>>();
   public readonly labels: Labels = new OrderedMap<number, Remote<Label>>();
   public readonly masters: MasterReleases = new OrderedMap<number, Remote<MasterRelease>>();
@@ -134,13 +148,7 @@ export default class LPDB {
   }
 
   public entriesForRelease(id: number) {
-    const result: CollectionItem[] = [];
-    for (const entry of this.collection.values()) {
-      if (entry.id === id) {
-        result.push(entry);
-      }
-    }
-    return result;
+    return this.entriesByReleaseId.get(id);
   }
 
   public details({ id }: Pick<CollectionItem, "id">): Remote<Release> {
@@ -277,69 +285,6 @@ export default class LPDB {
     return result;
   });
 
-  // public masterForRelease(item: Release): Remote<MasterRelease> {
-  // let refresh = () => { };
-  //   autorun(() => {
-  //     const details = this.details(item);
-  //     ., "master_id", 0).get();
-  //   if (masterId.status === "ready") {
-  //     if (masterId.value) {
-  //       result = this.masters.get(masterId.value);
-  //       if (result) {
-  //         this.mastersByReleaseId.set(item.id, result);
-  //         return result;
-  //       }
-  //     } else {
-  //       result = {
-  //         status: "ready",
-  //         value: "no-master-release",
-  //         refresh,
-  //       };
-  //       this.mastersByReleaseId.set(item.id, result);
-  //       return result;
-  //     }
-  //   } else if (masterId.status === "error") {
-  //     result = {
-  //       status: "error", 
-  //       error: "unknown",
-  //       refresh,
-  //     };
-  //     this.mastersByReleaseId.set(item.id, result);
-  //     return result;
-  // }
-  // result = {
-  //   status: "pending",
-  // };
-  // reaction(() => masterId, (mid) => {
-  //   if (mid.status ==)
-  // });
-  // if (masterId.value) {
-
-  // }
-  // let result = this.masters.get(masterId.value);
-  // if (result !== undefined) {
-  //   return result;
-  // }
-  // result = observable<Remote<MasterRelease>>({
-  //   status: "pending",
-  // });
-
-  // refresh = () => this.client.getMaster(id).then(
-  //   action((value) => {
-  //     set(result!, "status", "ready");
-  //     set(result!, "value", value);
-  //     set(result!, "refresh", refresh);
-  //   }),
-  //   action((error) => {
-  //     set(result!, "status", "error");
-  //     set(result!, "error", error);
-  //     set(result!, "refresh", refresh);
-  //   }));
-  // this.releases.set(id, result);
-  // refresh();
-  // return result;
-  //}
-
   public detail<K extends keyof Release>(item: CollectionItem, key: K, def: Release[K]) {
     return computed(() => {
       const details = this.details(item);
@@ -367,19 +312,6 @@ export default class LPDB {
   constructor(public readonly client: Discojs, public readonly cache: DiscogsIndexedCache) {
     const storeEnv: StoreEnv = { cache, client, db: cache.storage };
     this.store = StoreModel.create({}, storeEnv);
-    // reaction(() => {
-    //   const collectionItems = Array.from(this.collection.values());
-    //   const collectionItemsJs = JSON.stringify(collectionItems.map((e) => toJS(e)));
-    //   return collectionItemsJs;
-    // }, (collectionItemsJs) => {
-    //   worker.setCollection(collectionItemsJs).then(() => {
-    //     worker.tags().then((tags) => sync(tags.sort(), this.tags));
-    //     this.byTagCache.forEach((result, tag) => this.refresh(tag, result));
-    //   });
-    // }, {
-    //   name: "worker.setCollection",
-    //   delay: 1000,
-    // });
   }
 
   private refresh(tag: string, result: number[]) {

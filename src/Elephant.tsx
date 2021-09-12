@@ -2,7 +2,6 @@ import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
-import merge from "lodash/merge";
 import { action, reaction, runInAction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
@@ -232,14 +231,7 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    items.forEach(action((item) => {
-      const existing = collection.get(item.instance_id);
-      if (existing) {
-        merge(existing, item);
-      } else {
-        collection.set(item.instance_id, item);
-      }
-    }));
+    items.forEach(lpdb.addToCollection);
     setCollectionTimestamp(new Date());
   }
 

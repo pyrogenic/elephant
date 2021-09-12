@@ -14,6 +14,9 @@ export default class OrderedMap<TKey, TValue> {
     public get = (key: TKey) => {
         return this.content.get(key);
     };
+    public has = (key: TKey) => {
+        return this.content.has(key);
+    };
     public set = action((key: TKey, value: TValue) => {
         const i = this.insertionOrder.get(key);
         if (i !== undefined) {
@@ -23,5 +26,13 @@ export default class OrderedMap<TKey, TValue> {
             this.inOrder.push(value);
         }
         this.content.set(key, value);
+    });
+    public getOrCreate = action((id: TKey, factory: () => TValue) => {
+        let result = this.content.get(id);
+        if (result === undefined) {
+            result = factory();
+            this.set(id, result);
+        }
+        return result;
     });
 }
