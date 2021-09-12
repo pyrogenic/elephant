@@ -10,7 +10,7 @@ export default function LazyTabs({
     className,
     tabs,
 }: {
-    className: ClassNames,
+        className?: ClassNames,
     tabs: LazyContent[],
 }) {
     const [currentTab, setCurrentTab] = React.useState<string>();

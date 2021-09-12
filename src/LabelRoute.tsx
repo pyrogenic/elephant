@@ -3,8 +3,8 @@ import flatten from "lodash/flatten";
 import groupBy from "lodash/groupBy";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { autorun, computed, reaction } from "mobx";
-import { observer } from "mobx-react";
+import { autorun, computed, IComputedValue, reaction } from "mobx";
+import { Observer, observer } from "mobx-react";
 import React from "react";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
@@ -12,13 +12,16 @@ import autoFormat from "./autoFormat";
 import CollectionTable from "./CollectionTable";
 import { categorizeRole, uniqueArtistRoles } from "./details/AlbumArtists";
 import DiscoTag from "./DiscoTag";
+import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import LazyMusicLabel from "./LazyMusicLabel";
-import { Release } from "./LPDB";
+import LPDB, { Release } from "./LPDB";
 import { Remote } from "./Remote";
 import RouterPaths from "./RouterPaths";
 import Graph, { DataType, Gener } from "./shared/cytoscape/Graph";
+import Disclosure from "./shared/Disclosure";
 import ExternalLink from "./shared/ExternalLink";
+import LazyTabs from "./shared/lazy/LazyTabs";
 import LoadingIcon from "./shared/LoadingIcon";
 import RefreshButton from "./shared/RefreshButton";
 import { Content, resolve } from "./shared/resolve";
@@ -33,8 +36,53 @@ const LabelPanel = observer(() => {
 
     const label = React.useMemo(() => lpdb?.label(labelId), [labelId, lpdb]);
     const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), [collection, labelId]);
-    const generateGraph = React.useMemo(() =>
-    {
+    const generateGraph = useCollectionGraphGenerator(collectionSubset, lpdb);
+    return <>
+        <div className="mb-3">
+            <Disclosure title={(icon) => <h2>
+                <LazyMusicLabel label={{ id: labelId, name: labelName ?? "…" }} showName={false} />
+                <span className="me-2" />
+                <ExternalLink href={label.status === "ready" ? label.value.uri : undefined}>
+                    <LoadingIcon remote={[label, "name"]} />
+                </ExternalLink>
+                {icon}
+            </h2>} content={() => <>
+                {label.status === "ready" && label.value.profile ? <>
+                    <DiscoTag src={label.value.profile} {...label.value} />
+                </>
+                    : <i>No information available.</i>}
+                <RefreshButton remote={label} />
+            </>} />
+        </div>
+        <LazyTabs
+            tabs={[
+                {
+                    title: "Albums",
+                    content: () => <Observer>
+                        {() => <CollectionTable collectionSubset={collectionSubset.get()} />}
+                    </Observer>,
+                },
+                {
+                    title: "Graph",
+                    content: () => <Graph generator={generateGraph} />,
+                },
+            ]}
+        />
+    </>;
+});
+
+const LabelIndex = observer(() => {
+    let match = Router.useRouteMatch();
+    const { collection } = React.useContext(ElephantContext);
+    const labelsAcrossCollection = flatten(collection.values().map(({ basic_information: { labels } }) => labels));
+    const labels = sortBy(uniqBy(labelsAcrossCollection, "id"), "name");
+    return <>
+        {labels.map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>)}
+    </>;
+});
+
+function useCollectionGraphGenerator(collectionSubset: IComputedValue<CollectionItem[]>, lpdb: LPDB) {
+    return React.useMemo(() => {
         console.log("Buiding new graph generator");
         return function* (): Gener {
             const pending: Remote<Release>[] = [];
@@ -108,36 +156,8 @@ const LabelPanel = observer(() => {
                 console.log(`${pending.length} pending + ${ready.length} ready + ${done.length} done`);
             }
         };
-        }, [collectionSubset, lpdb]);
-    return <>
-        <div className="mb-3">
-            <h2>
-                <LazyMusicLabel label={{ id: labelId, name: labelName ?? "…" }} showName={false} />
-                <span className="me-2" />
-                <ExternalLink href={label.status === "ready" ? label.value.uri : undefined}>
-                    <LoadingIcon remote={[label, "name"]} />
-                </ExternalLink>
-            </h2>
-            {label.status === "ready" && label.value.profile ? <>
-                <DiscoTag src={label.value.profile} {...label.value} />
-            </>
-                : <i>No information available.</i>}
-            <RefreshButton remote={label} />
-        </div>
-        <Graph generator={generateGraph} />
-        <CollectionTable collectionSubset={collectionSubset.get()} />
-    </>;
-});
-
-const LabelIndex = observer(() => {
-    let match = Router.useRouteMatch();
-    const { collection } = React.useContext(ElephantContext);
-    const labelsAcrossCollection = flatten(collection.values().map(({ basic_information: { labels } }) => labels));
-    const labels = sortBy(uniqBy(labelsAcrossCollection, "id"), "name");
-    return <>
-        {labels.map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>)}
-    </>;
-});
+    }, [collectionSubset, lpdb]);
+}
 
 export function wrap(paragraph: Content, bold: number, italic: number, underline: number, url: string[]) {
     let content = resolve(paragraph);

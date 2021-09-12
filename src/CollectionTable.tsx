@@ -88,7 +88,6 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         client,
         collection,
         fieldsById,
-        fieldsByName,
         folders,
         inventory,
         orders,
@@ -102,21 +101,6 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     } else {
         hash = undefined;
     }
-
-    // Router.matchPath(match.path, `$`)
-    //     return (
-    //       <div>
-    //         <Router.Switch>
-    //           <Router.Route path={[`${match.path}/:artistId`, `${match.path}/:artistId/:artistName`]}>
-    //             <ArtistPanel />
-    //           </Router.Route>
-    //           <Router.Route path={match.path}>
-    //             <ArtistIndex />
-    //           </Router.Route>
-    //         </Router.Switch>
-    //       </div>
-    //     );
-    //   }
 
     const folderName = useFolderName();
 
@@ -446,8 +430,16 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
         const aa = ac.values[columnId].artists;
         const ba = bc.values[columnId].artists;
-        return compare(aa, ba, {
+        const artistComparisonResult = compare(aa, ba, {
             toString: ({ name }: Artist) => name,
+            library: true,
+        });
+        if (artistComparisonResult) {
+            return artistComparisonResult;
+        }
+        const aTitle = ac.original.basic_information.title;
+        const bTitle = bc.original.basic_information.title;
+        return compare(aTitle, bTitle, {
             library: true,
         });
     }, []);
