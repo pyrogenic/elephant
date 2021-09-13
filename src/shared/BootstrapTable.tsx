@@ -326,10 +326,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             ))}
         </select>
     </div>;
+}
 
-    function columnsFor(headerGroup: HeaderGroup<TElement>) {
-        return headerGroup.headers as Array<HeaderGroup<TElement> & UseSortByColumnProps<TElement>>;
-    }
+function columnsFor<TElement extends {}>(headerGroup: HeaderGroup<TElement>) {
+    return headerGroup.headers as Array<HeaderGroup<TElement> & UseSortByColumnProps<TElement>>;
 }
 
 function deepSearchTargetsImpl(obj: object, result?: string[], visited?: Set<any>): string[] {

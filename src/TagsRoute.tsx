@@ -9,6 +9,7 @@ import CollectionStats from "./CollectionStats";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 import RouterPaths from "./RouterPaths";
+import { resolveToString } from "./shared/resolve";
 import Tag from "./Tag";
 import { useTagsFor } from "./Tuning";
 
@@ -43,7 +44,7 @@ const TagsIndex = observer(() => {
     const tags = computed(() => uniqBy(flatten(collection.values().map((item) => tagsFor(item, { includeLocation: true }).get())), "tag"));
 
     return <>
-        {(sortBy(tags.get(), "name").map((tag) => <Tag key={tag.tag} {...tag} />))}
+        {(sortBy(tags.get(), "name").map((tag) => <Tag key={resolveToString(tag.tag)} {...tag} />))}
     </>;
 });
 

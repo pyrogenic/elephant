@@ -14,6 +14,8 @@ import LPDB from "./LPDB";
 import { DeepPendable } from "./shared/Pendable";
 import { parseLocation } from "./location";
 import { FiCircle } from "react-icons/fi";
+import { Content } from "./shared/resolve";
+import Circled from "./shared/Circled";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -172,7 +174,7 @@ export function labelNames(labels: Labels) {
 export const FORMATS: {
     [key: string]: {
         as: TagKind,
-        abbr?: string,
+        abbr?: Content,
         name?: string,
     } | false
 } = {
@@ -206,7 +208,7 @@ export const FORMATS: {
     "Reissue": { as: TagKind.tag, abbr: "RI" },
     "Remastered": { as: TagKind.tag },
     "Repress": { as: TagKind.tag, abbr: "RE" },
-    "Single": { as: TagKind.format },
+    "Single": { as: TagKind.format, abbr: <Circled>1</Circled> },
     "Single Sided": { as: TagKind.tag },
     "Stereo": false,
     "White Label": { as: TagKind.tag },

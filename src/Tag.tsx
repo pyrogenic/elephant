@@ -5,7 +5,7 @@ import Badge, { BadgeProps } from "react-bootstrap/Badge";
 import { FiAlertTriangle, FiArchive, FiCreditCard, FiDisc, FiCircle, FiHelpCircle, FiList, FiSquare, FiTag, FiTarget } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import ElephantContext from "./ElephantContext";
-import { Content, resolve } from "./shared/resolve";
+import { Content, resolve, resolveToString } from "./shared/resolve";
 import "./Tag.scss";
 
 export enum TagKind {
@@ -23,7 +23,7 @@ export enum TagKind {
 
 export type TagProps = {
     className?: string;
-    tag: string;
+    tag: Content;
     kind: TagKind;
     extra?: Content;
     title?: string;
@@ -57,15 +57,15 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
                 break;
             case TagKind.list:
                 Icon = FiList;
-                count = lpdb?.listByName(tag)?.items.length;
+                count = lpdb?.listByName(resolveToString(tag))?.items.length;
                 break;
             case TagKind.genre:
                 Icon = FiTarget;
-                count = lpdb?.byTag(tag).length
+                count = lpdb?.byTag(resolveToString(tag)).length
                 break;
             case TagKind.style:
                 Icon = FiDisc;
-                count = lpdb?.byTag(tag).length
+                count = lpdb?.byTag(resolveToString(tag)).length
                 break;
             case TagKind.tag:
                 Icon = FiTag;
@@ -93,7 +93,7 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
         let contents = <>
             <Icon onClick={onClickIcon} />
             &nbsp;
-            {tag}
+            {resolve(tag)}
             {count ? <>
                 &nbsp;
                 <Badge
@@ -112,7 +112,7 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
             </> : null}
         </>;
         if (onClickTag === undefined) {
-            contents = <Router.NavLink exact to={`/${rte}/${encodeURIComponent(tag)}`}>
+            contents = <Router.NavLink exact to={`/${rte}/${encodeURIComponent(resolveToString(tag))}`}>
                 {contents}
             </Router.NavLink>;
         }
