@@ -9,8 +9,14 @@ import Chart from "react-google-charts";
 import { priceToString } from "./CollectionTable";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
+import { ElementType } from "./shared/TypeConstraints";
 import { getNote, useNoteIds } from "./Tuning";
 const RATING_COLS = ["Year", 0, 1, 2, 3, 4, 5];
+
+type ReactGoogleChartProps = ConstructorParameters<typeof Chart>[0];
+type GoogleDataTableColumn = Exclude<ElementType<Exclude<ReactGoogleChartProps["columns"], undefined>>, string>;
+type GoogleDataTableColumnRoleType = Exclude<GoogleDataTableColumn["role"], undefined>;
+
 export default function CollectionStats({ items }: { items: CollectionItem[] }) {
     const { orders } = React.useContext(ElephantContext);
     const { priceId } = useNoteIds();
@@ -49,13 +55,21 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
     ], [items])
 
     const priceData = React.useMemo(() => [
-        ["Release", "Price", "Sold For"],
+        ["Release", "Price", "Sold For", "Rating"],
         ...compact((items.map(({ id, basic_information: { title }, notes }) => {
             const price = priceId && getNote(notes, priceId);
             const soldFor = income.valueByRelease.get(id);
             return (price || soldFor) && [title, price, soldFor];
         }))),
     ], [income.valueByRelease, items, priceId])
+
+    const priceRatingData = React.useMemo(() => [
+        // ["Release", "Price", "Rating"],
+        ...compact((items.map(({ basic_information: { title }, notes, rating }) => {
+            const price = priceId && getNote(notes, priceId);
+            return price && !isNaN(Number(price)) && [Number(price), rating, title];
+        }))),
+    ], [items, priceId])
 
     const purchasePrice = React.useMemo(() => {
         const prices = priceData.map(([, n]) => isNaN(Number(n)) ? 0 : Number(n));
@@ -132,6 +146,25 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 chartType="Histogram"
                 data={priceData}
             />
+            <Chart
+                chartType="ScatterChart"
+                rows={priceRatingData}
+                columns={[
+                    { label: "Price", type: "number", pattern: "$0.00" },
+                    { label: "Rating", type: "number" },
+                    {
+                        label: "Title",
+                        type: "string",
+                        role: "tooltip" as GoogleDataTableColumnRoleType,
+                    },
+                ]}
+                options={{
+                    axes: { y: { "Rating": { label: "Star Rating" } } },
+                    hAxis: { title: "Price" },
+                    vAxis: { title: "Rating" },
+                }}
+            />
         </dd>
     </dl>;
 }
+

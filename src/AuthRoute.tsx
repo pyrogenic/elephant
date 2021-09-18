@@ -1,14 +1,12 @@
 import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
-import { useRouteMatch } from "react-router-dom";
+import { Container } from "react-bootstrap";
+import Form from "react-bootstrap/Form";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
-import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
-import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
-import InputGroup from "react-bootstrap/InputGroup";
-import { Container } from "react-bootstrap";
+import { useRouteMatch } from "react-router-dom";
+import Profile from "./Profile";
 import { useRoonId } from "./roon/useRoon";
+import Testbed from "./Testbed";
 
 export default function AuthRoute({
     token,
@@ -31,37 +29,32 @@ export default function AuthRoute({
         >
             <Tab eventKey="home" title="Auth">
                 <Form>
-                    <Form.Group>
+                    <Form.Group className="mb-2">
+                        <Form.Label>User Token</Form.Label>
                         <Form.Control
                             type="text"
                             value={token}
                             onChange={({ target: { value } }) => setToken(value)}
                         />
-                        <Form.FloatingLabel label="User Token" />
                     </Form.Group>
-                    <Form.Group>
+                    <Form.Group className="mb-2">
+                        <Form.Label>Roon Extension Identitfier</Form.Label>
                         <Form.Control
                             type="text"
                             value={roonId}
                             onChange={({ target: { value } }) => setRoonId(value)}
                         />
-                        <Form.FloatingLabel label="Roon Extension Identitfier" />
                     </Form.Group>
                 </Form>
             </Tab>
             <Tab eventKey="profile" title="Profile">
-                Profile
-                <Row>
-                    <Col>
-                        <InputGroup>
-                            <Button variant="outline-secondary">Test</Button>
-                            <Button variant="outline-secondary">Test</Button>
-                        </InputGroup>
-                    </Col>
-                </Row>
+                <Profile />
             </Tab>
             <Tab eventKey="contact" title="Contact" disabled>
                 Contact
+            </Tab>
+            <Tab eventKey="testbed" title="Testbed">
+                <Testbed />
             </Tab>
         </Tabs>
     </Container>;
