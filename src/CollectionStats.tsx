@@ -60,7 +60,6 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
     const purchasePrice = React.useMemo(() => {
         const prices = priceData.map(([, n]) => isNaN(Number(n)) ? 0 : Number(n));
         const total = sum(prices);
-        console.log({ prices, total });
         return total;
     }, [priceData]);
 

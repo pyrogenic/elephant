@@ -299,7 +299,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 ...{ sortType: sortByCondition } as any,
             }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
         }
-    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inSoldFolder, soldFolder, inventory, folders, client, folderName, cache]);
+    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inventory, folders, lpdb, inSoldFolder, soldFolder, client, folderName, cache]);
 
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
@@ -678,7 +678,7 @@ $ Australian Dollar
 ¥ Japanese Yen 
 */
 export function priceToString(price: DiscogsPrice): string | undefined {
-    return price.value === undefined ? "" : `${priceUnit(price.currency)}${Math.round(price.value * 100) / 100}`;
+    return price.value === undefined ? "" : `${priceUnit(price.currency)}${price.value.toFixed(2)}`;
 }
 
 function priceUnit(currency: CurrenciesEnum | undefined) {
@@ -784,6 +784,7 @@ function FieldEditor<As = "text">(props: {
                     "cache",
                     "setError",
                 )}
+                className="hover-lined"
                 disabled={pending(pendable)}
                 value={floatingValue ?? pendingValue(pendable)}
                 onChange={({ target: { value } }) => setFloatingValue(value)}

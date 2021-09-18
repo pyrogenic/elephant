@@ -20,6 +20,7 @@ import LazyTabs from "../shared/lazy/LazyTabs";
 import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
 import Insert from "./Insert";
+import Listing from "./Listing";
 import RoonLink from "./RoonLink";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
@@ -163,6 +164,13 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 </Col>
             </Row>;
 
+        const listingContent = () =>
+            <Row>
+                <Col>
+                    <Listing item={item} />
+                </Col>
+            </Row>;
+
         const graphContent = () =>
             <Row>
                 <Col>
@@ -206,6 +214,10 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                     {
                         title: "Spine",
                         content: spineContent,
+                    },
+                    {
+                        title: "Listing",
+                        content: listingContent,
                     },
                     {
                         title: "Graph",

@@ -32,7 +32,7 @@ const TagPanel = () => {
         const items = collectionSubset.get();
         return <>
             <h2>{tagName}</h2>
-            <CollectionStats items={items} />
+            {/* <CollectionStats items={items} /> */}
             <CollectionTable collectionSubset={items} />
         </>;
     }} />;

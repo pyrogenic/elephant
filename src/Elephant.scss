@@ -17,12 +17,11 @@ table {
     tbody tr {
         height: 6.8vh;
     }
-    textarea, .hover-lined {
+    .hover-lined {
         margin-top: inherit !important;
         font-size: small !important;
         min-height: 2rem;
-    }
-    .form-control, .hover-lined {
+
         padding: 0;
         border-radius: 0;
         border-top: none;
