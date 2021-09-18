@@ -12,7 +12,8 @@ import { ButtonVariant, Variant } from "./shared/Shared";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 export const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
-const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
+export const PROFILE_QUERY = { url: /\/users\/[^/]+$/ };
+export const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
 const INVENTORY_QUERY = { url: /\/inventory\?/ };
 const MARKETPLACE_QUERY = { url: /\/marketplace\// };
 const MASTERS_QUERY = { url: /discogs\.com\/masters\// };

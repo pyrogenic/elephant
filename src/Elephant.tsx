@@ -28,7 +28,6 @@ import { ElementType, PromiseType } from "./shared/TypeConstraints";
 import { StatsMode } from "./StatsRoute";
 import { TagsMode } from "./TagsRoute";
 import { TasksMode } from "./TasksRoute";
-import Testbed from "./Testbed";
 import Tuning from "./Tuning";
 
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
@@ -213,11 +212,6 @@ export default function Elephant() {
         <Row>
           <Col>
             This application uses Discogs’ API but is not affiliated with, sponsored or endorsed by Discogs. ‘Discogs’ is a trademark of Zink Media, LLC.
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <Testbed />
           </Col>
         </Row>
       </Container>
