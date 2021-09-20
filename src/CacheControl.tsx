@@ -14,12 +14,12 @@ import { ButtonVariant, Variant } from "./shared/Shared";
 export const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
 export const PROFILE_QUERY = { url: /\/users\/[^/]+$/ };
 export const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
-const INVENTORY_QUERY = { url: /\/inventory\?/ };
-const MARKETPLACE_QUERY = { url: /\/marketplace\// };
-const MASTERS_QUERY = { url: /discogs\.com\/masters\// };
-const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
-const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
-const LISTS_QUERY = { url: /discogs\.com\/lists\// };
+export const INVENTORY_QUERY = { url: /\/inventory\?/ };
+export const MARKETPLACE_QUERY = { url: /\/marketplace\// };
+export const MASTERS_QUERY = { url: /discogs\.com\/masters\// };
+export const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
+export const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
+export const LISTS_QUERY = { url: /discogs\.com\/lists\// };
 
 export function CacheControl({ variant, badgeVariant = "light", badgeText = "dark" }: { variant?: ButtonVariant, badgeVariant?: Variant, badgeText?: Variant }) {
     const counts: {

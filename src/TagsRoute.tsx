@@ -68,3 +68,9 @@ export function tagRoutePaths(path: string): RouterPaths {
     return `${path}/:tagName`;
 }
 
+/*
+ *              US      EU      CN      RU      NOS
+ * Pre          6SN7    6SN7    6N8P    6CC10   B65, 5692
+ * Rectifier    5U4G    5U4G    5Z3P    5Z3S    U52, WE274A/B, 53KU
+ * Power        300B
+ */

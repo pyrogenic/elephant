@@ -16,6 +16,7 @@ import { parseLocation } from "./location";
 import { FiCircle } from "react-icons/fi";
 import { Content } from "./shared/resolve";
 import Circled from "./shared/Circled";
+import { ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -75,29 +76,29 @@ export function patches(lists: Lists) {
     return lists.values().filter(isPatch);
 }
 
-export const MEDIA_CONDITIONS = [
-    "Mint (M)",
-    "Near Mint (NM or M-)",
-    "Very Good Plus (VG+)",
-    "Very Good (VG)",
-    "Good Plus (G+)",
-    "Good (G)",
-    "Fair (F)",
-    "Poor (P)",
+export const MEDIA_CONDITIONS: ReleaseConditionsEnum[] = [
+    ReleaseConditionsEnum.MINT,
+    ReleaseConditionsEnum.NEAR_MINT,
+    ReleaseConditionsEnum.VERY_GOOD_PLUS,
+    ReleaseConditionsEnum.VERY_GOOD,
+    ReleaseConditionsEnum.GOOD_PLUS,
+    ReleaseConditionsEnum.GOOD,
+    ReleaseConditionsEnum.FAIR,
+    ReleaseConditionsEnum.POOR,
 ];
 
-export const SLEEVE_CONDITIONS = [
-    "Mint (M)",
-    "Near Mint (NM or M-)",
-    "Very Good Plus (VG+)",
-    "Very Good (VG)",
-    "Good Plus (G+)",
-    "Good (G)",
-    "Fair (F)",
-    "Poor (P)",
-    "Generic",
-    "Not Graded",
-    "No Cover",
+export const SLEEVE_CONDITIONS: SleeveConditionsEnum[] = [
+    SleeveConditionsEnum.MINT,
+    SleeveConditionsEnum.NEAR_MINT,
+    SleeveConditionsEnum.VERY_GOOD_PLUS,
+    SleeveConditionsEnum.VERY_GOOD,
+    SleeveConditionsEnum.GOOD_PLUS,
+    SleeveConditionsEnum.GOOD,
+    SleeveConditionsEnum.FAIR,
+    SleeveConditionsEnum.POOR,
+    SleeveConditionsEnum.GENERIC,
+    SleeveConditionsEnum.NOT_GRADED,
+    SleeveConditionsEnum.NO_COVER,
 ];
 
 export function autoVariant(str: string | undefined): Variant | undefined {
@@ -249,8 +250,11 @@ export function formats(value: Formats) {
 const novelFormats = computed(() => TUNING_TRACKER.formats.filter((k) => !(k in FORMATS)));
 const novelRoles = computed(() => TUNING_TRACKER.roles.filter((k) => !(k in ROLES)));
 
+export const SHIPS_IN_NOTE = "Play graded based on a complete play through. Ships in archival inner / PPL outer.";
+
 const IDIOMS = [
     "№",
+    SHIPS_IN_NOTE,
 ];
 
 function Tuning() {
@@ -288,7 +292,9 @@ export function listEntryToTag({ list: { definition: { name: tag } }, entry: { c
     return { tag, kind: TagKind.list, extra };
 }
 
-type CollectionNote = ElementType<CollectionItem["notes"]>;
+export type CollectionNotes = CollectionItem["notes"];
+
+export type CollectionNote = ElementType<CollectionNotes>;
 
 export const noteById = action("noteById", (notes: CollectionNote[], id: number): DeepPendable<{
     field_id: number;

@@ -1,5 +1,5 @@
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import { Discojs } from "discojs";
+import { Discojs, InventorySortEnum, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
 import { action, reaction, runInAction } from "mobx";
@@ -246,15 +246,17 @@ export default function Elephant() {
 
   function getCollection() {
     updateCollectionReaction.current?.();
-    updateInventory();
-    updateLists();
-    const p1 = updateCustomFields();
-    const p2 = updateCollection();
-    Promise.all([p1, p2]).then(() => {
+    const promises: Promise<any>[] = [
+      updateInventory(),
+      updateLists(),
+      updateCustomFields(),
+      updateCollection(),
+    ];
+    Promise.all(promises).then(() => {
       if (reactive) {
         updateCollectionReaction.current = reaction(
           () => cache.version,
-          updateCollection,
+          getCollection,
           { delay: 1000 },
         );
       }
@@ -262,7 +264,7 @@ export default function Elephant() {
   }
 
   function updateInventory() {
-    const listings = client.getInventory().then(((r) => client.all("listings", r, addToInventory)), setError);
+    const listings = client.getInventory(InventoryStatusesEnum.ALL).then(((r) => client.all("listings", r, addToInventory)), setError);
     const orders = client.listOrders().then(((r) => client.all<OrdersResponse, ElementType<OrdersResponse["orders"]>, "orders">("orders", r, addToOrders)), setError);
     return Promise.all([listings, orders]);
   }
@@ -277,6 +279,6 @@ export default function Elephant() {
   }
 
   function updateCollection() {
-    client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
+    return client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
   }
 }

@@ -1,6 +1,6 @@
 import { arraySetAdd, arraySetRemove, compare } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
-import { CurrenciesEnum } from "discojs";
+import { CurrenciesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
 import compact from "lodash/compact";
@@ -16,10 +16,10 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiMinus, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
-import { clearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
+import { useClearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
 import Details from "./details/Details";
 import DiscoTag from "./DiscoTag";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, Order, OrderItem } from "./Elephant";
@@ -41,7 +41,7 @@ import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
+import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -108,9 +108,9 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const { tasks, tasksId } = useTasks();
 
-    const mediaCondition = React.useCallback((notes) => mediaConditionId ? getNote(notes, mediaConditionId) : "", [mediaConditionId]);
-    const sleeveCondition = React.useCallback((notes) => sleeveConditionId ? autoFormat(getNote(notes, sleeveConditionId)) : "", [sleeveConditionId]);
-    const playCount = React.useCallback(({ folder_id, id: release_id, instance_id, notes, rating }: CollectionItem) => {
+    const mediaCondition = useMediaCondition();
+    const sleeveCondition = useSleeveCondition();
+    const playCount = React.useCallback(({ notes, rating }: CollectionItem) => {
         if (playsId) {
             const playsNote = noteById(notes, playsId)!;
             let plays = Number(pendingValue(playsNote.value?.split("\n", 2)[0] ?? "0"));
@@ -220,6 +220,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             </div>
                         </div>
                         <Observer render={() => {
+                            const inventoryListing = inventory.get(id);
                             const listings: ([Order, OrderItem] | [])[] = orders.values().map((order) => {
                                 const orderItem = order.items.find((q) => {
                                     const { release: { id: itemId } } = q;
@@ -243,16 +244,15 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             }));
                             let newFolderId: number | undefined;
                             if (!listingElements.length) {
-                                const listing = inventory.get(id);
-                                if (listing) {
-                                    const status = autoFormat(pendingValue(listing.status));
-                                    const listingLocation = folders?.find(({ name }) => name.match(listing.location))?.id;
+                                if (inventoryListing) {
+                                    const status = autoFormat(pendingValue(inventoryListing.status));
+                                    const listingLocation = folders?.find(({ name }) => name.match(inventoryListing.location))?.id;
                                     if (listingLocation && listingLocation !== item.folder_id) {
                                         newFolderId = listingLocation;
                                     }
                                     listingElements.push(<div className="d-flex d-flex-row" key={listingElements.length}>
-                                        <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
-                                            <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(listing.price)}>{status}</Badge>
+                                        <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${inventoryListing.id}`}>
+                                            <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(inventoryListing.price)}>{status}</Badge>
                                         </ExternalLink>
                                         </div>
                                     </div>);
@@ -438,7 +438,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return columns;
     }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
-    const sortByArtist = React.useCallback((ac, bc, columnId, desc) => {
+    const sortByArtist = React.useCallback((ac, bc, columnId) => {
         const aa = ac.values[columnId].artists;
         const ba = bc.values[columnId].artists;
         const artistComparisonResult = compare(aa, ba, {
@@ -598,7 +598,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         Header: "Tags",
         className: "col-md-2",
         accessor: (e: CollectionItem) => tagsFor(e),
-        Cell: ({ value, row: { original } }: CollectionCell<ReturnType<typeof tagsFor>>) => <Observer render={() => {
+        Cell: ({ value }: CollectionCell<ReturnType<typeof tagsFor>>) => <Observer render={() => {
             const badges = value.get().map((tag) => <span key={tag.kind + tag.tag}><Tag {...tag} /> </span>);
             // const add = availableTags && <Dropdown onSelect={(list) => addToList(original, list)}>
             //     <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
@@ -642,6 +642,21 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
 }
 
+export function useMediaCondition() {
+    const { mediaConditionId } = useNoteIds();
+    return React.useCallback((notes: CollectionNotes): ReleaseConditionsEnum | undefined => (mediaConditionId ? getNote(notes, mediaConditionId) as ReleaseConditionsEnum : undefined), [mediaConditionId]);
+}
+
+export function useSleeveCondition() {
+    const { sleeveConditionId } = useNoteIds();
+    return React.useCallback((notes: CollectionNotes): SleeveConditionsEnum | undefined => (sleeveConditionId ? getNote(notes, sleeveConditionId) as SleeveConditionsEnum : undefined), [sleeveConditionId]);
+}
+
+export function useNotes() {
+    const { notesId } = useNoteIds();
+    return React.useCallback((notes: CollectionNotes) => (notesId ? getNote(notes, notesId) : undefined), [notesId]);
+}
+
 function ConditionBadge({ condition, kind, item, noteId }: { condition: string | undefined, kind: "media" | "sleeve", item: CollectionItem, noteId: number }) {
     const { client, cache } = React.useContext(ElephantContext);
     const options = React.useMemo(() => (kind === "media") ? MEDIA_CONDITIONS : SLEEVE_CONDITIONS, [kind]);
@@ -657,7 +672,7 @@ function ConditionBadge({ condition, kind, item, noteId }: { condition: string |
     }}>
         <Dropdown.Toggle as={"div"} className={classConcat("badge", "bg-" + autoVariant(condition), "no-toggle")}>{autoFormat(condition) || <>&nbsp;</>}</Dropdown.Toggle>
         <Dropdown.Menu>
-            {options.map((cond) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
+            {options.map((cond: string) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
         </Dropdown.Menu>
     </Dropdown>;
 }
@@ -738,11 +753,11 @@ function FieldEditor<As = "text">(props: {
     } = props;
     const {
         client,
-        cache,
         setError,
     } = React.useContext(ElephantContext);
     const [floatingValue, setFloatingValue] = React.useState<string>();
     const [editing, setEditing] = React.useState<boolean>(false);
+    const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, notes } = row;
         const note = noteById(notes, noteId)!;
@@ -754,7 +769,7 @@ function FieldEditor<As = "text">(props: {
                 mutate(note, "value", floatingValue, promise).then(() => {
                     setFloatingValue(undefined);
                     setEditing(false);
-                    clearCacheForCollectionItem(cache!, row);
+                    clearCacheForCollectionItem(row);
                 }, (e) => {
                     setFloatingValue(undefined);
                     setEditing(false);
@@ -817,9 +832,9 @@ function TasksEditor(props: {
     } = props;
     const {
         client,
-        cache,
         setError,
     } = React.useContext(ElephantContext);
+    const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     const tasks = React.useMemo<Array<{ checked: boolean, task: string }>>(() => {
         if (!noteId) { return []; }
         let value = getNote(row.notes, noteId);
@@ -846,14 +861,14 @@ function TasksEditor(props: {
                 const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
                 mutate(note, "value", floatingValue, promise).then(() => {
                     // setFloatingValue(undefined);
-                    clearCacheForCollectionItem(cache!, row);
+                    clearCacheForCollectionItem(row);
                 }, (e) => {
                     // setFloatingValue(undefined);
                     setError(e);
                 });
             }
         });
-    }, [cache, client, folder_id, instance_id, note, noteId, notes, release_id, row, setError, tasks]);
+    }, [clearCacheForCollectionItem, client, folder_id, instance_id, note, noteId, notes, release_id, row, setError, tasks]);
     const availableTasks = KNOWN_TASKS.filter((t) => !tasks.find(({ task }) => task === t));
     return <Observer render={() => {
         const pendable = note.value ?? "";
@@ -883,6 +898,7 @@ function RatingEditor(props: {
         cache,
         setError,
     } = React.useContext(ElephantContext);
+    const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     if (!client || !cache) { return <></>; }
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, rating } = row;
@@ -890,7 +906,7 @@ function RatingEditor(props: {
         const commit = async (newValue: number) => {
             const promise = client.editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
             mutate(row, "rating", newValue, promise).then(() => {
-                clearCacheForCollectionItem(cache, row);
+                clearCacheForCollectionItem(row);
             }, (e) => {
                 setError(e);
             });

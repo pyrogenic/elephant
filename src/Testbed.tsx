@@ -10,6 +10,7 @@ import { COLLECTION_QUERY } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
 import ExternalLink from "./shared/ExternalLink";
 import { PromiseType } from "./shared/TypeConstraints";
+import usePromiseState from "./shared/usePromiseState";
 
 export default function Testbed() {
     const { client, cache } = React.useContext(ElephantContext);
@@ -25,10 +26,7 @@ export default function Testbed() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cache?.version]);
 
-    const [promise, setPromise] = React.useState<Promise<any>>();
-    React.useEffect(() => {
-        promise?.then(setPromise.bind(null, undefined), setPromise.bind(null, undefined));
-    }, []);
+    const [promise, setPromise] = usePromiseState();
     const [result, setResult] = React.useState<SearchResults>();
     const doSearch = React.useCallback(() => client?.searchRelease(search, {
         barcode,

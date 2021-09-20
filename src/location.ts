@@ -89,3 +89,18 @@ export function useFolderName() {
         return name ?? stale(FOLDER_NAMES_QUERY, "Unknown");
     }, [folders, stale]);
 }
+
+export function useFolderId() {
+    const { cache, folders } = React.useContext(ElephantContext);
+    const stale = React.useMemo(() => {
+        function s<T>(pattern: Parameters<IDiscogsCache["clear"]>[0], result: T) {
+            cache?.clear(pattern);
+            return result;
+        };
+        return s;
+    }, [cache]);
+    return React.useCallback((folder_name: string) => {
+        const id = folders?.find(({ name }) => folder_name.length < 2 ? name === folder_name : name.match(folder_name))?.id;
+        return id ?? stale(FOLDER_NAMES_QUERY, 0);
+    }, [folders, stale]);
+}

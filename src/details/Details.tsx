@@ -132,7 +132,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                             name="Release"
                             src={release.value}
                             collapsed={true} />}
-                    <RefreshButton remote={release} />
+                    <RefreshButton remote={release} size="sm" />
                 </Col>
                 <Col xs={4}>
                     {master?.status === "ready" && (
@@ -141,7 +141,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                                 name="Master"
                                 src={master.value}
                                 collapsed={true} />)}
-                    <RefreshButton remote={master} />
+                    <RefreshButton remote={master} size="sm" />
                 </Col>
             </Row>;
 
