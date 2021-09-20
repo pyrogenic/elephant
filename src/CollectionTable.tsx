@@ -310,7 +310,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     const source = autoFormat(getNote(notes, sourceId));
                     const orderNumber = autoFormat(getNote(notes, orderNumberId));
                     const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
-                    const price = cache && client && <div className="flex flex-row d-inline-flex price">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
+                    const price = cache && client && <div className="flex flex-row d-inline-flex price t-small">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
                     let { uri, Icon } = orderUri(source as Source, orderNumber);
                     Icon = Icon ?? (() => <div><Badge bg="dark">{source}</Badge> {orderNumber}</div>);
                     if (uri) {

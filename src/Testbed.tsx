@@ -1,30 +1,23 @@
 import { Discojs } from "discojs";
-import sortBy from "lodash/sortBy";
 import React from "react";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import ReactJson from "react-json-view";
-import { COLLECTION_QUERY } from "./CacheControl";
 import ElephantContext from "./ElephantContext";
 import ExternalLink from "./shared/ExternalLink";
 import { PromiseType } from "./shared/TypeConstraints";
 import usePromiseState from "./shared/usePromiseState";
+import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
 
 export default function Testbed() {
-    const { client, cache } = React.useContext(ElephantContext);
+    const { client } = React.useContext(ElephantContext);
     const [search, setSearch] = React.useState("");
     const [barcode, setBarcode] = React.useState("");
     type SearchResults = PromiseType<ReturnType<Discojs["searchRelease"]>>;
 
-    const [cacheKey, setCacheKey] = React.useState<string>();
-    React.useMemo(() => {
-        cache?.keys(COLLECTION_QUERY).then((keys) => {
-            setCacheKey(sortBy(keys, (key) => Number(key.match(/page=(\d+)/)?.pop())).pop());
-        })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cache?.version]);
+    const getNewCollectionEntries = useGetNewCollectionEntries();
 
     const [promise, setPromise] = usePromiseState();
     const [result, setResult] = React.useState<SearchResults>();
@@ -43,7 +36,6 @@ export default function Testbed() {
                 disabled={promise !== undefined}
                 onClick={doSearch}
             >Go</Button>
-            <pre>{cacheKey}</pre>
             {result && result.results.map((release) => <Row>
                 <Col className="minimal-column">
                     <ExternalLink href={release.uri}>
@@ -65,7 +57,7 @@ export default function Testbed() {
                 <Col>
                     <Button
                         disabled={release.user_data.in_collection || promise !== undefined}
-                        onClick={() => setPromise(client?.addReleaseToFolder(release.id).then(() => cache?.clear({ url: cacheKey })))}
+                        onClick={() => setPromise(client?.addReleaseToFolder(release.id).then(getNewCollectionEntries))}
                     >Add to Collection</Button>
                 </Col>
             </Row>)}
@@ -73,3 +65,4 @@ export default function Testbed() {
         </Form>
     </>;
 }
+

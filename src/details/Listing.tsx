@@ -58,20 +58,14 @@ export default function Listing({ item }: { item: CollectionItem }) {
     const createListingOptions: ListingOptions = {
         condition: condition,
         sleeveCondition: sleeveCondition,
-        price: 10,
+        price: suggestions?.[condition]?.value ?? 1,
         releaseId: item.id,
         status: ListingStatusesEnum.DRAFT,
-        comments: compact([getNotes(item.notes), SHIPS_IN_NOTE]).join(" "),
+        comments: compact([getNotes(item.notes), ...item.basic_information.formats.map((f) => SHIPS_IN_NOTE[f.name as keyof typeof SHIPS_IN_NOTE])]).join(" "),
     };
+
     const createListingSection = listings.length === 0 && <Row><Col>
         <pre>{JSON.stringify(createListingOptions, null, 2)}</pre>
-        <Button
-            className="me-2"
-            disabled={promise !== undefined}
-            onClick={getPriceSuggestions}
-        >
-            Get Price Suggestions
-        </Button>
         <Button
             className="me-2"
             disabled={promise !== undefined}
@@ -79,6 +73,13 @@ export default function Listing({ item }: { item: CollectionItem }) {
         >
             List for Sale
         </Button>
+        {!suggestions && <Button
+            className="me-2"
+            disabled={promise !== undefined}
+            onClick={getPriceSuggestions}
+        >
+            Get Price Suggestions
+        </Button>}
     </Col></Row>;
     const viewListingSection = listings.length !== 0 && <Row>
         <Col>

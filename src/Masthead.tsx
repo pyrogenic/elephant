@@ -25,6 +25,7 @@ import SearchBox from "./shared/SearchBox";
 import { statRoutePaths } from "./StatsRoute";
 import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
+import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -119,7 +120,9 @@ export default function Masthead({
 }) {
     const formSpacing = "me-2";
 
-    const { lpdb } = React.useContext(ElephantContext);
+    const { cache, lpdb } = React.useContext(ElephantContext);
+
+    const getNewCollectionEntries = useGetNewCollectionEntries();
 
     type AllParams = {
         artistId?: string;
@@ -269,6 +272,11 @@ export default function Masthead({
             <Dropdown.Toggle as={OptionsMenuIcon} />
 
             <Dropdown.Menu flip={true}>
+                <Dropdown.Item
+                    onClick={getNewCollectionEntries}>
+                    Update
+                </Dropdown.Item>
+                <Dropdown.Divider />
                 <Dropdown.ItemText>
                     <Check
                         className={formSpacing}

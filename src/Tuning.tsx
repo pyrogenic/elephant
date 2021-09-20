@@ -250,11 +250,11 @@ export function formats(value: Formats) {
 const novelFormats = computed(() => TUNING_TRACKER.formats.filter((k) => !(k in FORMATS)));
 const novelRoles = computed(() => TUNING_TRACKER.roles.filter((k) => !(k in ROLES)));
 
-export const SHIPS_IN_NOTE = "Play graded based on a complete play through. Ships in archival inner / PPL outer.";
+export const SHIPS_IN_NOTE = { "Vinyl": "Play graded based on a complete play through. Ships in archival inner / PPL outer.", "CD": "Verified no-error playthrough." };
 
 const IDIOMS = [
     "№",
-    SHIPS_IN_NOTE,
+    ...Object.values(SHIPS_IN_NOTE),
 ];
 
 function Tuning() {

@@ -13,6 +13,10 @@ img.cover {
     background-color: black;
 }
 
+.f-small, .t-small {
+    font-size: small !important;
+}
+
 table {
     tbody tr {
         height: 6.8vh;
@@ -20,7 +24,7 @@ table {
     .hover-lined {
         margin-top: inherit !important;
         font-size: small !important;
-        min-height: 2rem;
+        min-height: 1rem;
 
         padding: 0;
         border-radius: 0;
