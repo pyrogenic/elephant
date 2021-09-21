@@ -2,8 +2,9 @@ import { Discojs } from "discojs";
 import React from "react";
 import LPDB from "./LPDB";
 import OrderedMap from "./OrderedMap";
-import { Collection, FieldsById, FieldsByName, Folders, Inventory, Lists, Orders } from "./Elephant";
+import { Collection, FieldsById, FieldsByName, Inventory, Lists, Orders } from "./Elephant";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
+import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 
 export interface IElephantContext {
     lpdb?: LPDB;
@@ -12,7 +13,7 @@ export interface IElephantContext {
     collection: Collection;
     fieldsById?: FieldsById;
     fieldsByName: FieldsByName;
-    folders?: Folders;
+    folders?: DiscogsFolders;
     orders: Orders;
     inventory: Inventory;
     lists: Lists;

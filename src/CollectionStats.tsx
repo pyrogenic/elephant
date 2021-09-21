@@ -2,7 +2,6 @@ import { CurrenciesEnum } from "discojs";
 import compact from "lodash/compact";
 import map from "lodash/map";
 import orderBy from "lodash/orderBy";
-import sortBy from "lodash/sortBy";
 import sum from "lodash/sum";
 import React from "react";
 import Chart from "react-google-charts";

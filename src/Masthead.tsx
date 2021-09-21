@@ -120,7 +120,7 @@ export default function Masthead({
 }) {
     const formSpacing = "me-2";
 
-    const { cache, lpdb } = React.useContext(ElephantContext);
+    const { lpdb } = React.useContext(ElephantContext);
 
     const getNewCollectionEntries = useGetNewCollectionEntries();
 

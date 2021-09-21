@@ -1,5 +1,5 @@
 import classConcat from "@pyrogenic/perl/lib/classConcat";
-import { Discojs, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
+import { InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import { cloneDeep, compact } from "lodash";
 import { action, computed, observable, reaction } from "mobx";
 import { Observer } from "mobx-react";
@@ -11,6 +11,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
+import yaml from "yaml";
 import autoFormat from "../autoFormat";
 import { INVENTORY_QUERY } from "../CacheControl";
 import { useClearCacheForCollectionItem } from "../collectionItemCache";
@@ -21,15 +22,9 @@ import ElephantContext from "../ElephantContext";
 import { parseLocation, useFolderName } from "../location";
 import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
-import { PromiseType } from "../shared/TypeConstraints";
 import usePromiseState from "../shared/usePromiseState";
-import { autoVariant, getNote, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
-import yaml from "yaml";
-import ReactJson from "react-json-view";
-
-type ListingOptions = Parameters<Discojs["createListing"]>[0];
-type PriceSuggestions = PromiseType<ReturnType<Discojs["getPriceSuggestions"]>>;
-type RatingOptions = Parameters<Discojs["editReleaseInstanceRating"]>[3];
+import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
+import { PriceSuggestions, ListingOptions } from "../DiscogsTypeDefinitions";
 
 export default function Listing({ item }: { item: CollectionItem }) {
     const { client, lpdb } = React.useContext(ElephantContext);

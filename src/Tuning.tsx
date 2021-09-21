@@ -1,22 +1,21 @@
-import { uniq, flattenDeep, compact } from "lodash";
-import { observable, runInAction, computed, action } from "mobx";
-import { Observer, observer } from "mobx-react";
-import { Card } from "react-bootstrap";
 import { arraySetAddAll, ElementType } from "@pyrogenic/asset/lib";
-import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
-import { TagKind, TagProps } from "./Tag";
+import { ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
+import { compact, flattenDeep, uniq } from "lodash";
+import { action, computed, observable, runInAction } from "mobx";
+import { Observer } from "mobx-react";
+import React from "react";
+import { Card } from "react-bootstrap";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import autoFormat from "./autoFormat";
-import { Variant } from "./shared/Shared";
-import React from "react";
+import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
 import ElephantContext from "./ElephantContext";
-import LPDB from "./LPDB";
-import { DeepPendable } from "./shared/Pendable";
 import { parseLocation } from "./location";
-import { FiCircle } from "react-icons/fi";
-import { Content } from "./shared/resolve";
+import LPDB from "./LPDB";
 import Circled from "./shared/Circled";
-import { ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
+import { DeepPendable } from "./shared/Pendable";
+import { Content } from "./shared/resolve";
+import { Variant } from "./shared/Shared";
+import { TagKind, TagProps } from "./Tag";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",

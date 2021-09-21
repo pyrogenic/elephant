@@ -53,7 +53,7 @@ export default function useRoon(config: RoonWebSocketConfig) {
 
         console.log(roon);
         return roon;
-    }, [config]);
+    }, [config, roonId]);
 
     return activeCore;
 }

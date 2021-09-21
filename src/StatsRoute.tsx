@@ -1,12 +1,7 @@
-import flatten from "lodash/flatten";
-import sortBy from "lodash/sortBy";
-import uniqBy from "lodash/uniqBy";
-import { computed } from "mobx";
-import { Observer, observer } from "mobx-react";
+import { observer } from "mobx-react";
 import React from "react";
 import * as Router from "react-router-dom";
 import CollectionStats from "./CollectionStats";
-import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 import RouterPaths from "./RouterPaths";
 

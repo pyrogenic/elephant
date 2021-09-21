@@ -9,6 +9,7 @@ import CollectionStats from "./CollectionStats";
 import CollectionTable from "./CollectionTable";
 import ElephantContext from "./ElephantContext";
 import RouterPaths from "./RouterPaths";
+import Disclosure from "./shared/Disclosure";
 import { resolveToString } from "./shared/resolve";
 import Tag from "./Tag";
 import { useTagsFor } from "./Tuning";
@@ -32,7 +33,9 @@ const TagPanel = () => {
         const items = collectionSubset.get();
         return <>
             <h2>{tagName}</h2>
-            {/* <CollectionStats items={items} /> */}
+            <Disclosure title="Stats">
+                <CollectionStats items={items} />
+            </Disclosure>
             <CollectionTable collectionSubset={items} />
         </>;
     }} />;

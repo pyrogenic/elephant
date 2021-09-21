@@ -28,7 +28,7 @@ export default function Disclosure({ title, icons, children, content, disclosed,
     if (typeof title !== "string") {
         result = <div className="disclosure" onClick={disclose}>{resolve(title(icon))}</div>;
     } else {
-        result = <div className="disclosure" onClick={disclose}><div>{icon}</div><div>{resolve(result)}</div></div>;
+        result = <div className="disclosure" onClick={disclose}><div>{title}{icon}</div><div>{resolve(result)}</div></div>;
     }
     if (!disclosed) {
         return <>{result}</>;

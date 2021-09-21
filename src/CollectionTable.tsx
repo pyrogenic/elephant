@@ -19,7 +19,7 @@ import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
-import { useClearCacheForCollectionItem, collectionItemCacheQuery } from "./collectionItemCache";
+import { collectionItemCacheQuery, useClearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./details/Details";
 import DiscoTag from "./DiscoTag";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, Order, OrderItem } from "./Elephant";
@@ -76,6 +76,16 @@ function applyInstruction(instruction: string, _src: any) {
 
 const ARTIST_COLUMN_TITLE = "Release";
 
+function isVinyl(item: CollectionItem): boolean {
+    return item.basic_information.formats.findIndex(({ name }) => name === "Vinyl") >= 0;
+}
+
+function isCD(item: CollectionItem): boolean {
+    if (isVinyl(item)) {
+        return false;
+    }
+    return item.basic_information.formats.findIndex(({ name }) => name === "CD") >= 0;
+}
 
 export default function CollectionTable({ tableSearch, collectionSubset }: {
     tableSearch?: TableSearch<CollectionItem>,
@@ -130,8 +140,6 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     }, [mediaCondition, playsId]);
 
     const tagsFor = useTagsFor();
-
-    const isCD = React.useCallback((item) => tagsFor(item).get().find(({ tag }) => tag === "CD") !== undefined, [tagsFor]);
 
     const sourceMnemonicFor = React.useCallback((item: CollectionItem): undefined | ["literal", string] => {
         if (!sourceId || !orderNumberId) {
@@ -370,7 +378,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             } as BootstrapTableColumn<CollectionItem>,
             [KnownFieldTitle.plays]];
         }
-    }, [client, isCD, mediaCondition, playsId, sortByPlays]);
+    }, [client, mediaCondition, playsId, sortByPlays]);
 
     const notesColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && notesId) {
@@ -501,7 +509,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }) => tag)}
         </>,
         sortType: autoSortBy("Type"),
-    }), [autoSortBy, isCD]);
+    }), [autoSortBy]);
 
     const labelColumn = React.useMemo<BootstrapTableColumn<CollectionItem>>(() => ({
         Header: "Label",

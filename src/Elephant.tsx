@@ -1,5 +1,5 @@
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
-import { Discojs, InventorySortEnum, InventoryStatusesEnum } from "discojs";
+import { Discojs, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
 import { action, reaction, runInAction } from "mobx";
@@ -14,6 +14,7 @@ import { ArtistMode } from "./ArtistRoute";
 import AuthRoute from "./AuthRoute";
 import CollectionTable from "./CollectionTable";
 import { DataIndex } from "./DataRoute";
+import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
@@ -33,7 +34,6 @@ import Tuning from "./Tuning";
 // type Identity = PromiseType<ReturnType<Discojs["getIdentity"]>>;
 
 type FieldsResponse = PromiseType<ReturnType<Discojs["listCustomFields"]>>;
-export type Folders = PromiseType<ReturnType<Discojs["listFolders"]>>["folders"];
 type DiscogsLists = PromiseType<ReturnType<Discojs["getLists"]>>;
 
 type Folder = PromiseType<ReturnType<Discojs["listItemsInFolder"]>>;
@@ -105,7 +105,7 @@ export default function Elephant() {
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
   const [error, setError] = React.useState<any>();
   // const [identity, setIdentity] = React.useState<Identity>();
-  const [folders, setFolders] = React.useState<Folders>();
+  const [folders, setFolders] = React.useState<DiscogsFolders>();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const orders = React.useMemo<Orders>(() => new OrderedMap(), [client]);
   const [fieldsById, setFieldsById] = React.useState<FieldsById>();

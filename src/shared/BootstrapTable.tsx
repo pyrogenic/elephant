@@ -279,17 +279,20 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 {compact(flatten(page.map((plainRow) => {
                     const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
-                    const onClick: MouseEventHandler = (e) => {
-                        const target: Element = e.target as Element;
-                        // const currentTarget: Element = e.currentTarget as Element;
-                        const targetRoll = target.attributes.getNamedItem("role")?.value;
-                        const targetClassNames = target.classList;
-                        // const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
-                        // console.log({ targetRoll, currentTargetRoll, target, currentTarget });
-                        if (targetRoll === "cell" || targetRoll === "row" || targetClassNames.contains("expand")) {
-                            row.toggleRowExpanded();
-                        }
-                    };
+                    let onClick: MouseEventHandler | undefined;
+                    if (detail) {
+                        onClick = (e) => {
+                            const target: Element = e.target as Element;
+                            // const currentTarget: Element = e.currentTarget as Element;
+                            const targetRoll = target.attributes.getNamedItem("role")?.value;
+                            const targetClassNames = target.classList;
+                            // const currentTargetRoll = currentTarget.attributes.getNamedItem("role")?.value;
+                            // console.log({ targetRoll, currentTargetRoll, target, currentTarget });
+                            if (targetRoll === "cell" || targetRoll === "row" || targetClassNames.contains("expand")) {
+                                row.toggleRowExpanded();
+                            }
+                        };
+                    }
                     const rowProps = row.getRowProps();
                     return [
                         <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original), searchAndFilter?.goto === row.original && "flash")} onClick={onClick}>
@@ -304,10 +307,10 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     column that fills the entire length of the table.
                   */
                         row.isExpanded &&
-                            <tr key={rowProps.key + "-detail"}>
-                                <td colSpan={visibleColumns.length}>
-                                    {resolve(detail?.(row.original))}
-                                </td>
+                        <tr key={rowProps.key + "-detail"} className="detail-row">
+                            <td colSpan={visibleColumns.length}>
+                                {resolve(detail?.(row.original))}
+                            </td>
                         </tr>,
                     ];
                 })))}

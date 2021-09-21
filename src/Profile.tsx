@@ -13,9 +13,9 @@ import { Remote } from "./Remote";
 import RefreshButton from "./shared/RefreshButton";
 import { PromiseType } from "./shared/TypeConstraints";
 
-function yes(...args: any): boolean {
-    return true;
-}
+// function yes(...args: any): boolean {
+//     return true;
+// }
 
 type DiscogsProfile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
