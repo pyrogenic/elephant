@@ -3,6 +3,7 @@ import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
+import noop from "lodash/noop";
 import compact from "lodash/compact";
 import kebabCase from "lodash/kebabCase";
 import omit from "lodash/omit";
@@ -215,16 +216,14 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 Header: "Cond.",
                 className: "centered-column",
                 accessor(item) {
-                    const { id, notes } = item;
-                    const media = mediaCondition(notes);
-                    const sleeve = sleeveCondition(notes);
+                    const { id } = item;
                     return <>
                         <div className="d-flex d-flex-row">
                             <div className="grade grade-media">
-                                <ConditionBadge condition={media} kind="media" item={item} noteId={mediaConditionId} />
+                                <ConditionBadge kind="media" item={item} />
                             </div>
                             <div className="grade grade-sleeve">
-                                <ConditionBadge condition={sleeve} kind="sleeve" item={item} noteId={sleeveConditionId} />
+                                <ConditionBadge kind="sleeve" item={item} />
                             </div>
                         </div>
                         <Observer render={() => {
@@ -652,12 +651,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
 export function useMediaCondition() {
     const { mediaConditionId } = useNoteIds();
-    return React.useCallback((notes: CollectionNotes): ReleaseConditionsEnum | undefined => (mediaConditionId ? getNote(notes, mediaConditionId) as ReleaseConditionsEnum : undefined), [mediaConditionId]);
+    return React.useCallback((notes: CollectionNotes) => (mediaConditionId ? getNote(notes, mediaConditionId) as ReleaseConditionsEnum : undefined), [mediaConditionId]);
 }
 
 export function useSleeveCondition() {
     const { sleeveConditionId } = useNoteIds();
-    return React.useCallback((notes: CollectionNotes): SleeveConditionsEnum | undefined => (sleeveConditionId ? getNote(notes, sleeveConditionId) as SleeveConditionsEnum : undefined), [sleeveConditionId]);
+    return React.useCallback((notes: CollectionNotes) => (sleeveConditionId ? getNote(notes, sleeveConditionId) as SleeveConditionsEnum : undefined), [sleeveConditionId]);
 }
 
 export function useNotes() {
@@ -665,24 +664,35 @@ export function useNotes() {
     return React.useCallback((notes: CollectionNotes) => (notesId ? getNote(notes, notesId) : undefined), [notesId]);
 }
 
-function ConditionBadge({ condition, kind, item, noteId }: { condition: string | undefined, kind: "media" | "sleeve", item: CollectionItem, noteId: number }) {
+function ConditionBadge({ kind, item }: { kind: "media" | "sleeve", item: CollectionItem }) {
     const { client, cache } = React.useContext(ElephantContext);
+    const { mediaConditionId, sleeveConditionId } = useNoteIds();
     const options = React.useMemo(() => (kind === "media") ? MEDIA_CONDITIONS : SLEEVE_CONDITIONS, [kind]);
-    return <Dropdown onSelect={(newCondition) => {
-        if (!client || !newCondition) {
-            return;
-        }
-        const note = noteById(item.notes, noteId);
-        const promise = client!.editCustomFieldForInstance(item.folder_id, item.id, item.instance_id, noteId, newCondition);
-        mutate(note, "value", newCondition, promise).then(() => {
-            cache?.clear(collectionItemCacheQuery(item));
-        });
-    }}>
-        <Dropdown.Toggle as={"div"} className={classConcat("badge", "bg-" + autoVariant(condition), "no-toggle")}>{autoFormat(condition) || <>&nbsp;</>}</Dropdown.Toggle>
-        <Dropdown.Menu>
-            {options.map((cond: string) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
-        </Dropdown.Menu>
-    </Dropdown>;
+    const noteId = kind === "media" ? mediaConditionId : sleeveConditionId;
+    if (noteId === undefined) return null;
+    return <Observer>{() => {
+        let condition = getNote(item.notes, noteId);
+        const isPending = condition ? pending(condition) : false;
+        condition = condition ? pendingValue(condition) : condition;
+        const disabling = isPending ? {
+            onClick: noop,
+        } : {};
+        return <Dropdown onSelect={(newCondition) => {
+            if (!client || !newCondition) {
+                return;
+            }
+            const note = noteById(item.notes, noteId);
+            const promise = client!.editCustomFieldForInstance(item.folder_id, item.id, item.instance_id, noteId, newCondition);
+            mutate(note, "value", newCondition, promise).then(() => {
+                cache?.clear(collectionItemCacheQuery(item));
+            });
+        }}>
+            <Dropdown.Toggle as={"div"} className={classConcat("badge", "bg-" + autoVariant(condition), isPending && "disabled", "no-toggle")} {...disabling}>{autoFormat(condition) || <>&nbsp;</>}</Dropdown.Toggle>
+            <Dropdown.Menu>
+                {options.map((cond: string) => <Dropdown.Item key={cond} eventKey={cond} active={condition === cond}>{cond}</Dropdown.Item>)}
+            </Dropdown.Menu>
+        </Dropdown>;
+    }}</Observer>;
 }
 
 export type DiscogsPrice = InventoryItem["price"];

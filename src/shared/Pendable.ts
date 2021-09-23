@@ -31,7 +31,17 @@ type PendableContainer<T extends Primitive, K extends string | symbol | number> 
     [k in K]: Pendable<T>;
 };
 
-export async function mutate<T extends Primitive, K extends string | symbol | number, F>(parent: PendableContainer<T, K>, key: K, value: T, promise: Promise<F>): Promise<F> {
+async function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        console.log("waiting...");
+        setTimeout(() => {
+            console.log("done waiting");
+            resolve();
+        }, ms);
+    });
+}
+
+export function mutate<T extends Primitive, K extends string | symbol | number, F>(parent: PendableContainer<T, K>, key: K, value: T, promise: Promise<F>): Promise<F> {
     const placeholder = {
         value,
         [SENTINEL]: undefined,
