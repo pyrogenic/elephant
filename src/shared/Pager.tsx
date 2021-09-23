@@ -15,7 +15,9 @@ import {
     FiMoreHorizontal,
 } from "react-icons/fi";
 import KeyboardEventHandler from "react-keyboard-event-handler";
+import { last } from "@pyrogenic/asset/lib";
 import "./Pager.scss";
+import Dropdown from "react-bootstrap/Dropdown";
 
 const MAX_PAGES = 8;
 
@@ -74,6 +76,23 @@ export default function Pager({
                 break;
         };
     }, [nextPage, noNext, noPrev, prevPage]);
+    const spineInfo = React.useMemo(() => {
+        const spines: ReturnType<SpineFactory>[] = [];
+        const sections: [page: number, label: string][] = [];
+        for (var i = 0; i < maxPage; ++i) {
+            const thisSpine = spine?.(i);
+            spines.push(thisSpine);
+            if (thisSpine) {
+                const [from, to] = thisSpine;
+                const label = from ?? to;
+                if (label && last(sections)?.[1] !== label) {
+                    sections.push([i, label]);
+                }
+            }
+        }
+        return { spines, sections };
+    }, [maxPage, spine]);
+    React.useEffect(() => console.log(spineInfo), [spineInfo]);
     return <Row className={classConcat("Pager", lastMove?.bad && "bad")}>
         {keyboardNavigation === "global" && <KeyboardEventHandler
             isExclusive={true}
@@ -106,18 +125,20 @@ export default function Pager({
                     </InputGroup.Text>}
                     {minShownPage < currentPage && range(minShownPage, currentPage).map((page: number) =>
                         <PageButton key={page} autoHide={page < minShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
-                    {currentPageSpine?.[0] && <InputGroup.Text>{currentPageSpine[0]}</InputGroup.Text>}
                 </>
-                <Form.Control
-                    key={currentPage + 1}
-                    className="spine"
-                    type="number"
-                    min={1}
-                    max={maxPage + 1}
-                    value={(currentPage + 1).toString()}
-                    onChange={({ target: { value } }) => gotoPage(clamp(Number(value) - 1, 0, maxPage))} />
+                <Dropdown onSelect={(eventKey) => gotoPage(Number(eventKey))}>
+                    <Dropdown.Toggle as={InputGroup.Text} className="spine no-toggle">
+                        {currentPageSpine?.[0] && currentPageSpine[0]}
+                        <span className="pad" />
+                        {(currentPage + 1).toString()}
+                        <span className="pad" />
+                        {currentPageSpine?.[1] && currentPageSpine[1]}
+                    </Dropdown.Toggle>
+                    {spineInfo.sections.length > 0 && <Dropdown.Menu>
+                        {spineInfo.sections.map(([newPage, label]) => <Dropdown.Item key={newPage} eventKey={newPage}>{label}</Dropdown.Item>)}
+                    </Dropdown.Menu>}
+                </Dropdown>
                 <>
-                    {currentPageSpine?.[1] && <InputGroup.Text>{currentPageSpine[1]}</InputGroup.Text>}
                     {currentPage < maxShownPage && range(currentPage + 1, maxShownPage + 1).map((page: number) =>
                         <PageButton key={page}  autoHide={page > maxShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
                     {maxShownPage < maxPage && <InputGroup.Text key={maxPage}>

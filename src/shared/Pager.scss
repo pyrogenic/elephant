@@ -21,9 +21,13 @@ $grid-breakpoints-xl: 1200px;
             padding-left: 2px;
             padding-right: 2px;
         }
-        &.form-control {
+        &.form-control, &.dropdown-toggle {
             min-width: 6rem;
             height: unset;
+            flex-grow: 1;
+            .pad {
+                flex-grow: 1;
+            }
         }
     }
     button.bad {
@@ -40,6 +44,7 @@ $grid-breakpoints-xl: 1200px;
         border-left: none;
     }
 }
+
 input.spine {
     border-left: none;
     border-right: none;
