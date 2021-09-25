@@ -181,23 +181,25 @@ export default function Graph({ generator }: {
     const [randomize, setRandomize] = useStorageState<boolean>("session", ["graph", "randomize"], false);
     const [spaceForLabels, setSpaceForLabels] = useStorageState<boolean>("session", ["graph", "spaceForLabels"], false);
     React.useEffect(() => {
-        const retval = {//: Partial<cytoscape.CoseLayoutOptions> = {
-            name: "cola",
+        const retval: Partial<cytoscape.CoseLayoutOptions> = {
+            name: "cose",
             animate,
             fit,
             // padding: 0,
             randomize,
-            // avoidOverlap: true,
-            // nodeOverlap: 20,
-            // nodeDimensionsIncludeLabels: spaceForLabels,
-            // idealEdgeLength({ category }: any) {
-            //     if (category === "musician") {
-            //         return 100;
-            //     }
-            //     return 50;
-            // },
-            // minTemp: 0.1,
-            //maxSimulationTime: 60 * 1000,
+            avoidOverlap: true,
+            nodeOverlap: 20,
+            nodeDimensionsIncludeLabels: spaceForLabels,
+            idealEdgeLength({ category }: any) {
+                if (category === "musician") {
+                    return 200;
+                }
+                return 400;
+            },
+            minTemp: 0.01,
+            nodeRepulsion({ category }) {
+                return 100;
+            },
             // stop() {
             //     if (fit) {
             //         cy.fit();

@@ -12,7 +12,7 @@ import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
 import LPDB from "./LPDB";
 import Circled from "./shared/Circled";
-import { DeepPendable } from "./shared/Pendable";
+import { DeepPendable, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import { TagKind, TagProps } from "./Tag";
@@ -350,7 +350,7 @@ export function useTasks(fieldsByName?: FieldsByName) {
         if (!tasksId) { return []; }
         const value = getNote(notes, tasksId);
         if (!value) { return []; }
-        return value.split("\n").sort();
+        return pendingValue(value).split("\n").sort();
     }, [tasksId]);
     return { tasks, tasksId };
 }
