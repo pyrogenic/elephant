@@ -6,6 +6,7 @@ import Tabs from "react-bootstrap/Tabs";
 import { useRouteMatch } from "react-router-dom";
 import Profile from "./Profile";
 import { useRoonId } from "./roon/useRoon";
+import Folders from "./Folders";
 import Testbed from "./Testbed";
 
 export default function AuthRoute({
@@ -49,6 +50,9 @@ export default function AuthRoute({
             </Tab>
             <Tab eventKey="profile" title="Profile">
                 <Profile />
+            </Tab>
+            <Tab eventKey="folders" title="Folders">
+                <Folders />
             </Tab>
             <Tab eventKey="contact" title="Contact" disabled>
                 Contact

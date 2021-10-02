@@ -21,6 +21,7 @@ export default function Testbed() {
 
     const [promise, setPromise] = usePromiseState();
     const [result, setResult] = React.useState<SearchResults>();
+    const [orders, setOrders] = React.useState<SearchResults>();
     const doSearch = React.useCallback(() => client?.searchRelease(search, {
         barcode,
     }).then(setResult, setResult), [barcode, client, search]);

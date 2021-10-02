@@ -8,12 +8,14 @@ import uniqueId from "lodash/uniqueId";
 
 export default function LazyTabs({
     className,
+    defaultTab,
     tabs,
 }: {
         className?: ClassNames,
+        defaultTab?: string,
     tabs: LazyContent[],
 }) {
-    const [currentTab, setCurrentTab] = React.useState<string>();
+    const [currentTab, setCurrentTab] = React.useState(defaultTab);
     const [titles, activeKey, content] = useLazyContent(tabs, currentTab, setCurrentTab);
     const id = React.useMemo(uniqueId, []);
     return <Tabs

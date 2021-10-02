@@ -1,7 +1,5 @@
 import { SetState } from "@pyrogenic/perl/lib/useStorageState";
-import compact from "lodash/compact";
 import flatten from "lodash/flatten";
-import sum from "lodash/sum";
 import { computed } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
@@ -13,18 +11,21 @@ import { FiMoreHorizontal } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import { artistRoutePath as artistRoutePaths } from "./ArtistRoute";
 import autoFormat from "./autoFormat";
+import { Profile } from "./DiscogsTypeDefinitions";
 import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, STATS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import { labelRoutePaths } from "./LabelRoute";
 import "./Masthead.scss";
 import Check from "./shared/Check";
+import ExternalLink from "./shared/ExternalLink";
 import Loader from "./shared/Loader";
 import LoadingIcon from "./shared/LoadingIcon";
 import SearchBox from "./shared/SearchBox";
 import { statRoutePaths } from "./StatsRoute";
 import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
+import useActivityMonitor from "./useActivityMonitor";
 import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
@@ -39,25 +40,7 @@ const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick
 });
 
 function SpeedTracker() {
-    const { cache } = React.useContext(ElephantContext);
-    const [{ rpm, db, waiting, errorPause }, setRpm] = React.useState<{
-        rpm?: number,
-        db?: number,
-        waiting?: number,
-        errorPause?: number,
-    }>({});
-    const update = React.useMemo(() => () => {
-        const newRpm = cache?.rpm;
-        const newDb = cache?.dbInflight.length;
-        const newWaiting = cache?.waiting.length;
-        const newErrorPause = cache?.errorPause;
-        setRpm({ rpm: newRpm, db: newDb, waiting: newWaiting, errorPause: newErrorPause });
-    }, [cache]);
-    React.useEffect(() => {
-        const t = setInterval(update, 500);
-        return clearInterval.bind(null, t);
-    }, [update]);
-    const total = sum(compact([db, waiting]));
+    const { rpm, db, waiting, errorPause, total } = useActivityMonitor();
     const pauseLabel = errorPause ? `${Math.ceil((errorPause - Date.now()) / 1000)}s` : undefined;
     const label = pauseLabel ?? total ? total : undefined;
     return <>
@@ -86,7 +69,7 @@ function SpeedTracker() {
 }
 
 export default function Masthead({
-    avatarUrl,
+    profile,
     collection,
     search,
     setSearch,
@@ -102,7 +85,7 @@ export default function Masthead({
     setVerbose,
     setFilter,
 }: {
-        avatarUrl?: string,
+        profile?: Profile,
         collection: Collection,
         search: string,
         setSearch: SetState<string>,
@@ -324,16 +307,20 @@ export default function Masthead({
                 </Dropdown.ItemText>
             </Dropdown.Menu>
         </Navbar.Text>
-        {avatarUrl &&
+        {profile &&
+            <ExternalLink href={profile.uri}>
+
             <span
             className="pe-5 me-2 justify-content-end"
                 style={{
-                    backgroundImage: `url(${avatarUrl})`,
+                    backgroundImage: `url(${profile.avatar_url})`,
                     backgroundSize: "contain",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "right",
                     padding: 0,
-                }}>&nbsp;</span>}
+                    }}>&nbsp;</span>
+            </ExternalLink>
+        }
         <Navbar.Toggle />
     </Navbar>;
 }

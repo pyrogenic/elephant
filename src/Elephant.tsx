@@ -156,7 +156,7 @@ export default function Elephant() {
         fluid={fluid}
         reactive={reactive}
         showRuler={showRuler}
-        avatarUrl={profile?.avatar_url}
+        profile={profile}
         search={search}
         setBypassCache={setBypassCache}
         setFilter={(newFilter) => {
@@ -218,9 +218,13 @@ export default function Elephant() {
     </Router.BrowserRouter>
   </ElephantContext.Provider>;
 
+  function updateFolders(): Promise<any> {
+    return client.listFolders().then(({ folders }) => setFolders(folders), setError);
+  }
+
   function getIdentity() {
     client.getProfile().then(setProfile, setError);
-    client.listFolders().then(({ folders }) => setFolders(folders), setError);
+    updateFolders();
     // client.getIdentity().then(setIdentity, setError);
   }
 
@@ -251,6 +255,7 @@ export default function Elephant() {
       updateLists(),
       updateCustomFields(),
       updateCollection(),
+      updateFolders(),
     ];
     Promise.all(promises).then(() => {
       if (reactive) {
