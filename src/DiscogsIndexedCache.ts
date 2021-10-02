@@ -160,7 +160,13 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     }
 
     private activeGets = new Map<string, Promise<any>>();
-
+    private priorityGets = new Map<string, Promise<any>>();
+    public highPriorityKey(key: string) {
+        if (key.match("per_page")) {
+            return true;
+        }
+        return false;
+    }
     public get = async <T>(factory: () => Promise<T>, ...props: Parameters<typeof fetch>) => {
         const method = props[1]?.method ?? "GET";
         const { cache, bypass, log } = this;
@@ -189,11 +195,18 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         if (this.log) console.log(`Starting new active request for ${key}`);
         const p = this.getInternal(factory, key, log, bypass, cache);
         this.activeGets.set(key, p);
+        if (this.highPriorityKey(key)) {
+            this.priorityGets.set(key, p);
+        }
         p.then(() => {
             if (this.log) console.log(`Active request completed for ${key}`);
             if (this.activeGets.get(key) === p) {
                 if (this.log) console.log(`Deleted cached promise: ${key}`);
                 this.activeGets.delete(key);
+            }
+            if (this.priorityGets.get(key) === p) {
+                if (this.log) console.log(`Deleted cached priority promise: ${key}`);
+                this.priorityGets.delete(key);
             }
         });
         return p;
@@ -216,6 +229,11 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     }
 
                     this.checkRate();
+                    while (this.priorityGets.size && !this.priorityGets.has(key)) {
+                        if (this.log) console.log(`Waiting for ${this.priorityGets.size} higher-priority gets: ${key}`);
+                        await Promise.all(this.priorityGets.values());
+                    }
+
                     if (this.pause === undefined) {
                         break;
                     }

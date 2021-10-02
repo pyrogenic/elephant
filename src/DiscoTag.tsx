@@ -11,18 +11,27 @@ import { Content } from "./shared/resolve";
 
 export default function DiscoTag({ className, onClick, prewrap, src, uri: discogsUrl }: { className?: ClassNames, onClick?: () => void, prewrap?: boolean, src: string, uri: string | false }) {
     const { lpdb } = React.useContext(ElephantContext);
-    if (!lpdb) { return null; }
     const result: JSX.Element[] = [];
     let li = false;
     let bold = 0;
     let italic = 0;
     let underline = 0;
     let url: string[] = [];
+    const mainRegex = React.useMemo(() => {
+        try {
+            return new RegExp("(?<=[.!:\\]?])\\s*[\\r\\n]\\n");
+        } catch {
+            return undefined;
+        }
+    }, []);
+    if (!lpdb || !mainRegex) {
+        return <>{src}</>;
+    }
     src.split(/-{4,}/).forEach((sect) => {
         if (result.length) {
             result.push(<hr key={result.length} />);
         }
-        sect.split(/(?<=[.!:\]?])\s*[\r\n]\n/).forEach((para) => {
+        sect.split(mainRegex).forEach((para) => {
             let matches: {
                 li?: string,
                 pre?: string,

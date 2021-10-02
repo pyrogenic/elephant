@@ -279,6 +279,8 @@ export default function Elephant() {
   }
 
   function updateCollection() {
-    return client.listItemsInFolder(0).then(((r) => client.all("releases", r, addToCollection)), setError);
+    return client.listItemsInFolder(0, undefined, {
+      perPage: 100,
+    }).then(((r) => client.all("releases", r, addToCollection)), setError);
   }
 }

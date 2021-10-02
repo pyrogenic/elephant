@@ -227,8 +227,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             </div>
                         </div>
                         <Observer render={() => {
-                            const inventoryListing = inventory.get(id);
-                            const listings: ([Order, OrderItem] | [])[] = orders.values().map((order) => {
+                            const listing = inventory.get(id);
+                            const ordersForItem: ([Order, OrderItem] | [])[] = orders.values().map((order) => {
                                 const orderItem = order.items.find((q) => {
                                     const { release: { id: itemId } } = q;
                                     return itemId === id;
@@ -236,7 +236,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                 return orderItem ? [order, orderItem] : [];
                             });
                             let numSold = 0;
-                            const listingElements = compact(listings.map(([order, orderItem], i) => {
+                            const orderOrListingElements = compact(ordersForItem.map(([order, orderItem], i) => {
                                 if (!order || !orderItem) { return undefined; }
                                 const status = autoFormat(order.status);
                                 if (status === "Sold") {
@@ -244,22 +244,22 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                 }
                                 return <div className="d-flex d-flex-row" key={i}>
                                     <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/order/${order.id}`}>
-                                        <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(orderItem.price)}>{status}</Badge>
+                                        <Badge as="div" bg="light" className={kebabCase(status)} title={`Sold for ${priceToString(orderItem.price)}`}>{status}</Badge>
                                     </ExternalLink>
                                     </div>
                                 </div>;
                             }));
                             let newFolderId: number | undefined;
-                            if (!listingElements.length) {
-                                if (inventoryListing) {
-                                    const status = autoFormat(pendingValue(inventoryListing.status));
-                                    const listingLocation = folders?.find(({ name }) => name.match(inventoryListing.location))?.id;
+                            if (!orderOrListingElements.length) {
+                                if (listing) {
+                                    const status = autoFormat(pendingValue(listing.status));
+                                    const listingLocation = folders?.find(({ name }) => name.match(listing.location))?.id;
                                     if (listingLocation && listingLocation !== item.folder_id) {
                                         newFolderId = listingLocation;
                                     }
-                                    listingElements.push(<div className="d-flex d-flex-row" key={listingElements.length}>
-                                        <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${inventoryListing.id}`}>
-                                            <Badge as="div" bg="light" className={kebabCase(status)} title={priceToString(inventoryListing.price)}>{status}</Badge>
+                                    orderOrListingElements.push(<div className="d-flex d-flex-row" key={orderOrListingElements.length}>
+                                        <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
+                                            <Badge as="div" bg="light" className={kebabCase(status)} title={`Listed for ${priceToString(listing.price)}`}>{status}</Badge>
                                         </ExternalLink>
                                         </div>
                                     </div>);
@@ -270,17 +270,17 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                     if (numSold > numInSoldFolder) {
                                         newFolderId = soldFolder;
                                     } else if (!inSoldFolder(item)) {
-                                        listingElements.pop();
+                                        orderOrListingElements.pop();
                                     }
                                 }
                             }
                             if (newFolderId) {
-                                listingElements.push(
+                                orderOrListingElements.push(
                                     <Button
                                         as={Badge}
                                         variant={"dark"}
                                         //bg={"warning"}
-                                        key={listingElements.length}
+                                        key={orderOrListingElements.length}
                                         size="sm"
                                         disabled={!client || !newFolderId}
                                         onClick={
@@ -299,7 +299,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                         <FiArrowRight />{parseLocation(folderName(newFolderId)).label}
                                     </Button>);
                             }
-                            return <>{listingElements}</>;
+                            return <>{orderOrListingElements}</>;
                         }} />
                     </>;
                 },

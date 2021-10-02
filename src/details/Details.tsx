@@ -29,7 +29,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const masterYear = lpdb?.masterDetail(item, "year", 0).get();
     const release = lpdb?.details(item);
     const master = lpdb?.masterForColectionItem(item);
-
+    // const listing = lpdb?.lis
     const cacheQuery = React.useMemo(() => collectionItemCacheQuery(item), [item]);
     const [cacheCount, setCacheCount] = React.useState(0);
     const effectCleanupSemaphore = React.useRef(true);
@@ -115,6 +115,20 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 <Col xs={4}>
                     <ReactJson
                         name="Collection Item"
+                        src={item}
+                        collapsed={true} />
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!cacheCount}
+                        onClick={() => cache?.clear(cacheQuery)}>
+                        {cacheCount ? <FiRefreshCw className="prepend-inline-icon" /> : false}
+                        Refresh
+                    </Button>
+                </Col>
+                <Col xs={4}>
+                    <ReactJson
+                        name="Listing"
                         src={item}
                         collapsed={true} />
                     <Button
