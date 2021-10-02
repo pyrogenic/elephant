@@ -207,6 +207,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
         </pre> : <ReactJson src={result} collapsed={true} />} */}
             <LazyTabs
                 className="drawer"
+                defaultTab="Listing"
                 tabs={[
                     {
                         title: "Artists",

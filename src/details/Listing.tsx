@@ -1,5 +1,5 @@
 import classConcat from "@pyrogenic/perl/lib/classConcat";
-import { InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
+import { CurrenciesEnum, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import { cloneDeep, compact } from "lodash";
 import { action, computed, observable, reaction } from "mobx";
 import { Observer } from "mobx-react";
@@ -19,12 +19,16 @@ import { priceToString, useMediaCondition, useNotes, useSleeveCondition } from "
 import DiscogsLinkback from "../DiscogsLinkback";
 import { CollectionItem, InventoryItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
-import { parseLocation, useFolderName } from "../location";
+import { parseLocation, useFolderId, useFolderName } from "../location";
 import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
 import usePromiseState from "../shared/usePromiseState";
 import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
 import { PriceSuggestions, ListingOptions } from "../DiscogsTypeDefinitions";
+import Check from "../shared/Check";
+import useBusy from "../useBusy";
+import useFolderSets from "../useFolderSets";
+import boxInfo from "../boxInfo";
 
 export default function Listing({ item }: { item: CollectionItem }) {
     const { client, lpdb } = React.useContext(ElephantContext);
@@ -41,6 +45,9 @@ export default function Listing({ item }: { item: CollectionItem }) {
     const [listings, setListings] = React.useState<InventoryItem[]>([]);
     React.useMemo(() => lpdb && reaction(() => lpdb.inventory.values().filter(({ release: { id } }) => id === item.id), setListings, { fireImmediately: true }), [item.id, lpdb]);
 
+    const { openListed } = useFolderSets();
+    const folderName = useFolderName();
+
     if (!lpdb) {
         return null;
     }
@@ -56,11 +63,20 @@ export default function Listing({ item }: { item: CollectionItem }) {
         price: suggestions?.[condition]?.value ?? 1,
         releaseId: item.id,
         status: ListingStatusesEnum.DRAFT,
+        location: boxInfo(folderName(item.folder_id))?.[0],
         comments: compact([getNotes(item.notes), ...item.basic_information.formats.map((f) => SHIPS_IN_NOTE[f.name as keyof typeof SHIPS_IN_NOTE])]).join(" "),
     };
 
+    const openListedFolderId = openListed?.id;
     const createListingSection = listings.length === 0 && <Row><Col>
         <pre>{JSON.stringify(createListingOptions, null, 2)}</pre>
+        {openListedFolderId && <Button
+            className="me-2"
+            disabled={promise !== undefined || item.folder_id === openListedFolderId}
+            onClick={() => setPromise(client?.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, openListedFolderId).then(action(() => item.folder_id = openListedFolderId)))}
+        >
+            Move to {boxInfo(openListed?.name)?.[0]} ({openListed?.count})
+        </Button>}
         <Button
             className="me-2"
             disabled={promise !== undefined}
@@ -112,6 +128,7 @@ function InventoryItemComponent({
 }) {
     const { client, folders, lpdb } = React.useContext(ElephantContext);
     const { notesId } = useNoteIds();
+    const busy = useBusy();
     const refreshInventory = useRefreshInventory();
     const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     const folderName = useFolderName();
@@ -148,6 +165,15 @@ function InventoryItemComponent({
                 <Form.Group>
                     <Form.Label>Price</Form.Label>
                     <InputGroup>
+                        {[0.5, 1, 2].map((c) => <Button
+                            key={c}
+                            variant="secondary"
+                            onClick={action(() => {
+                                item.price.value = c;
+                            })}
+                        >
+                            {priceToString({ value: c, currency: CurrenciesEnum.USD })}
+                        </Button>)}
                         <InputGroup.Text>$</InputGroup.Text>
                         <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
                             item.price.value = Number(value);
@@ -184,26 +210,54 @@ function InventoryItemComponent({
                     <Form.Label>Location</Form.Label>
                     <InputGroup>
                         {item.location !== suggestedLocation && <Button
+                            disabled={busy}
                             onClick={action(() => item.location = suggestedLocation)}
-                        >Use "{suggestedLocation}"</Button>}
-                        <Form.Control value={item.location} onChange={({ target: { value } }) => item.location = value} />
-                    <Dropdown onSelect={(newFolderIdStr) => {
-                        const newFolderId = Number(newFolderIdStr);
-                        if (!client || !newFolderIdStr || isNaN(newFolderId)) {
-                            return;
-                        }
-                            setListingLocationByFolderId(newFolderId);
-                    }}>
-                            <Dropdown.Toggle>{item.location?.length ? item.location : "Select a location…"}</Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={folder.name.includes(item.location)}>{folder.name}</Dropdown.Item>)}
-                        </Dropdown.Menu>
+                        >
+                            Use "{suggestedLocation}"
+                        </Button>}
+                        <Form.Control
+                            disabled={busy}
+                            value={item.location}
+                            onChange={({ target: { value } }) => item.location = value}
+                        />
+                        <Dropdown
+                            onSelect={(newFolderIdStr) => {
+                                const newFolderId = Number(newFolderIdStr);
+                                if (!client || !newFolderIdStr || isNaN(newFolderId)) {
+                                    return;
+                                }
+                                setListingLocationByFolderId(newFolderId);
+                            }}
+                        >
+                            <Dropdown.Toggle
+                                disabled={busy}
+                            >
+                                {item.location?.length ? item.location : "Select a location…"}
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={folder.name.includes(item.location)}>{folder.name}</Dropdown.Item>)}
+                            </Dropdown.Menu>
                         </Dropdown>
                     </InputGroup>
                 </Form.Group>
+
                 <Form.Group>
                     <Form.Label>Comments</Form.Label>
-                    <Form.Control as="textarea" value={htmlUnescape(item.comments)} onChange={action(({ target: { value } }) => item.comments = htmlEscape(value))} />
+                    <Form.Control
+                        disabled={busy}
+                        as="textarea"
+                        value={htmlUnescape(item.comments)}
+                        onChange={action(({ target: { value } }) => item.comments = htmlEscape(value))}
+                    />
+                </Form.Group>
+
+                <Form.Group>
+                    <Check
+                        disabled={busy}
+                        label="Allow Offers"
+                        value={item.allow_offers ?? (item.price?.value ?? 0) > 10}
+                        setValue={action((value) => item.allow_offers = value)}
+                    />
                 </Form.Group>
 
                 <Button
@@ -227,6 +281,7 @@ function InventoryItemComponent({
                             sleeveCondition: item.sleeve_condition,
                             comments: item.comments,
                             price: item.price.value!,
+                            allowOffers: item.allow_offers,
                             status: ListingStatusesEnum.DRAFT,
                         }).then(action(() => {
                             originalValue.location = item.location;
@@ -234,6 +289,7 @@ function InventoryItemComponent({
                             originalValue.sleeve_condition = item.sleeve_condition;
                             originalValue.comments = item.comments;
                             originalValue.price = item.price;
+                            originalValue.allow_offers = item.allow_offers;
                             originalValue.status = InventoryStatusesEnum.DRAFT;
                         })).then(refreshInventory);
                         setPromise(promise);
@@ -244,7 +300,7 @@ function InventoryItemComponent({
                 <Button
                     className="me-2"
                     variant="warning"
-                    disabled={promise !== undefined || originalValue.status !== InventoryStatusesEnum.DRAFT}
+                    disabled={promise !== undefined || (noChanges.get() && originalValue.status !== InventoryStatusesEnum.DRAFT)}
                     onClick={() => {
                         const promise = client!.editListing(item.id, {
                             releaseId: item.release.id,
@@ -253,6 +309,7 @@ function InventoryItemComponent({
                             sleeveCondition: item.sleeve_condition,
                             comments: item.comments,
                             price: item.price.value!,
+                            allowOffers: item.allow_offers,
                             status: ListingStatusesEnum.FOR_SALE,
                         }).then(action(() => {
                             originalValue.location = item.location;
@@ -260,6 +317,7 @@ function InventoryItemComponent({
                             originalValue.sleeve_condition = item.sleeve_condition;
                             originalValue.comments = item.comments;
                             originalValue.price = item.price;
+                            originalValue.allow_offers = item.allow_offers;
                             originalValue.status = InventoryStatusesEnum.FOR_SALE;
                         })).then(refreshInventory);
                         setPromise(promise);
@@ -334,11 +392,11 @@ function ConditionBadge({ kind, item }: { kind: "media" | "sleeve", item: Invent
 }
 
 function htmlEscape(value: string): string {
-    return value.replaceAll("&", "&amp;").replaceAll("\"", "&quot;");
+    return value.replaceAll("&", " and ").replaceAll("\"", "'");
 }
 
 function htmlUnescape(value: string): string {
-    return value.replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
+    return value;//.replaceAll("'", "\"").replaceAll(" and ", "&");
 }
 
 function injectedValues(src: string) {

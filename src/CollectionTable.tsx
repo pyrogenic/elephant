@@ -43,6 +43,8 @@ import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
+import { FOLDER_NAMES_QUERY } from "./CacheControl";
+import { number } from "mobx-state-tree/dist/internal";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -88,6 +90,8 @@ function isCD(item: CollectionItem): boolean {
     return item.basic_information.formats.findIndex(({ name }) => name === "CD") >= 0;
 }
 
+const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
 export default function CollectionTable({ tableSearch, collectionSubset }: {
     tableSearch?: TableSearch<CollectionItem>,
     collectionSubset?: ReturnType<Collection["values"]>,
@@ -121,24 +125,41 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
 
     const mediaCondition = useMediaCondition();
     const sleeveCondition = useSleeveCondition();
-    const playCount = React.useCallback(({ notes, rating }: CollectionItem) => {
-        if (playsId) {
-            const playsNote = noteById(notes, playsId)!;
-            let plays = Number(pendingValue(playsNote.value?.split("\n", 2)[0] ?? "0"));
-            if (!plays) {
-                if (rating) {
-                    plays = 1;
-                } else {
-                    const media = mediaCondition(notes);
-                    if (media) {
-                        plays = 1;
-                    }
-                }
+    const playsInfo = React.useCallback(({ notes, rating, date_added }: CollectionItem) => {
+        if (!playsId) return undefined;
+        const playsNote = noteById(notes, playsId)!;
+        let playsValue = pendingValue(playsNote.value ?? "0");
+        let [playsStr, ...history] = playsValue.split("\n")
+        for (var i = 0; i < history.length; ++i) {
+            const [y, m, d] = history[i].split(".");
+            if (m) {
+                history[i] = [y, Number(m) + 1, d].join("-");
             }
-            return plays;
         }
-        return undefined;
+        let plays = Number(playsStr);
+        if (plays) {
+            return { playsNote, plays, history };
+        }
+        const now = Date.now();
+        const dateAdded = new Date(date_added);
+        const dateAddedTime = dateAdded.getTime();
+        // console.log({ playsNote, playsStr, history, plays, now, date_added, dateAdded, dateNow, dateAddedTime, TEN_DAYS_MS });
+        if ((now - dateAddedTime) < TEN_DAYS_MS) {
+            return { playsNote, plays, history };
+        }
+        if (rating) {
+            plays = 1;
+        } else {
+            const media = mediaCondition(notes);
+            if (media) {
+                plays = 1;
+            }
+        }
+        return { playsNote, plays, history };
     }, [mediaCondition, playsId]);
+    const playCount = React.useCallback((item: CollectionItem) => {
+        return playsInfo(item)?.plays ?? 0;
+    }, [playsInfo]);
 
     const tagsFor = useTagsFor();
 
@@ -344,23 +365,17 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 accessor(row) {
                     return <Observer render={() => {
                         const { folder_id, id: release_id, instance_id, notes } = row;
-                        const playsNote = noteById(notes, playsId)!;
-                        let playsValue = pendingValue(playsNote.value ?? "0");
-                        let [playsStr, ...history] = playsValue.split("\n")
-                        let plays = Number(playsStr);
-                        const media = mediaCondition(notes);
-                        if (!plays && media) {
-                            plays = 1;
-                        }
-                        if (isCD(row)) {
+                        const info = playsInfo(row);
+                        if (isCD(row) || !info) {
                             return null;
                         }
-                        return <Spinner value={plays} min={0} onChange={change} title={history.join("\n")} />;
+                        const { plays, playsNote, history } = info;
+                        return <Spinner value={plays ?? 0} min={0} onChange={change} title={history.join("\n")} />;
 
                         function change(value: number) {
                             const newPlayCount = value.toString();
                             const now = new Date();
-                            const today = [now.getFullYear(), now.getMonth(), now.getDate()].join(".");
+                            const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join("-");
                             const segments = [newPlayCount, ...history];
                             if (value > plays) {
                                 arraySetAdd(segments, today);
@@ -588,13 +603,23 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 }
                 const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId).then(action(() => {
                     cache?.clear(collectionItemCacheQuery(item));
+                    cache?.clear(FOLDER_NAMES_QUERY);
                     item.folder_id = newFolderId;
                 }));
                 mutate(item, "folder_id", newFolderId, promise);
             }}>
                 <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row", "xno-toggle")} kind={type} tag={label} extra={extra} />
                 <Dropdown.Menu>
-                    {folders?.map((folder) => <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name}</Dropdown.Item>)}
+                    {folders?.map((folder, i) => {
+                        let menuItem = <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name} ({folder.count})</Dropdown.Item>;
+                        if (i && folders[i - 1].name.split("(")[0] !== folder.name.split("(")[0]) {
+                            menuItem = <>
+                                <Dropdown.Divider />
+                                {menuItem}
+                            </>;
+                        }
+                        return menuItem;
+                    })}
                 </Dropdown.Menu>
             </Dropdown>;
         },
