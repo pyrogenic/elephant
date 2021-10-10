@@ -1,10 +1,11 @@
+import { last } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import clamp from "lodash/clamp";
 import range from "lodash/range";
 import React from "react";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
+import Dropdown from "react-bootstrap/Dropdown";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import {
@@ -15,9 +16,7 @@ import {
     FiMoreHorizontal,
 } from "react-icons/fi";
 import KeyboardEventHandler from "react-keyboard-event-handler";
-import { last } from "@pyrogenic/asset/lib";
 import "./Pager.scss";
-import Dropdown from "react-bootstrap/Dropdown";
 
 const MAX_PAGES = 8;
 
@@ -92,7 +91,7 @@ export default function Pager({
         }
         return { spines, sections };
     }, [maxPage, spine]);
-    React.useEffect(() => console.log(spineInfo), [spineInfo]);
+    // React.useEffect(() => console.log(spineInfo), [spineInfo]);
     return <Row className={classConcat("Pager", lastMove?.bad && "bad")}>
         {keyboardNavigation === "global" && <KeyboardEventHandler
             isExclusive={true}

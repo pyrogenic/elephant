@@ -33,6 +33,10 @@ export default function autoFormat(str: string | undefined) {
             return "Listed";
         case "Shipped":
             return "Sold";
+        case "Invoice Sent":
+            return "Invoiced";
+        case "Payment Received":
+            return "Paid";
         case undefined:
             return "";
         default:

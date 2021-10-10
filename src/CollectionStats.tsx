@@ -16,6 +16,7 @@ type ReactGoogleChartProps = ConstructorParameters<typeof Chart>[0];
 type GoogleDataTableColumn = Exclude<ElementType<Exclude<ReactGoogleChartProps["columns"], undefined>>, string>;
 type GoogleDataTableColumnRoleType = Exclude<GoogleDataTableColumn["role"], undefined>;
 
+const SHIPPING_ARBITRAGE_ESTIMATE = 0.75;
 export default function CollectionStats({ items }: { items: CollectionItem[] }) {
     const { orders } = React.useContext(ElephantContext);
     const { priceId } = useNoteIds();
@@ -23,8 +24,12 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
     const income = React.useMemo(() => {
         let count = 0;
         let value = 0;
+        let txCount = 0;
         let valueByRelease = new Map<number, number>();
         orders.values().forEach((order) => {
+            if (order.status.includes("Cancelled")) return;
+            txCount++;
+            value += SHIPPING_ARBITRAGE_ESTIMATE;
             order.items.forEach((q) => {
                 const { release: { id: itemId }, price: { value: itemValue } } = q;
                 if (releaseIds.has(itemId)) {
@@ -38,6 +43,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         });
         return {
             count,
+            txCount,
             value: {
                 currency: CurrenciesEnum.USD,
                 value: value,
@@ -137,7 +143,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         <dt>Cost</dt>
         <dd>{priceToString({ currency: CurrenciesEnum.USD, value: purchasePrice })}</dd>
         <dt>Income</dt>
-        <dd>{priceToString(income.value)} ({income.count} sold)</dd>
+        <dd title={`includes about ${priceToString({ value: income.txCount * SHIPPING_ARBITRAGE_ESTIMATE, currency: CurrenciesEnum.USD })} in shipping fee arbitrage`}>{priceToString(income.value)} ({income.count} sold in {income.txCount} orders)</dd>
         <dt>Price Distribution</dt>
         <dd>
             <Chart

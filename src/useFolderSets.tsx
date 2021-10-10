@@ -81,6 +81,7 @@ export default function useFolderSets() {
             remain,
             openListed,
             openRemain,
+            service,
             unknown,
         };
     }, [folders]);

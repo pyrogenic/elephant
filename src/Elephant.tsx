@@ -14,8 +14,8 @@ import { ArtistMode } from "./ArtistRoute";
 import AuthRoute from "./AuthRoute";
 import CollectionTable from "./CollectionTable";
 import { DataIndex } from "./DataRoute";
-import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
+import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
 import { LabelMode } from "./LabelRoute";
@@ -120,6 +120,7 @@ export default function Elephant() {
 
   const { collection, inventory, lists } = lpdb;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getIdentity, [client]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(getCollection, [client]);
@@ -159,6 +160,7 @@ export default function Elephant() {
         profile={profile}
         search={search}
         setBypassCache={setBypassCache}
+        filter={filter?.filter}
         setFilter={(newFilter) => {
           if (newFilter !== filter.filter) {
             setFilter({ ...filter, filter: newFilter });

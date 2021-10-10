@@ -1,10 +1,12 @@
+import { arraySetAdd, ElementType } from "@pyrogenic/asset/lib";
 import { sync } from "@pyrogenic/asset/lib/sync";
 import { Discojs } from "discojs";
 import merge from "lodash/merge";
 import { action, autorun, computed, observable, runInAction, set } from "mobx";
 import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types } from "mobx-state-tree";
-import { arraySetAdd, ElementType } from "@pyrogenic/asset/lib";
+import { IObservableArray } from "mobx/dist/internal";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
+import { PriceSuggestions } from "./DiscogsTypeDefinitions";
 import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
 import { Artist, ArtistByIdReference, ArtistStore, ArtistStoreModel } from "./model/Artist";
 import { ReleaseByIdReference, ReleaseStore, ReleaseStoreModel } from "./model/Release";
@@ -79,6 +81,10 @@ const StoreModel = types.model("Store", {
     },
   };
 });
+/*
+    const [suggestions, setSuggestions] = React.useState<PriceSuggestions>();
+    const getPriceSuggestions = React.useMemo(() => () => setPromise(client?.getPriceSuggestions(item.id).then(setSuggestions)), [client, item.id, setPromise]);
+*/
 
 type IStore = {
   artistStore: ArtistStore,
@@ -89,6 +95,7 @@ export function getStore(node: IAnyStateTreeNode): IStore {
   return getRoot(node);
 }
 
+const NEW_OBSERVABLE_ARRAY = () => observable([]);
 export default class LPDB {
   public addToCollection = action((item: CollectionItem) => {
     const existing = this.collection.get(item.instance_id);
@@ -98,12 +105,12 @@ export default class LPDB {
     } else {
       this.collection.set(item.instance_id, item);
     }
-    const byId = this.entriesByReleaseId.getOrCreate(item.id, Array);
+    const byId = this.entriesByReleaseId.getOrCreate(item.id, NEW_OBSERVABLE_ARRAY);
     arraySetAdd(byId, item);
   });
 
   public readonly collection: Collection = new OrderedMap<number, CollectionItem>();
-  public readonly entriesByReleaseId = new OrderedMap<number, CollectionItem[]>();
+  public readonly entriesByReleaseId = new OrderedMap<number, IObservableArray<CollectionItem>>();
   public readonly releases: Releases = new OrderedMap<number, Remote<Release>>();
   public readonly labels: Labels = new OrderedMap<number, Remote<Label>>();
   public readonly masters: MasterReleases = new OrderedMap<number, Remote<MasterRelease>>();
@@ -111,7 +118,10 @@ export default class LPDB {
   public readonly inventory: Inventory = new OrderedMap<number, InventoryItem>();
   public readonly lists: Lists = new OrderedMap<number, List>();
   public readonly tags: string[] = observable([]);
+
   private readonly byTagCache: Map<string, number[]> = new Map();
+  private readonly inventoryByReleaseIdCache = new OrderedMap<number, InventoryItem | undefined>();
+  private readonly priceSuggestionsByReleaseIdCache = new OrderedMap<number, Remote<PriceSuggestions>>();
 
   public readonly store: Instance<typeof StoreModel>;
 
@@ -307,6 +317,47 @@ export default class LPDB {
 
   public artist(id: number, name?: string) {
     return this.artistStore.get(id, name);
+  }
+
+  public listing({ id }: CollectionItem) {
+    return this.inventoryByReleaseIdCache.getOrCreate(id, this.inventoryByReleaseId.bind(this, id));
+  }
+
+  private inventoryByReleaseId = (id: number) => {
+    const matching = this.inventory.values().filter(({ release: { id: rId } }) => id === rId);
+    switch (matching.length) {
+      case 0:
+        return undefined;
+      case 1:
+        return matching[0];
+      default:
+        console.warn(`Multiple listings for ${id}:`, ...matching);
+        return matching[0];
+    }
+  };
+
+  public suggestions({ id }: CollectionItem, refesh: boolean = false) {
+    return this.priceSuggestionsByReleaseIdCache.getOrRefresh(id, this.priceSuggestionsByReleaseId.bind(this, id), refesh);
+  }
+
+  private priceSuggestionsByReleaseId = (id: number, existingValue?: Remote<PriceSuggestions>) => {
+    if (existingValue === undefined) {
+      existingValue = { status: "pending" };
+    } else {
+      existingValue.status = "pending";
+    }
+    const existing = observable(existingValue);
+    const refresh = () => this.client.getPriceSuggestions(id).then(
+      action((value) => {
+        set(existing, { status: "ready", value, refresh });
+        return existing;
+      }),
+      action((error) => {
+        set(existing, { status: "error", error, refresh });
+        return existing;
+      }));
+    refresh();
+    return existing;
   }
 
   constructor(public readonly client: Discojs, public readonly cache: DiscogsIndexedCache) {

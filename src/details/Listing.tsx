@@ -1,7 +1,7 @@
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import { cloneDeep, compact } from "lodash";
-import { action, computed, observable, reaction } from "mobx";
+import { action, computed, observable, reaction, runInAction, toJS } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -12,23 +12,27 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import yaml from "yaml";
+import { arraySetAdd } from "@pyrogenic/asset/lib";
 import autoFormat from "../autoFormat";
-import { INVENTORY_QUERY } from "../CacheControl";
+import boxInfo from "../boxInfo";
 import { useClearCacheForCollectionItem } from "../collectionItemCache";
 import { priceToString, useMediaCondition, useNotes, useSleeveCondition } from "../CollectionTable";
 import DiscogsLinkback from "../DiscogsLinkback";
+import { ListingOptions, PriceSuggestions } from "../DiscogsTypeDefinitions";
 import { CollectionItem, InventoryItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
-import { parseLocation, useFolderId, useFolderName } from "../location";
+import { parseLocation, useFolderName } from "../location";
+import Check from "../shared/Check";
 import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
 import usePromiseState from "../shared/usePromiseState";
 import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
-import { PriceSuggestions, ListingOptions } from "../DiscogsTypeDefinitions";
-import Check from "../shared/Check";
 import useBusy from "../useBusy";
 import useFolderSets from "../useFolderSets";
-import boxInfo from "../boxInfo";
+import useRefreshInventory from "../useRefreshInventory";
+import OrderedMap from "../OrderedMap";
+
+const RENDER_LOG = new OrderedMap<string, { prices?: number[], comments?: string[] }>();
 
 export default function Listing({ item }: { item: CollectionItem }) {
     const { client, lpdb } = React.useContext(ElephantContext);
@@ -145,6 +149,12 @@ function InventoryItemComponent({
     if (!lpdb) return null;
     const release = lpdb.releases.get(collectionItem.id);
     const communityRating = release?.status === "ready" && release.value.community.rating;
+    const renderLog = RENDER_LOG.getOrCreate(originalValue.release.title, () => ({}));
+    runInAction(() => {
+        if (arraySetAdd(renderLog, "prices", item.price.value ?? 0) || arraySetAdd(renderLog, "comments", item.comments)) {
+            console.log(toJS(renderLog));
+        }
+    });
     return <>
         {error && <Alert variant="warning">{JSON.stringify(error)}</Alert>}
         <Observer>
@@ -165,15 +175,18 @@ function InventoryItemComponent({
                 <Form.Group>
                     <Form.Label>Price</Form.Label>
                     <InputGroup>
-                        {[0.5, 1, 2].map((c) => <Button
-                            key={c}
+                        <Observer>
+                            {() => <>
+                                {[0.5, 1, 2, ...(renderLog.prices ?? [])].map((c, i) => <Button
+                                    key={i}
                             variant="secondary"
                             onClick={action(() => {
                                 item.price.value = c;
                             })}
                         >
                             {priceToString({ value: c, currency: CurrenciesEnum.USD })}
-                        </Button>)}
+                                </Button>)}</>}
+                        </Observer>
                         <InputGroup.Text>$</InputGroup.Text>
                         <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
                             item.price.value = Number(value);
@@ -250,6 +263,12 @@ function InventoryItemComponent({
                         onChange={action(({ target: { value } }) => item.comments = htmlEscape(value))}
                     />
                 </Form.Group>
+                <Observer>
+                    {() => <>{renderLog.comments?.map((e, i) => <React.Fragment key={i}>
+                        <br />
+                        <Form.Text onClick={action(() => item.comments = htmlEscape(e))}>{e}</Form.Text>
+                    </React.Fragment>)}</>}
+                </Observer>
 
                 <Form.Group>
                     <Check
@@ -366,11 +385,6 @@ function InventoryItemComponent({
         }}
         </Observer>
     </>;
-}
-
-function useRefreshInventory() {
-    const { cache } = React.useContext(ElephantContext);
-    return React.useMemo(() => () => cache?.clear(INVENTORY_QUERY), [cache]);
 }
 
 function ConditionBadge({ kind, item }: { kind: "media" | "sleeve", item: InventoryItem }) {

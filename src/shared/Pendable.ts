@@ -31,7 +31,7 @@ type PendableContainer<T extends Primitive, K extends string | symbol | number> 
     [k in K]: Pendable<T>;
 };
 
-async function delay(ms: number): Promise<void> {
+export async function delay(ms: number): Promise<void> {
     return new Promise((resolve) => {
         console.log("waiting...");
         setTimeout(() => {

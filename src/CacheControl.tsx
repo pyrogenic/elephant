@@ -15,7 +15,8 @@ export const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
 export const PROFILE_QUERY = { url: /\/users\/[^/]+$/ };
 export const COLLECTION_QUERY = { url: /\/collection\/folders\/0\// };
 export const INVENTORY_QUERY = { url: /\/inventory\?/ };
-export const MARKETPLACE_QUERY = { url: /\/marketplace\// };
+export const MARKETPLACE_QUERY = { url: /\/marketplace\/(?!orders)/ };
+export const ORDERS_QUERY = { url: /\/marketplace\/orders/ };
 export const MASTERS_QUERY = { url: /discogs\.com\/masters\// };
 export const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
 export const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
@@ -26,6 +27,7 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
         collectionCount: number;
         inventoryCount: number;
         marketplaceCount: number;
+        ordersCount: number;
         folderNamesCount: number;
         mastersCount: number;
         releasesCount: number;
@@ -36,6 +38,7 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
         collectionCount: 0,
         inventoryCount: 0,
         marketplaceCount: 0,
+        ordersCount: 0,
         folderNamesCount: 0,
         mastersCount: 0,
         releasesCount: 0,
@@ -61,6 +64,7 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
     cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
     cache.count(INVENTORY_QUERY).then(action((result) => counts.inventoryCount = result));
     cache.count(MARKETPLACE_QUERY).then(action((result) => counts.marketplaceCount = result));
+    cache.count(ORDERS_QUERY).then(action((result) => counts.ordersCount = result));
     cache.count(FOLDER_NAMES_QUERY).then(action((result) => counts.folderNamesCount = result));
     cache.count(MASTERS_QUERY).then(action((result) => counts.mastersCount = result));
     cache.count(RELEASES_QUERY).then(action((result) => counts.releasesCount = result));
@@ -70,7 +74,16 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
 
     return <Observer render={() => {
         const {
-            collectionCount, inventoryCount, marketplaceCount, folderNamesCount, mastersCount, releasesCount, artistsCount, listsCount, allCount,
+            collectionCount,
+            inventoryCount,
+            ordersCount,
+            marketplaceCount,
+            folderNamesCount,
+            mastersCount,
+            releasesCount,
+            artistsCount,
+            listsCount,
+            allCount,
         } = counts;
         const allBadge = allCount ? <> <Badge bg={badgeVariant} text={badgeText}>{allCount}</Badge></> : null;
 
@@ -95,6 +108,13 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
                         >
                             Inventory
                             {inventoryCount ? <> <Badge bg={badgeVariant} text={badgeText}>{inventoryCount}</Badge></> : null}
+                        </Button>
+                        <Button
+                            variant={variant}
+                            onClick={cache.clear.bind(cache, ORDERS_QUERY)}
+                        >
+                            Orders
+                            {ordersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{ordersCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}

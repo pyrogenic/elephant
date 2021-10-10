@@ -1,4 +1,5 @@
-import { SetState } from "@pyrogenic/perl/lib/useStorageState";
+import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
+import { InventoryStatusesEnum } from "discojs";
 import flatten from "lodash/flatten";
 import { computed } from "mobx";
 import { Observer } from "mobx-react";
@@ -15,13 +16,17 @@ import { Profile } from "./DiscogsTypeDefinitions";
 import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, STATS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
+import isVinyl from "./isVinyl";
 import { labelRoutePaths } from "./LabelRoute";
+import { useFolderName } from "./location";
 import "./Masthead.scss";
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import Loader from "./shared/Loader";
 import LoadingIcon from "./shared/LoadingIcon";
+import { pendingValue } from "./shared/Pendable";
 import SearchBox from "./shared/SearchBox";
+import SelectBox from "./shared/SelectBox";
 import { statRoutePaths } from "./StatsRoute";
 import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
@@ -68,6 +73,9 @@ function SpeedTracker() {
     </>;
 }
 
+type CollectionFilter = (item: CollectionItem) => boolean | undefined;
+
+
 export default function Masthead({
     profile,
     collection,
@@ -83,6 +91,7 @@ export default function Masthead({
     setBypassCache,
     verbose,
     setVerbose,
+    filter,
     setFilter,
 }: {
         profile?: Profile,
@@ -99,13 +108,39 @@ export default function Masthead({
         setBypassCache: SetState<boolean>,
         verbose: boolean,
         setVerbose: SetState<boolean>,
-        setFilter(filter: ((item: CollectionItem) => boolean | undefined) | undefined): void,
+        filter: CollectionFilter | undefined,
+        setFilter(filter: CollectionFilter | undefined): void,
 }) {
     const formSpacing = "me-2";
 
     const { lpdb } = React.useContext(ElephantContext);
 
     const getNewCollectionEntries = useGetNewCollectionEntries();
+
+    const folderName = useFolderName();
+
+    const listedMissingLocation: CollectionFilter = React.useCallback((item: CollectionItem) => {
+        if (!isVinyl(item)) return false;
+        const listing = lpdb?.listing(item);
+        if (!listing) return false;
+        if (listing.status === InventoryStatusesEnum.SOLD) return false;
+        if (!listing.location.length) {
+            console.log(`Has no listing location: ${listing.release.title} @ ${listing.location}`, listing);
+            return true;
+        }
+        const inFolderName = folderName(item.folder_id);
+        if (inFolderName.indexOf(listing.location) >= 0) return false;
+        console.log(`Location '${inFolderName}' doesn't contain '${listing.location}': ${listing.release.title}`);
+        return true;
+    }, [folderName, lpdb]);
+
+    const [inventoryStatus, setInventoryStatus] = useStorageState<InventoryStatusesEnum>("session", ["Masthead", "inventoryStatus"], InventoryStatusesEnum.ALL);
+    const listed: CollectionFilter = React.useCallback((item: CollectionItem) => {
+        const listing = lpdb?.listing(item);
+        if (!listing) return false;
+        if (inventoryStatus === InventoryStatusesEnum.ALL) return true;
+        return pendingValue(listing.status) === inventoryStatus;
+    }, [inventoryStatus, lpdb]);
 
     type AllParams = {
         artistId?: string;
@@ -236,6 +271,15 @@ export default function Masthead({
                 search={search}
                 setSearch={setSearch}
             />
+            <Navbar.Text>
+                <Check label="Listed Missing Location" value={filter === listedMissingLocation} setValue={(on) => setFilter(on ? listedMissingLocation : undefined)} />
+            </Navbar.Text>
+            <Navbar.Text>
+                <Check label="Listed" value={filter === listed} setValue={(on) => setFilter(on ? listed : undefined)} />
+            </Navbar.Text>
+            <Navbar.Text>
+                <SelectBox<InventoryStatusesEnum> size={"sm"} variant="outline-secondary" options={Object.values(InventoryStatusesEnum) as InventoryStatusesEnum[]} value={inventoryStatus} setValue={setInventoryStatus} placeholder="status" />
+            </Navbar.Text>
             {/* <Observer render={() => {
             const items = computed(() => Array.from(collection.values()));
             if (!items.get() || !lpdb?.tags) {
@@ -309,8 +353,8 @@ export default function Masthead({
         </Navbar.Text>
         {profile &&
             <ExternalLink href={profile.uri}>
-
-            <span
+            <Image src={profile.avatar_url} height="48" />
+            {/* <span
             className="pe-5 me-2 justify-content-end"
                 style={{
                     backgroundImage: `url(${profile.avatar_url})`,
@@ -318,7 +362,7 @@ export default function Masthead({
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "right",
                     padding: 0,
-                    }}>&nbsp;</span>
+                    }}>&nbsp;</span> */}
             </ExternalLink>
         }
         <Navbar.Toggle />

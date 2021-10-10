@@ -3,9 +3,9 @@ import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
-import noop from "lodash/noop";
 import compact from "lodash/compact";
 import kebabCase from "lodash/kebabCase";
+import noop from "lodash/noop";
 import omit from "lodash/omit";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
@@ -17,15 +17,17 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
+import { FOLDER_NAMES_QUERY } from "./CacheControl";
 import { collectionItemCacheQuery, useClearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./details/Details";
 import DiscoTag from "./DiscoTag";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, Order, OrderItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
+import isCD from "./isCD";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
@@ -35,6 +37,7 @@ import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, Table
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
+import RefreshButton from "./shared/RefreshButton";
 import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import "./shared/Shared.scss";
@@ -43,8 +46,7 @@ import { ElementType } from "./shared/TypeConstraints";
 import Stars, { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
-import { FOLDER_NAMES_QUERY } from "./CacheControl";
-import { number } from "mobx-state-tree/dist/internal";
+import useRefreshInventory from "./useRefreshInventory";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -79,17 +81,6 @@ function applyInstruction(instruction: string, _src: any) {
 
 const ARTIST_COLUMN_TITLE = "Release";
 
-function isVinyl(item: CollectionItem): boolean {
-    return item.basic_information.formats.findIndex(({ name }) => name === "Vinyl") >= 0;
-}
-
-function isCD(item: CollectionItem): boolean {
-    if (isVinyl(item)) {
-        return false;
-    }
-    return item.basic_information.formats.findIndex(({ name }) => name === "CD") >= 0;
-}
-
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
 export default function CollectionTable({ tableSearch, collectionSubset }: {
@@ -117,6 +108,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         hash = undefined;
     }
 
+    const refreshInventory = useRefreshInventory();
     const folderName = useFolderName();
 
     const { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId } = useNoteIds();
@@ -271,12 +263,24 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                 </div>;
                             }));
                             let newFolderId: number | undefined;
+                            let newLocation: string | undefined;
+                            let arrowButtonTitle: string | undefined;
                             if (!orderOrListingElements.length) {
                                 if (listing) {
+                                    const listingLocation = pendingValue(listing.location);
                                     const status = autoFormat(pendingValue(listing.status));
-                                    const listingLocation = folders?.find(({ name }) => name.match(listing.location))?.id;
-                                    if (listingLocation && listingLocation !== item.folder_id) {
-                                        newFolderId = listingLocation;
+                                    const listingFolderId = folders?.find(({ name }) => name.match(listingLocation))?.id;
+                                    const expectedLocation = parseLocation(folderName(item.folder_id)).label;
+                                    if (listing.status === "Sold") {
+                                        if (item.folder_id !== soldFolder) {
+                                            newFolderId = soldFolder;
+                                        }
+                                    } else if (listingFolderId && listingFolderId !== item.folder_id) {
+                                        newFolderId = listingFolderId;
+                                    } else if (listingLocation !== expectedLocation) {
+                                        // a.k.a "suggestedLocation"
+                                        newLocation = expectedLocation;
+                                        arrowButtonTitle = `Listing location: ${listingLocation ?? "unset"}`;
                                     }
                                     orderOrListingElements.push(<div className="d-flex d-flex-row" key={orderOrListingElements.length}>
                                         <div className="listed"><ExternalLink href={`https://www.discogs.com/sell/item/${listing.id}`}>
@@ -304,6 +308,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                         key={orderOrListingElements.length}
                                         size="sm"
                                         disabled={!client || !newFolderId}
+                                        title={arrowButtonTitle}
                                         onClick={
                                             () => {
                                                 if (!client || !newFolderId) {
@@ -320,6 +325,51 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                         <FiArrowRight />{parseLocation(folderName(newFolderId)).label}
                                     </Button>);
                             }
+                            if (listing && newLocation) {
+                                orderOrListingElements.push(
+                                    <Button
+                                        as={Badge}
+                                        variant={"dark"}
+                                        key={orderOrListingElements.length}
+                                        size="sm"
+                                        disabled={!client || !newLocation}
+                                        title={arrowButtonTitle}
+                                        onClick={
+                                            () => {
+                                                if (!client || !newLocation) {
+                                                    return;
+                                                }
+                                                const promise = client.editListing(listing.id, {
+                                                    releaseId: listing.release.id,
+                                                    location: newLocation,
+                                                    condition: listing.condition,
+                                                    sleeveCondition: listing.sleeve_condition,
+                                                    comments: listing.comments,
+                                                    price: listing.price.value!,
+                                                    allowOffers: listing.allow_offers,
+                                                    status: listing.status as any,
+                                                }).then(refreshInventory);
+                                                mutate(listing, "location", newLocation, promise);
+                                            }
+                                        }
+                                    >
+                                        {newLocation}<FiArrowLeft />
+                                    </Button>);
+                            }
+                            if (!orderOrListingElements.length) {
+                                orderOrListingElements.push(<Observer key={orderOrListingElements.length} render={() => {
+                                    const condition = mediaCondition(item.notes);
+                                    if (!condition) return null;
+                                    const suggestions = lpdb?.suggestions(item);
+                                    if (suggestions?.status === "ready") {
+                                        const value = suggestions.value[condition];
+                                        if (value) {
+                                            return <div>{priceToString(value)}</div>;
+                                        }
+                                    }
+                                    return <RefreshButton remote={suggestions} />;
+                                }} />);
+                            }
                             return <>{orderOrListingElements}</>;
                         }} />
                     </>;
@@ -327,7 +377,21 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 ...{ sortType: sortByCondition } as any,
             }, [KnownFieldTitle.mediaCondition, KnownFieldTitle.sleeveCondition]];
         }
-    }, [mediaConditionId, sleeveConditionId, sortByCondition, mediaCondition, sleeveCondition, orders, inventory, folders, lpdb, inSoldFolder, soldFolder, client, folderName, cache]);
+    }, [mediaConditionId,
+        sleeveConditionId,
+        sortByCondition,
+        inventory,
+        orders,
+        folders,
+        folderName,
+        soldFolder,
+        lpdb,
+        inSoldFolder,
+        client,
+        cache,
+        refreshInventory,
+        mediaCondition,
+    ]);
 
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
@@ -364,7 +428,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 className: "centered-column",
                 accessor(row) {
                     return <Observer render={() => {
-                        const { folder_id, id: release_id, instance_id, notes } = row;
+                        const { folder_id, id: release_id, instance_id } = row;
                         const info = playsInfo(row);
                         if (isCD(row) || !info) {
                             return null;
@@ -392,7 +456,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
             } as BootstrapTableColumn<CollectionItem>,
             [KnownFieldTitle.plays]];
         }
-    }, [client, mediaCondition, playsId, sortByPlays]);
+    }, [client, playsId, playsInfo, sortByPlays]);
 
     const notesColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && notesId) {
@@ -424,11 +488,17 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         for (const list of patches(lists)) {
             const queries = list.definition.description.split("\n");
             list.items.forEach((item) => {
+                const entries = lpdb?.entriesForRelease(item.id);
+                if (entries?.length) {
                 const instruction = item.comment;
                 const applyThisInstruction = applyInstruction.bind(null, instruction);
-                const entries = lpdb?.entriesForRelease(item.id);
-                if (entries) for (const entry of entries) {
-                    runInAction(() => queries.forEach((query) => jsonpath.apply(entry, query, applyThisInstruction)));
+                    for (const entry of entries) {
+                        runInAction(() => {
+                            queries.forEach((query) => {
+                                jsonpath.apply(entry, query, applyThisInstruction);
+                            });
+                        });
+                    }
                 }
             });
         }

@@ -4,6 +4,7 @@ import { FiRefreshCw } from "react-icons/fi";
 import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import { Remote } from "../Remote";
 import { ButtonSize, ButtonVariant } from "./Shared";
+import Loader from "./Loader";
 
 type RemoteProps = {
     remote: Remote<any> | undefined;
@@ -29,6 +30,7 @@ export default function RefreshButton(props: RemoteProps | RefreshProps) {
     let variant = props.variant;
     let size = props.size;
     let className = classConcat(props.className);
+    let title: string | undefined;
     if ("refresh" in props) {
         const { promise, disabled: myDisabled, refresh: myRefresh } = props;
         disabled = myDisabled !== undefined ? myDisabled : promise !== undefined;
@@ -38,6 +40,10 @@ export default function RefreshButton(props: RemoteProps | RefreshProps) {
         refresh = remote?.status === "pending" ? undefined : remote?.refresh;
         variant = variant ?? remote?.status === "error" ? "warning" : undefined;
         disabled = refresh === undefined;
+        title = (remote && "error" in remote) ? JSON.stringify(remote.error) : undefined;
+        if (remote?.status === "pending") {
+            return <Loader />
+        }
     };
     return <Button
         className={className}
@@ -46,7 +52,9 @@ export default function RefreshButton(props: RemoteProps | RefreshProps) {
         disabled={disabled}
         onClick={() => {
             refresh?.();
-        }}>
+        }}
+        title={title}
+    >
         <FiRefreshCw className="prepend-inline-icon" />
         Refresh
     </Button>;
