@@ -1,10 +1,10 @@
 import { Discojs } from "discojs";
 import React from "react";
-import Col from "react-bootstrap/Col";
+import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
+import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import Button from "react-bootstrap/Button";
 import ReactJson from "react-json-view";
 import { PROFILE_QUERY } from "./CacheControl";
 import DiscoTag from "./DiscoTag";
@@ -19,6 +19,16 @@ import { PromiseType } from "./shared/TypeConstraints";
 
 type DiscogsProfile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
+// type FolderMetadata = {
+//     purpose?: "listed" | "remain" | "service",
+//     notes?: string,
+// };
+
+// type ProfileMetadata = {
+//     scratchpad?: string,
+//     folders?: { [id: number]: FolderMetadata },
+// };
+
 export default function Profile() {
     const { cache, client } = React.useContext(ElephantContext);
 
@@ -32,6 +42,8 @@ export default function Profile() {
 
     const [profile, setProfile] = React.useState<Remote<DiscogsProfile>>({ status: "pending" });
     const [editingProfile, setEditingProfile] = React.useState(false);
+
+
 
     React.useEffect(() => {
         console.log(`Promise: ${promise}`);

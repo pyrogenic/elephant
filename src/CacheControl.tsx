@@ -97,70 +97,70 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
                     <InputGroup className="mb-2">
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, COLLECTION_QUERY)}
+                            onClick={cache.clear.bind(cache, COLLECTION_QUERY, true)}
                         >
                             Collection
                             {collectionCount ? <> <Badge bg={badgeVariant} text={badgeText}>{collectionCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, INVENTORY_QUERY)}
+                            onClick={cache.clear.bind(cache, INVENTORY_QUERY, true)}
                         >
                             Inventory
                             {inventoryCount ? <> <Badge bg={badgeVariant} text={badgeText}>{inventoryCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, ORDERS_QUERY)}
+                            onClick={cache.clear.bind(cache, ORDERS_QUERY, true)}
                         >
                             Orders
                             {ordersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{ordersCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, MARKETPLACE_QUERY)}
+                            onClick={cache.clear.bind(cache, MARKETPLACE_QUERY, true)}
                         >
                             Marketplace
                             {marketplaceCount ? <> <Badge bg={badgeVariant} text={badgeText}>{marketplaceCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY)}
+                            onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY, true)}
                         >
                             Folders
                             {folderNamesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{folderNamesCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, MASTERS_QUERY)}
+                            onClick={cache.clear.bind(cache, MASTERS_QUERY, true)}
                         >
                             Masters
                             {mastersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{mastersCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, RELEASES_QUERY)}
+                            onClick={cache.clear.bind(cache, RELEASES_QUERY, true)}
                         >
                             Releases
                             {releasesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{releasesCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, ARTISTS_QUERY)}
+                            onClick={cache.clear.bind(cache, ARTISTS_QUERY, true)}
                         >
                             Artists
                             {artistsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{artistsCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, LISTS_QUERY)}
+                            onClick={cache.clear.bind(cache, LISTS_QUERY, true)}
                         >
                             Lists
                             {listsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{listsCount}</Badge></> : null}
                         </Button>
                         <Button
                             variant={variant}
-                            onClick={cache.clear.bind(cache, undefined)}
+                            onClick={cache.clear.bind(cache, undefined, true)}
                         >
                             All
                             {allBadge}

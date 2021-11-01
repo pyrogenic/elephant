@@ -87,13 +87,23 @@ tr.sold {
     opacity: 50%;
 }
 
-.grade {
-    box-sizing: content-box;
-    width: 1.8rem;
+.condition-row {
+    display: flex !important;
+    justify-content: center;
+    > {
+        width: 3.6rem;
+    }
     .badge {
         font-weight: 400;
         width: 100%;
     }
+    // line break padding
+    margin-block-end: .125em;
+}
+
+.grade {
+    //box-sizing: content-box;
+    width: 1.8rem;
 }
 
 svg.vinyl, svg.cd {
@@ -166,6 +176,10 @@ svg.vinyl {
 
 .price {
     max-width: 4rem;
+    font-variant-numeric: tabular-nums;
+    &.price-preview {
+        color:rgb(162, 162, 162);
+    }
 }
 
 .ListEntryBadge {
@@ -248,7 +262,10 @@ th.minimal-column {
 td.centered-column,
 th.centered-column {
     text-align: center;
-
+    justify-content: center;
+    div.d-flex {
+        justify-content: center;
+    }
     // https://stackoverflow.com/a/43615091/4607986
     width: 1px;
 }

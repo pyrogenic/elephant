@@ -73,6 +73,20 @@ svg.prepend-inline-icon {
     }
 }
 
+.form-label .comma-sep {
+    white-space: inherit;
+}
+
 .card-header {
     white-space: pre;
+}
+
+// Support outline-variant buttons rendered as badges
+.btn.badge {
+    color: inherit;
+}
+
+.placeholder  {
+    outline: 1px solid red;
+    min-height: 1rem;
 }

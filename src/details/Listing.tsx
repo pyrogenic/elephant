@@ -163,7 +163,7 @@ function InventoryItemComponent({
             return <Form>
                 <Form.Group>
                     <Form.Label>Condition</Form.Label>
-                    <div className="d-flex d-flex-row">
+                    <div className="condition-row justify-content-start">
                         <div className="grade grade-media">
                             <ConditionBadge item={item} kind="media" />
                         </div>

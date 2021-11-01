@@ -1,0 +1,11 @@
+@keyframes spin {
+    to {transform: rotate(360deg);}
+}
+
+.icon-spinner {
+    color: rgba(0, 0, 0, 0.5) !important;
+    >svg {
+        // margin-inline-end: 0.25rem;
+        animation: spin 2s linear infinite;
+    }
+}

@@ -16,8 +16,9 @@ export default function useGetNewCollectionEntries() {
         });
     }, [cacheVersion]);
     return React.useCallback(() => {
-        cache?.clear({ url: lastPageCacheKey });
-        cache?.clear(INVENTORY_QUERY);
-        cache?.clear(FOLDER_NAMES_QUERY);
+        Promise.all([
+            cache?.clear({ url: lastPageCacheKey }),
+            cache?.clear(INVENTORY_QUERY),
+        ]).then(() => cache?.clear(FOLDER_NAMES_QUERY, true));
     }, [cache, lastPageCacheKey]);
 }

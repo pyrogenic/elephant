@@ -31,6 +31,7 @@ import isCD from "./isCD";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
+import RatingEditor from "./RatingEditor";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
 import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
@@ -43,7 +44,7 @@ import { Variant } from "./shared/Shared";
 import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
-import Stars, { FILLED_STAR } from "./Stars";
+import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
 import useRefreshInventory from "./useRefreshInventory";
@@ -227,11 +228,11 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         if (mediaConditionId !== undefined && sleeveConditionId !== undefined) {
             return [{
                 Header: "Cond.",
-                className: "centered-column",
+                className: "minimal-column centered-column",
                 accessor(item) {
                     const { id } = item;
                     return <>
-                        <div className="d-flex d-flex-row">
+                        <div className="condition-row">
                             <div className="grade grade-media">
                                 <ConditionBadge kind="media" item={item} />
                             </div>
@@ -302,7 +303,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             if (newFolderId) {
                                 orderOrListingElements.push(
                                     <Button
-                                        as={Badge}
+                                        className="badge"
                                         variant={"dark"}
                                         //bg={"warning"}
                                         key={orderOrListingElements.length}
@@ -328,7 +329,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                             if (listing && newLocation) {
                                 orderOrListingElements.push(
                                     <Button
-                                        as={Badge}
+                                        className="badge"
                                         variant={"dark"}
                                         key={orderOrListingElements.length}
                                         size="sm"
@@ -357,18 +358,22 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                                     </Button>);
                             }
                             if (!orderOrListingElements.length) {
-                                orderOrListingElements.push(<Observer key={orderOrListingElements.length} render={() => {
+                                orderOrListingElements.push(<div className="condition-row"><Observer key={orderOrListingElements.length} render={() => {
                                     const condition = mediaCondition(item.notes);
                                     if (!condition) return null;
                                     const suggestions = lpdb?.suggestions(item);
                                     if (suggestions?.status === "ready") {
                                         const value = suggestions.value[condition];
                                         if (value) {
-                                            return <div>{priceToString(value)}</div>;
+                                            return <span className="price price-preview t-small">{priceToString(value)}</span>;
                                         }
                                     }
-                                    return <RefreshButton remote={suggestions} />;
-                                }} />);
+                                    return <RefreshButton
+                                        className="badge"
+                                        variant="outline-secondary"
+                                        remote={suggestions}
+                                    >$0.00</RefreshButton>;
+                                }} /></div>);
                             }
                             return <>{orderOrListingElements}</>;
                         }} />
@@ -402,7 +407,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     const source = autoFormat(getNote(notes, sourceId));
                     const orderNumber = autoFormat(getNote(notes, orderNumberId));
                     const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
-                    const price = cache && client && <div className="flex flex-row d-inline-flex price t-small">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
+                    const price = cache && client && <div className="d-flex d-flex-row d-inline-flex price t-small">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
                     let { uri, Icon } = orderUri(source as Source, orderNumber);
                     Icon = Icon ?? (() => <div><Badge bg="dark">{source}</Badge> {orderNumber}</div>);
                     if (uri) {
@@ -531,8 +536,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
     const sortByArtist = React.useCallback((ac, bc, columnId) => {
-        const aa = ac.values[columnId].artists;
-        const ba = bc.values[columnId].artists;
+        const collectionItemOne: DiscogsCollectionItem = ac.original;
+        const collectionItemTwo: DiscogsCollectionItem = bc.original;
+        const basicInfoOne = collectionItemOne.basic_information;
+        const basicInfoTwo = collectionItemTwo.basic_information;
+        const aa = basicInfoOne.artists;
+        const ba = basicInfoTwo.artists;
         const artistComparisonResult = compare(aa, ba, {
             toString: ({ name }: Artist) => name,
             library: true,
@@ -540,8 +549,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         if (artistComparisonResult) {
             return artistComparisonResult;
         }
-        const aTitle = ac.original.basic_information.title;
-        const bTitle = bc.original.basic_information.title;
+        const aTitle = basicInfoOne.title;
+        const bTitle = basicInfoTwo.title;
         return compare(aTitle, bTitle, {
             library: true,
         });
@@ -678,7 +687,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                 }));
                 mutate(item, "folder_id", newFolderId, promise);
             }}>
-                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row", "xno-toggle")} kind={type} tag={label} extra={extra} />
+                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row")} kind={type} tag={label} extra={extra} />
                 <Dropdown.Menu>
                     {folders?.map((folder, i) => {
                         let menuItem = <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name} ({folder.count})</Dropdown.Item>;
@@ -997,34 +1006,6 @@ function TasksEditor(props: {
                 </Dropdown.Menu>
             </Dropdown>}
         </>;
-    }} />;
-}
-
-function RatingEditor(props: {
-    row: CollectionItem,
-} & FormControlProps): JSX.Element {
-    const {
-        row,
-    } = props;
-    const {
-        client,
-        cache,
-        setError,
-    } = React.useContext(ElephantContext);
-    const clearCacheForCollectionItem = useClearCacheForCollectionItem();
-    if (!client || !cache) { return <></>; }
-    return <Observer render={() => {
-        const { folder_id, id: release_id, instance_id, rating } = row;
-        const value = pendingValue(rating);
-        const commit = async (newValue: number) => {
-            const promise = client.editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
-            mutate(row, "rating", newValue, promise).then(() => {
-                clearCacheForCollectionItem(row);
-            }, (e) => {
-                setError(e);
-            });
-        };
-        return <Stars disabled={pending(rating)} value={value} count={5} setValue={commit} />;
     }} />;
 }
 

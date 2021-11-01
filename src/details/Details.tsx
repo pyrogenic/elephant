@@ -121,7 +121,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         size="sm"
                         variant="secondary"
                         disabled={!cacheCount}
-                        onClick={() => cache?.clear(cacheQuery)}>
+                        onClick={() => cache?.clear(cacheQuery, true)}>
                         {cacheCount ? <FiRefreshCw className="prepend-inline-icon" /> : false}
                         Refresh
                     </Button>
@@ -135,7 +135,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         size="sm"
                         variant="secondary"
                         disabled={!cacheCount}
-                        onClick={() => cache?.clear(cacheQuery)}>
+                        onClick={() => cache?.clear(cacheQuery, true)}>
                         {cacheCount ? <FiRefreshCw className="prepend-inline-icon" /> : false}
                         Refresh
                     </Button>

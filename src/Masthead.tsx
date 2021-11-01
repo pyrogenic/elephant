@@ -39,7 +39,7 @@ const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick
         className="btn btn-sm btn-outline-dark"
         onClick={(e) => {
             e.preventDefault();
-            onClick?.(e);
+            onClick?.(e as unknown as any);
         }}
     ><FiMoreHorizontal /></div>
 });

@@ -23,13 +23,15 @@ const ArtistRoleModel = types.model("ArtistRoleModel", {
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 export const ReleaseModel = types.model("Release", {
     id: types.identifierNumber,
     title: types.optional(types.string, "unknown"),
     cacheKey: types.optional(types.string, "release"),
     artists: types.optional(types.array(ArtistRoleModel), []),
+    rating: types.maybe(types.number),
+    ratingCount: types.maybe(types.integer),
     images: types.optional(types.array(ImageModel), []),
     thumb: types.maybe(types.string),
     version: types.optional(types.integer, 0),
@@ -89,6 +91,8 @@ export const ReleaseModel = types.model("Release", {
         patch.id = self.id;
         patch.cacheKey = response.resource_url;
         patch.artists = compact(uniqueArtistRoles(response as DiscogsRelease).map(({ id, role }) => id && ({ artist: id.toString(), role })));
+        patch.rating = response.community.rating.average;
+        patch.ratingCount = response.community.rating.count;
         patch.version = CURRENT_VERSION;
         // TODO: connect master
         console.log(`refresh ${self.title}: applying patch...`);

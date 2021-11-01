@@ -287,7 +287,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         if (this.errorPause === t) { this.errorPause = 0; }
     }
 
-    public clear = async (query?: CacheQuery) => {
+    public clear = async (query: CacheQuery | undefined, notify = false) => {
         if (!query) {
             return (await this.storage).delete("get", IDBKeyRange.lowerBound(""));
         }
@@ -295,7 +295,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         const doomed = await this.keys(query, tx.db);
         await Promise.all(doomed.map((url) => tx.db.delete("get", url).then(() => console.log(`cleared ${url}`))));
         await tx.done;
-        runInAction(() => this.version++);
+        if (notify) {
+            runInAction(() => this.version++);
+        }
     }
 
     private cacheValue = async <T>(key: string, newValue: T) => {

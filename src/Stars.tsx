@@ -21,7 +21,7 @@ export function Star({ value, onEnter, onLeave, onClick }: { value: 0 | 0.5 | 1,
         onClick={orUndef(onClick)}
     >{value ? FILLED_STAR : OPEN_STAR}</div>;
 }
-function clip(value: number, thisBand: number) {
+function clip(value: number, thisBand: number, roundUp?: boolean) {
     value = value - thisBand;
     if (value <= -1) {
         return 0;
@@ -29,9 +29,29 @@ function clip(value: number, thisBand: number) {
     if (value >= 0) {
         return 1;
     }
+    if (roundUp) {
+        if (value <= -0.75) {
+            return 0;
+        }
+        if (value >= -0.25) {
+            return 1;
+        }
+    }
     return 0.5;
 }
-export default function Stars({ disabled, value, count, setValue }: { disabled: boolean, value: number, count: number, setValue(value: number): void }) {
+export default function Stars({
+    disabled,
+    value,
+    count,
+    roundUp,
+    setValue,
+}: {
+    disabled: boolean,
+    value: number,
+    count: number,
+    roundUp?: boolean,
+    setValue(value: number): void,
+}) {
     const [floatingValue, setFloatingValue] = React.useState<number>();
     const handle = React.useRef<any>();
 
@@ -41,7 +61,7 @@ export default function Stars({ disabled, value, count, setValue }: { disabled: 
     >
         {range(1, count + 1).map((n) => <Star
             key={n}
-            value={clip((floatingValue ?? value), n)}
+            value={clip((floatingValue ?? value), n, roundUp)}
             onEnter={!disabled && onHover.bind(null, n, true)}
             onLeave={!disabled && onHover.bind(null, n, false)}
             onClick={!disabled && onClickStar.bind(null, n)}

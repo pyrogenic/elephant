@@ -43,13 +43,17 @@ export function parseLocation(str: string): Location {
             labelSrc = str;
             break;
     }
-    const [statusSrc, boxNameSrc] = labelSrc.split(" ", 2);
+    const [statusSrc, boxNameSrc] = labelSrc.split(/ (?!\w)/, 2);
     const boxMatch = /\((?<label>.*)\)/.exec(boxNameSrc);
     label = boxMatch?.groups?.label ?? boxNameSrc;
     switch (statusSrc) {
         case "Remain":
         case "Top":
         case "Bottom":
+            status = "remain";
+            break;
+        case "Cube 1":
+            label = `C1 ${label}`;
             status = "remain";
             break;
         case "Leave":
