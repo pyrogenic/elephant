@@ -34,7 +34,7 @@ import LPDB from "./LPDB";
 import RatingEditor from "./RatingEditor";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
-import BootstrapTable, { BootstrapTableColumn, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
+import BootstrapTable, { BootstrapTableColumn, GetSelectedRows, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
@@ -742,6 +742,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return undefined;
     }, [inSoldFolder]);
 
+    const [getSelectedRows, setGetSelectedRows] = React.useState<GetSelectedRows<CollectionItem>>();
     return <BootstrapTable
         sessionKey={collectionSubset ? undefined : "Collection"}
         searchAndFilter={{ goto: hashItem.get(), ...tableSearch }}
@@ -749,7 +750,9 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         data={collectionTableData.get()}
         mnemonic={mnemonic}
         detail={(item) => <Details item={item} />}
-        rowClassName={rowClassName} />;
+        rowClassName={rowClassName}
+        setGetSelectedRows={setGetSelectedRows}
+    />;
 
 }
 

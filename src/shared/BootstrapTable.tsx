@@ -6,7 +6,7 @@ import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import orderBy from "lodash/orderBy";
 import { matchSorter } from "match-sorter";
-import React, { MouseEventHandler } from "react";
+import React, { InputHTMLAttributes, MouseEventHandler } from "react";
 import Table from "react-bootstrap/Table";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import {
@@ -27,6 +27,11 @@ import {
     UsePaginationInstanceProps,
     UsePaginationOptions,
     UsePaginationState,
+    useRowSelect,
+    UseRowSelectInstanceProps,
+    UseRowSelectOptions,
+    UseRowSelectRowProps,
+    UseRowSelectState,
     useSortBy,
     UseSortByColumnOptions,
     UseSortByColumnProps,
@@ -63,6 +68,8 @@ export function mnemonicToString(src: Mnemonic): string {
     }
 }
 
+export type GetSelectedRows<TElement extends {}> = () => TElement[];
+
 type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: BootstrapTableColumn<TElement, TColumnIds>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[];
@@ -71,9 +78,24 @@ type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
     detail?: (item: TElement) => Content;
     rowClassName?: (item: TElement) => ClassNames;
+    setGetSelectedRows?: (getSelectedRows: GetSelectedRows<TElement>) => void;
 }
     // & Pick<TableOptions<TElement>, "getSubRows">
     ;
+
+type IndCheck = InputHTMLAttributes<HTMLInputElement> & {
+    indeterminate?: boolean;
+};
+
+const IndeterminateCheckbox = ({ indeterminate, ...rest }: IndCheck) => {
+    const ref = React.useRef<HTMLInputElement>(null);
+    React.useEffect(() => {
+        if (ref.current)
+            ref.current.indeterminate = indeterminate ?? false;
+    }, [ref, indeterminate])
+
+    return <input type="checkbox" ref={ref} />;
+}
 
 function mnemonicString(q: Mnemonic): string | undefined {
     if (typeof q === "string") {
@@ -82,7 +104,7 @@ function mnemonicString(q: Mnemonic): string | undefined {
     return q?.[1];
 }
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
-    type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement>;
+    type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> & UseRowSelectState<TElement>;
     type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
     // typed version of UseGlobalFiltersOptions<TElement>["globalFilter"]
     type GlobalFilterCallbackSignature = ((rows: Row<TElement>[], columnIds: string[], filterValue: TableSearch<TElement>) => any);
@@ -92,7 +114,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter } = props;
+    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter, setGetSelectedRows } = props;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -114,7 +136,8 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         useSortBy,
         detail && useExpanded,
         usePagination,
-    ]), [detail]);
+        setGetSelectedRows && useRowSelect,
+    ]), [detail, setGetSelectedRows]);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
 
     const globalFilter = React.useMemo<GlobalFilterCallbackSignature
@@ -166,6 +189,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             // expanded,
             pageIndex,
             pageSize,
+            selectedRowIds,
             sortBy,
         },
         setGlobalFilter,
@@ -183,8 +207,35 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
             autoResetRowState: autoReset,
             autoResetGlobalFilter: false,
             globalFilter,
-        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement>,
+        } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement> & UseRowSelectOptions<TElement>,
         ...plugins,
+        hooks => {
+            hooks.visibleColumns.push(columns => [
+                // Let's make a column for selection
+                {
+                    id: "selection",
+                    // The header can use the table's getToggleAllRowsSelectedProps method
+                    // to render a checkbox
+                    Header: ({ getToggleAllPageRowsSelectedProps }: UseRowSelectInstanceProps<TElement>) => {
+                        return getToggleAllPageRowsSelectedProps ? (
+                            <div>
+                                <IndeterminateCheckbox {...getToggleAllPageRowsSelectedProps()} />
+                            </div>
+                        ) : null;
+                    },
+                    // The cell can use the individual row's getToggleRowSelectedProps method
+                    // to the render a checkbox
+                    Cell: ({ row }: { row: UseRowSelectRowProps<TElement> }) => {
+                        return row.getToggleRowSelectedProps ? (
+                            <div>
+                                <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
+                            </div>
+                        ) : null;
+                    },
+                },
+                ...columns,
+            ])
+        },
         ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
