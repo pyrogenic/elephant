@@ -11,7 +11,6 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
-import Stack from "react-bootstrap/Stack";
 import ReactJson from "react-json-view";
 import boxInfo from "./boxInfo";
 import { FOLDER_NAMES_QUERY } from "./CacheControl";

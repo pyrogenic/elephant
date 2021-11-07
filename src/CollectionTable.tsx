@@ -27,6 +27,7 @@ import DiscoTag from "./DiscoTag";
 import { Collection, CollectionItem, DiscogsCollectionItem, InventoryItem, Order, OrderItem } from "./Elephant";
 import "./Elephant.scss";
 import ElephantContext from "./ElephantContext";
+import ElephantSelectionContext from "./ElephantSelectionContext";
 import isCD from "./isCD";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { parseLocation, useFolderName } from "./location";
@@ -34,7 +35,7 @@ import LPDB from "./LPDB";
 import RatingEditor from "./RatingEditor";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
-import BootstrapTable, { BootstrapTableColumn, GetSelectedRows, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
+import BootstrapTable, { BootstrapTableColumn, BootstrapTableProps, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
@@ -646,9 +647,12 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
     type CollectionCell<V> = { value: V, row: { original: CollectionItem } };
     const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: "Location",
-        className: "minimal-column",
-        accessor: ({ folder_id }) => folderName(pendingValue(folder_id)),
-        Cell({ row: { original: item }, value }: CollectionCell<string>) {
+        className: "minimal-column multi-capable",
+        Cell: ({ row: { original: item } }: CollectionCell<string>) => {
+            let { selection } = React.useContext(ElephantSelectionContext);
+            return <Observer>{() => {
+                const folderId = pendingValue(item.folder_id);
+                const value = folderName(folderId);
             let { label, status, type } = parseLocation(value);
             let extra: Content = status;
             let className: string | undefined = undefined;
@@ -675,18 +679,19 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     className = "badge-success";
                     break;
             }
-            return <Dropdown onSelect={(newFolderIdStr) => {
-                const newFolderId = Number(newFolderIdStr);
-                if (!client || !newFolderIdStr || isNaN(newFolderId)) {
-                    return;
-                }
-                const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId).then(action(() => {
-                    cache?.clear(collectionItemCacheQuery(item));
-                    cache?.clear(FOLDER_NAMES_QUERY);
-                    item.folder_id = newFolderId;
-                }));
-                mutate(item, "folder_id", newFolderId, promise);
-            }}>
+                selection = selection ?? [item];
+                return <Dropdown
+                    onSelect={(newFolderIdStr) => {
+                        const newFolderId = Number(newFolderIdStr);
+                        if (!client || !newFolderIdStr || isNaN(newFolderId)) {
+                            return;
+                        }
+                        selection?.forEach(async (e) => {
+                            await mutate(e, "folder_id", newFolderId, client.moveReleaseInstanceToFolder(e.folder_id, e.id, e.instance_id, newFolderId));
+                            cache?.clear(collectionItemCacheQuery(e));
+                        });
+                    }}
+                >
                 <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row")} kind={type} tag={label} extra={extra} />
                 <Dropdown.Menu>
                     {folders?.map((folder, i) => {
@@ -701,6 +706,7 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
                     })}
                 </Dropdown.Menu>
             </Dropdown>;
+            }}</Observer>;
         },
         sortType: sortByLocation,
     }), [cache, client, folderName, folders, sortByLocation]);
@@ -742,17 +748,33 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return undefined;
     }, [inSoldFolder]);
 
-    const [getSelectedRows, setGetSelectedRows] = React.useState<GetSelectedRows<CollectionItem>>();
-    return <BootstrapTable
-        sessionKey={collectionSubset ? undefined : "Collection"}
-        searchAndFilter={{ goto: hashItem.get(), ...tableSearch }}
-        columns={collectionTableColumns}
-        data={collectionTableData.get()}
-        mnemonic={mnemonic}
-        detail={(item) => <Details item={item} />}
-        rowClassName={rowClassName}
-        setGetSelectedRows={setGetSelectedRows}
-    />;
+    const [selectedRows, setSelectedRows] = React.useState<CollectionItem[]>();
+    const sharedTableProps: Omit<BootstrapTableProps<CollectionItem>, "data"> = {
+        columns: collectionTableColumns,
+        detail: (item) => <Details item={item} />,
+        rowClassName: rowClassName,
+        selectedRows: selectedRows,
+        setSelectedRows: setSelectedRows,
+        getRowId: ({ instance_id }) => instance_id.toString(),
+    };
+    return <>
+        {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
+            <div className="multi">
+                <BootstrapTable
+                    pager={false}
+                    data={selectedRows}
+                    {...sharedTableProps}
+                />
+            </div>
+        </ElephantSelectionContext.Provider>}
+        <BootstrapTable
+            sessionKey={collectionSubset ? undefined : "Collection"}
+            searchAndFilter={{ goto: hashItem.get(), ...tableSearch }}
+            data={collectionTableData.get()}
+            mnemonic={mnemonic}
+            {...sharedTableProps}
+        />
+    </>;
 
 }
 

@@ -19,7 +19,6 @@ export interface IElephantContext {
     lists: Lists;
     setError: React.Dispatch<any>;
 }
-;
 
 const ElephantContext = React.createContext<IElephantContext>({
     collection: new OrderedMap(),

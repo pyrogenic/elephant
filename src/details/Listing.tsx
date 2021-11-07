@@ -1,3 +1,4 @@
+import { arraySetAdd } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import { cloneDeep, compact } from "lodash";
@@ -12,7 +13,6 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import yaml from "yaml";
-import { arraySetAdd } from "@pyrogenic/asset/lib";
 import autoFormat from "../autoFormat";
 import boxInfo from "../boxInfo";
 import { useClearCacheForCollectionItem } from "../collectionItemCache";
@@ -22,6 +22,7 @@ import { ListingOptions, PriceSuggestions } from "../DiscogsTypeDefinitions";
 import { CollectionItem, InventoryItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
 import { parseLocation, useFolderName } from "../location";
+import OrderedMap from "../OrderedMap";
 import Check from "../shared/Check";
 import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
@@ -30,7 +31,6 @@ import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNot
 import useBusy from "../useBusy";
 import useFolderSets from "../useFolderSets";
 import useRefreshInventory from "../useRefreshInventory";
-import OrderedMap from "../OrderedMap";
 
 const RENDER_LOG = new OrderedMap<string, { prices?: number[], comments?: string[] }>();
 

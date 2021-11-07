@@ -4,6 +4,7 @@ import useDebounce from "@pyrogenic/perl/lib/useDebounce";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import flatten from "lodash/flatten";
+import map from "lodash/map";
 import orderBy from "lodash/orderBy";
 import { matchSorter } from "match-sorter";
 import React, { InputHTMLAttributes, MouseEventHandler } from "react";
@@ -15,6 +16,7 @@ import {
     PluginHook,
     Row,
     TableInstance,
+    TableOptions,
     useExpanded,
     UseExpandedOptions,
     UseExpandedRowProps,
@@ -68,19 +70,19 @@ export function mnemonicToString(src: Mnemonic): string {
     }
 }
 
-export type GetSelectedRows<TElement extends {}> = () => TElement[];
-
-type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
+export type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: BootstrapTableColumn<TElement, TColumnIds>[];//ColumnSetItem<TElement, TColumnIds>[];
-    data: TElement[];
-    searchAndFilter?: TableSearch<TElement>;
-    sessionKey?: string;
-    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic;
-    detail?: (item: TElement) => Content;
-    rowClassName?: (item: TElement) => ClassNames;
-    setGetSelectedRows?: (getSelectedRows: GetSelectedRows<TElement>) => void;
+    data: TElement[],
+    pager?: boolean,
+    searchAndFilter?: TableSearch<TElement>,
+    sessionKey?: string,
+    mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic,
+    detail?: (item: TElement) => Content,
+    rowClassName?: (item: TElement) => ClassNames,
+    selectedRows?: TElement[],
+    setSelectedRows?: (selectedRows: TElement[]) => void,
 }
-    // & Pick<TableOptions<TElement>, "getSubRows">
+    & Pick<TableOptions<TElement>, "getSubRows" | "getRowId">
     ;
 
 type IndCheck = InputHTMLAttributes<HTMLInputElement> & {
@@ -94,7 +96,7 @@ const IndeterminateCheckbox = ({ indeterminate, ...rest }: IndCheck) => {
             ref.current.indeterminate = indeterminate ?? false;
     }, [ref, indeterminate])
 
-    return <input type="checkbox" ref={ref} />;
+    return <input type="checkbox" ref={ref} {...rest} />;
 }
 
 function mnemonicString(q: Mnemonic): string | undefined {
@@ -114,7 +116,9 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
-    const { detail, mnemonic, rowClassName, sessionKey, searchAndFilter, setGetSelectedRows } = props;
+    const { data, detail, mnemonic, rowClassName, sessionKey, searchAndFilter, selectedRows, setSelectedRows, getRowId } = props;
+    let { pager: showPager } = props;
+    showPager = showPager ?? true;
     const [initialPageIndex, setInitialPageIndex] =
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<number>("session", [sessionKey, "pageIndex"].join(), 0) : React.useState(0);
@@ -125,19 +129,21 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         // eslint-disable-next-line react-hooks/rules-of-hooks
         sessionKey ? useStorageState<UsePaginationState<TElement>["pageSize"]>("session", [sessionKey, "pageSize"].join(), 10) : React.useState<UsePaginationState<TElement>["pageSize"]>(10);
     const firstLoad = React.useRef(true);
+    const initialSelectedRowIds = itemsToRecord(selectedRows, getRowId, data);
     const initialState: InitialState = firstLoad.current ? {
         pageIndex: initialPageIndex,
         sortBy: initialSortBy,
         pageSize: initialPageSize,
+        selectedRowIds: initialSelectedRowIds,
     } : {};
     firstLoad.current = false;
     const plugins: PluginHook<TElement>[] = React.useMemo(() => compact([
         useGlobalFilter,
         useSortBy,
         detail && useExpanded,
-        usePagination,
-        setGetSelectedRows && useRowSelect,
-    ]), [detail, setGetSelectedRows]);
+        showPager && usePagination,
+        setSelectedRows && useRowSelect,
+    ]), [detail, setSelectedRows, showPager]);
     const deepSearchTargets = React.useCallback((item: any) => deepSearchTargetsImpl(item), []);
 
     const globalFilter = React.useMemo<GlobalFilterCallbackSignature
@@ -174,27 +180,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     const lastSearch = React.useRef<TableSearch<TElement>>({});
 
     const autoReset = false;//React.useMemo(() => lastSearch.current !== search, [search]);
-    const {
-        getTableBodyProps,
-        getTableProps,
-        gotoPage,
-        headerGroups,
-        page,
-        //preGlobalFilteredRows,
-        prepareRow,
-        rows,
-        setPageSize,
-        setSortBy,
-        state: {
-            // expanded,
-            pageIndex,
-            pageSize,
-            selectedRowIds,
-            sortBy,
-        },
-        setGlobalFilter,
-        visibleColumns,
-    } = useTable(
+    const table = useTable(
         {
             ...props,
             initialState,
@@ -210,33 +196,62 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         } as UseTableOptions<TElement> & UsePaginationOptions<TElement> & UseExpandedOptions<TElement> & UseSortByColumnOptions<TElement> & UseGlobalFiltersOptions<TElement> & UseRowSelectOptions<TElement>,
         ...plugins,
         hooks => {
-            hooks.visibleColumns.push(columns => [
-                // Let's make a column for selection
-                {
-                    id: "selection",
-                    // The header can use the table's getToggleAllRowsSelectedProps method
-                    // to render a checkbox
-                    Header: ({ getToggleAllPageRowsSelectedProps }: UseRowSelectInstanceProps<TElement>) => {
-                        return getToggleAllPageRowsSelectedProps ? (
-                            <div>
-                                <IndeterminateCheckbox {...getToggleAllPageRowsSelectedProps()} />
-                            </div>
-                        ) : null;
+            if (setSelectedRows) {
+                // Make a column for selection.
+                hooks.visibleColumns.push(columns => [
+                    {
+                        id: "selection",
+                        // The header can use the table's getToggleAllRowsSelectedProps method
+                        // to render a checkbox
+                        Header: ({ getToggleAllPageRowsSelectedProps }: UseRowSelectInstanceProps<TElement>) => {
+                            return getToggleAllPageRowsSelectedProps ? (
+                                <div>
+                                    <IndeterminateCheckbox {...getToggleAllPageRowsSelectedProps()} />
+                                </div>
+                            ) : null;
+                        },
+                        // The cell can use the individual row's getToggleRowSelectedProps method
+                        // to the render a checkbox
+                        Cell: ({ row }: { row: UseRowSelectRowProps<TElement> }) => {
+                            return row.getToggleRowSelectedProps ? (
+                                <div>
+                                    <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
+                                </div>
+                            ) : null;
+                        },
                     },
-                    // The cell can use the individual row's getToggleRowSelectedProps method
-                    // to the render a checkbox
-                    Cell: ({ row }: { row: UseRowSelectRowProps<TElement> }) => {
-                        return row.getToggleRowSelectedProps ? (
-                            <div>
-                                <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
-                            </div>
-                        ) : null;
-                    },
-                },
-                ...columns,
-            ])
+                    ...columns,
+                ])
+            }
         },
-        ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & { state: TotalState };
+    ) as TableInstance<TElement> & UsePaginationInstanceProps<TElement> & UseSortByInstanceProps<TElement> & UseGlobalFiltersInstanceProps<TElement> & UseRowSelectInstanceProps<TElement> & { state: TotalState };
+
+    const {
+        getTableBodyProps,
+        getTableProps,
+        gotoPage,
+        headerGroups,
+        //preGlobalFilteredRows,
+        prepareRow,
+        rows,
+        setPageSize,
+        setSortBy,
+        state: {
+            // expanded,
+            pageIndex,
+            pageSize,
+            selectedRowIds,
+            sortBy,
+        },
+        setGlobalFilter,
+        visibleColumns,
+    } = table;
+    let {
+        page,
+    } = table;
+    if (!showPager) {
+        table.page = page = rows;
+    }
     React.useEffect(() => setInitialPageIndex(pageIndex), [pageIndex, setInitialPageIndex]);
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     React.useEffect(() => setInitialPageSize(pageSize), [setInitialPageSize, pageSize]);
@@ -268,6 +283,12 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         }
         return () => { };
     }, [gotoPage, pageSize, rows, searchAndFilter?.goto]);
+    React.useEffect(() => {
+        if (setSelectedRows) {
+            setSelectedRows(map(rows.filter((row) => selectedRowIds[row.id]), "original"));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setSelectedRows, selectedRowIds && JSON.stringify(Object.keys(selectedRowIds))]);
     const spine = React.useCallback((page: number) => {
         if (!mnemonic) {
             throw new Error("missing mnemonic");
@@ -298,15 +319,30 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         return result;
     }, [mnemonic, pageSize, rows, sortBy]);
     const keyRef = React.createRef<HTMLDivElement>();
-    const pager = React.useMemo(() => <Pager
+    const { pager, pageSizeSelector } = React.useMemo(() => showPager ? {
+        pager: <Pager
         count={rows.length}
         currentPage={pageIndex}
         gotoPage={gotoPage}
         pageSize={pageSize}
         keyboardNavigation={"global"}
         spine={mnemonic && spine}
-    />, [gotoPage, mnemonic, pageIndex, pageSize, rows.length, spine]);
+        />,
+        pageSizeSelector: <select
+            value={pageSize}
+            onChange={e => {
+                setPageSize(Number(e.target.value));
+            }}
+        >
+            {[5, 10, 20, 30, 40, 50].map(pageSize => (
+                <option key={pageSize} value={pageSize}>
+                    Show {pageSize}
+                </option>
+            ))}
+        </select>,
+    } : {}, [gotoPage, mnemonic, pageIndex, pageSize, rows.length, setPageSize, showPager, spine]);
     const tableProps = getTableProps();
+    const tableBodyProps = getTableBodyProps();
     return <div ref={keyRef}>
         {/* {JSON.stringify(expanded)} */}
         {pager}
@@ -326,7 +362,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     </tr>
                 ))}
             </thead>
-            <tbody {...getTableBodyProps()}>
+            <tbody {...tableBodyProps}>
                 {compact(flatten(page.map((plainRow) => {
                     const row = plainRow as Row<TElement> & UseExpandedRowProps<TElement>;
                     prepareRow(row)
@@ -367,19 +403,17 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                 })))}
             </tbody>
         </Table>
-        <select
-            value={pageSize}
-            onChange={e => {
-                setPageSize(Number(e.target.value))
-            }}
-        >
-            {[5, 10, 20, 30, 40, 50].map(pageSize => (
-                <option key={pageSize} value={pageSize}>
-                    Show {pageSize}
-                </option>
-            ))}
-        </select>
+        {pageSizeSelector}
     </div>;
+}
+
+function itemsToRecord<TElement extends {}>(selectedRows: TElement[] | undefined, getRowId: ((originalRow: TElement, relativeIndex: number, parent?: Row<TElement> | undefined) => string) | undefined, data: TElement[]) {
+    const result: Record<string, boolean> = {};
+    selectedRows?.forEach((row) => {
+        const key = getRowId?.(row, 0) ?? `${data.indexOf(row)}`;
+        result[key] = true;
+    });
+    return result;
 }
 
 function columnsFor<TElement extends {}>(headerGroup: HeaderGroup<TElement>) {
