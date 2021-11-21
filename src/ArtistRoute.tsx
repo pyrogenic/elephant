@@ -48,7 +48,10 @@ const ArtistPanel = () => {
     <Button onClick={artist.refresh}>Refresh</Button>
     </>} />
 
-    <CollectionTable collectionSubset={collectionSubset.get()} />
+    <CollectionTable
+      collectionSubset={collectionSubset.get()}
+      storageKey={`artist-${artistId}`}
+    />
   </>}</Observer>;
 };
 // type GraphData = 

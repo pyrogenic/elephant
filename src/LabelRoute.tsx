@@ -59,7 +59,10 @@ const LabelPanel = observer(() => {
                 {
                     title: "Albums",
                     content: () => <Observer>
-                        {() => <CollectionTable collectionSubset={collectionSubset.get()} />}
+                        {() => <CollectionTable
+                            collectionSubset={collectionSubset.get()}
+                            storageKey={"label"}
+                        />}
                     </Observer>,
                 },
                 {

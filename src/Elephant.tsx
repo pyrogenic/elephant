@@ -185,7 +185,7 @@ export default function Elephant() {
               token={token}
             />
           </Router.Route>
-    < Router.Route path = { ARTISTS_PATH } >
+          <Router.Route path={ARTISTS_PATH}>
             <ArtistMode />
           </Router.Route>
           <Router.Route path="/labels">
@@ -206,8 +206,11 @@ export default function Elephant() {
           <Router.Route path="/tuning">
             <Tuning />
           </Router.Route>
-    < Router.Route path = { COLLECTION_PATH } >
-            <CollectionTable tableSearch={tableSearch} />
+          <Router.Route path={COLLECTION_PATH}>
+            <CollectionTable
+              tableSearch={tableSearch}
+              storageKey={COLLECTION_PATH}
+            />
           </Router.Route>
         </Router.Switch>
         <hr />

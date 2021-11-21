@@ -36,7 +36,10 @@ const TagPanel = () => {
             <Disclosure title="Stats">
                 <CollectionStats items={items} />
             </Disclosure>
-            <CollectionTable collectionSubset={items} />
+            <CollectionTable
+                collectionSubset={items}
+                storageKey={"tag"}
+            />
         </>;
     }} />;
 };

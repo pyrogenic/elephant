@@ -271,6 +271,10 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 }
                 return newValue;
             } catch (e) {
+                if ("statusCode" in e) {
+                    console.log(`404: ${key}`);
+                    return undefined;
+                }
                 console.warn(e);
                 const interval = 10 * 1000; // 10 seconds
                 const t = Date.now() + interval;

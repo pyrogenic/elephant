@@ -65,13 +65,17 @@ export const ArtistModel = types.model("Artist", {
                 cache.clear({ url: self.cacheKey });
             }
             let patch: Partial<Artist>;
-            const response: DiscogsArtist = yield client.getArtist(Number(self.id));
-            patch = pick(response, "profile", "images");
-            patch.id = self.id;
-            patch.name = autoFormat(response.name);
-            patch.cacheKey = response.resource_url;
-            // console.log(`refresh ${self.name}: applying patch...`);
-            applySnapshot(self, patch);
+            const response: DiscogsArtist | undefined = yield client.getArtist(Number(self.id));
+            if (response) {
+                patch = pick(response, "profile", "images");
+                patch.id = self.id;
+                patch.name = autoFormat(response.name);
+                patch.cacheKey = response.resource_url;
+                // console.log(`refresh ${self.name}: applying patch...`);
+                applySnapshot(self, patch);
+            } else {
+                console.warn(`Failed to retrieve artist ${self.id} from Discogs`);
+            }
         } finally {
             actionState.resolve?.();
         }

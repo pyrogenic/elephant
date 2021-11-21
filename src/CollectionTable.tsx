@@ -1,15 +1,17 @@
 import { arraySetAdd, arraySetRemove, compare } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
+import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { CurrenciesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import jsonpath from "jsonpath";
 import compact from "lodash/compact";
 import kebabCase from "lodash/kebabCase";
+import map from "lodash/map";
 import noop from "lodash/noop";
 import omit from "lodash/omit";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { action, computed, observable, reaction, runInAction } from "mobx";
+import { action, autorun, computed, observable, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
@@ -20,7 +22,6 @@ import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiArrowLeft, FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
-import { FOLDER_NAMES_QUERY } from "./CacheControl";
 import { collectionItemCacheQuery, useClearCacheForCollectionItem } from "./collectionItemCache";
 import Details from "./details/Details";
 import DiscoTag from "./DiscoTag";
@@ -85,9 +86,10 @@ const ARTIST_COLUMN_TITLE = "Release";
 
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
-export default function CollectionTable({ tableSearch, collectionSubset }: {
+export default function CollectionTable({ tableSearch, collectionSubset, storageKey }: {
     tableSearch?: TableSearch<CollectionItem>,
     collectionSubset?: ReturnType<Collection["values"]>,
+    storageKey: string,
 }) {
     type ColumnFactoryResult = [column: BootstrapTableColumn<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
 
@@ -748,6 +750,8 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         return undefined;
     }, [inSoldFolder]);
 
+    const [savedSelection, setSavedSelection] = useStorageState<number[]>("session", [storageKey, "selection"], []);
+    const onceRef = React.useRef(true);
     const [selectedRows, setSelectedRows] = React.useState<CollectionItem[]>();
     const sharedTableProps: Omit<BootstrapTableProps<CollectionItem>, "data"> = {
         columns: collectionTableColumns,
@@ -757,6 +761,20 @@ export default function CollectionTable({ tableSearch, collectionSubset }: {
         setSelectedRows: setSelectedRows,
         getRowId: ({ instance_id }) => instance_id.toString(),
     };
+    React.useEffect(() => {
+        if (!onceRef.current) {
+            setSavedSelection(map(selectedRows, "instance_id"));
+        }
+    }, [selectedRows, setSavedSelection]);
+    React.useMemo(() => autorun(() => {
+        if (onceRef.current) {
+            const rows = compact(savedSelection.map((e) => collection.get(e)));
+            setSelectedRows(rows);
+            if (rows.length === savedSelection.length) {
+                onceRef.current = false;
+            }
+        }
+    }), [collection, savedSelection]);
     return <>
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
             <div className="multi">

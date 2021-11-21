@@ -42,7 +42,10 @@ const TaskPanel = observer(() => {
                 <Check label="Show Completed" value={showCompleted} setValue={setShowCompleted} />
             </Toast.Body>
         </Toast>
-        <CollectionTable collectionSubset={collectionSubset.get()} />
+        <CollectionTable
+            collectionSubset={collectionSubset.get()}
+            storageKey="tasks"
+        />
     </>;
 });
 
