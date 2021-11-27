@@ -33,12 +33,13 @@ export const ArtistModel = types.model("Artist", {
     const loading = () => actionState.promise ?? Promise.resolve();
     const startLoading = () => {
         const promise = new Promise<void>((resolve, _) => actionState.resolve = resolve);
-        promise.then(() => {
+        const handler = () => {
             if (actionState.promise === promise) {
                 actionState.promise = undefined;
                 actionState.resolve = undefined;
             }
-        });
+        };
+        promise.then(handler, handler);
         actionState.promise = promise;
     }
     const hydrate = (patch: any /* Artist */) => {

@@ -1,5 +1,6 @@
 import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import React from "react";
+import { HTMLProps } from "react";
 import * as Router from "react-router-dom";
 import autoFormat from "./autoFormat";
 import DiscogsLinkback from "./DiscogsLinkback";
@@ -135,9 +136,19 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
             }
         });
     });
+//     var realOnClick: HTMLProps<HTMLDivElement>["onClick"] = undefined;
+//     //    if (onClick) {
+//     realOnClick = (e) => {
+//         //e.stopPropagation();
+//         onClick?.();
+//     }
+//   //  }
     return <>
         {/* <pre>{src}</pre> */}
-        <div className={classConcat(className, "disco-tagged")} onClick={onClick}>{result}</div>
+        <div className={classConcat(className, "disco-tagged")} onClick={onClick}>
+            {result}
+            &nbsp;
+        </div>
         {discogsUrl && <DiscogsLinkback uri={discogsUrl} />}
     </>;
 }

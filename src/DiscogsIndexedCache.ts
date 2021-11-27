@@ -2,6 +2,7 @@ import { arraySetRemove } from "@pyrogenic/asset/lib";
 import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import * as idb from "idb";
 import jsonpath from "jsonpath";
+import noop from "lodash/noop";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { Artist } from "./model/Artist";
@@ -231,7 +232,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     this.checkRate();
                     while (this.priorityGets.size && !this.priorityGets.has(key)) {
                         if (this.log) console.log(`Waiting for ${this.priorityGets.size} higher-priority gets: ${key}`);
-                        await Promise.all(this.priorityGets.values());
+                        await Promise.all(this.priorityGets.values()).catch(noop);
                     }
 
                     if (this.pause === undefined) {
@@ -242,6 +243,10 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     if (this.log) console.log(`Waiting #${waited}: ${key}`);
                     await this.pause;
                 }
+            }
+            catch (e) {
+                console.warn(e);
+                throw e;
             }
             finally {
                 runInAction(() => {
@@ -272,7 +277,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 return newValue;
             } catch (e) {
                 if ("statusCode" in e) {
-                    console.log(`404: ${key}`);
+                    console.log(`${e.statusCode}: ${key}`);
                     return undefined;
                 }
                 console.warn(e);

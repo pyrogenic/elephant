@@ -921,8 +921,29 @@ function FieldEditor<As = "text">(props: {
         setError,
     } = React.useContext(ElephantContext);
     const [floatingValue, setFloatingValue] = React.useState<string>();
-    const [editing, setEditing] = React.useState<boolean>(false);
+    const [editing, setEditing0] = React.useState<boolean>(false);
+    const focusRef = React.useRef<HTMLInputElement>();
+    const pendingFocus = React.useRef(false);
+    const setEditing = (value: boolean) => {
+        pendingFocus.current = value;
+        setEditing0(value);
+    }
     const clearCacheForCollectionItem = useClearCacheForCollectionItem();
+    React.useMemo(() => {
+        if (!editing) return;
+        var clear = noop;
+        var h = setInterval(() => {
+            if (focusRef.current && pendingFocus.current) {
+                pendingFocus.current = false;
+                focusRef.current.focus();
+            }
+            if (!pendingFocus.current) {
+                clear();
+            }
+        });
+        clear = () => clearInterval(h);
+        return clear;
+    }, [editing]);
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, notes } = row;
         const note = noteById(notes, noteId)!;
@@ -956,6 +977,7 @@ function FieldEditor<As = "text">(props: {
             />;
         } else {
             control = <Form.Control
+                ref={focusRef}
                 {...omit(
                     props,
                     "row",
