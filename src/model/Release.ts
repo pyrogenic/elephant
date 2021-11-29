@@ -57,12 +57,12 @@ export const ReleaseModel = types.model("Release", {
             return;
         }
         const { db: store } = getEnv<StoreEnv>(self);
-        console.log(`persist ${self.title}`);
+        //console.log(`persist ${self.title}`);
         const db: PromiseType<ElephantMemory> = yield store;
         const tx = db.transaction(["releases", "artistRoles"], "readwrite");
         let result = yield tx.db.put("releases", getSnapshot(self));
         const existingKeys: string[] = yield tx.db.getAllKeysFromIndex("artistRoles", "by-release", self.id);
-        console.log(`persist ${self.title} result: ${result}`);
+        //console.log(`persist ${self.title} result: ${result}`);
         for (const { artist, role } of self.artists) {
             if (!artist) {
                 console.warn(`bogus element in ${self.title}'s artists, role is ${role}`);
@@ -70,12 +70,12 @@ export const ReleaseModel = types.model("Release", {
                 const [ar, id] = artistRole(artist.id, role, self.id);
                 if (!arraySetRemove(existingKeys, id)) {
                     result = yield tx.db.put("artistRoles", ar, id);
-                    console.log(`persist ${id} result: ${result}`);
+                    //console.log(`persist ${id} result: ${result}`);
                 }
             }
         }
         for (const id of existingKeys) {
-            console.warn(`remove stale ${id}`);
+            console.log(`remove stale ${id}`);
             yield tx.db.delete("artistRoles", id);
         }
         result = yield tx.done;

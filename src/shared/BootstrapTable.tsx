@@ -45,6 +45,7 @@ import {
 import "./BootstrapTable.scss";
 import Pager, { Spine } from "./Pager";
 import { Content, resolve } from "./resolve";
+import useWhyDidYouUpdate from "./useWhyDidYouUpdate";
 
 export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column<TElement> & UseSortByColumnOptions<TElement> & {
     id?: TColumnIds,
@@ -105,6 +106,7 @@ function mnemonicString(q: Mnemonic): string | undefined {
     }
     return q?.[1];
 }
+
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
     type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> & UseRowSelectState<TElement>;
     type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
@@ -116,6 +118,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   // After the table has updated, always remove the flag
     //   skipPageResetRef.current = false;
     // });
+    // useWhyDidYouUpdate("BootstrapTable", props);
     const { data, detail, mnemonic, rowClassName, sessionKey, searchAndFilter, selectedRows, setSelectedRows, getRowId } = props;
     let { pager: showPager } = props;
     showPager = showPager ?? true;

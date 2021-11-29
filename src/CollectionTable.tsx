@@ -11,7 +11,7 @@ import noop from "lodash/noop";
 import omit from "lodash/omit";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { action, autorun, computed, observable, reaction, runInAction } from "mobx";
+import { action, autorun, computed, observable, reaction, runInAction, toJS } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
@@ -46,6 +46,7 @@ import { Variant } from "./shared/Shared";
 import "./shared/Shared.scss";
 import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
+import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
 import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
@@ -86,12 +87,18 @@ const ARTIST_COLUMN_TITLE = "Release";
 
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
-export default function CollectionTable({ tableSearch, collectionSubset, storageKey }: {
+export default function CollectionTable(props: {
     tableSearch?: TableSearch<CollectionItem>,
     collectionSubset?: ReturnType<Collection["values"]>,
     storageKey: string,
 }) {
     type ColumnFactoryResult = [column: BootstrapTableColumn<CollectionItem>, fields: KnownFieldTitle[]] | undefined;
+
+    const elephantContext = React.useContext(ElephantContext);
+
+    useWhyDidYouUpdate("CollectionTable", { ...props, elephantContext });
+
+    const { tableSearch, collectionSubset, storageKey } = props;
 
     const {
         cache,
@@ -103,7 +110,7 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
         orders,
         lists,
         lpdb,
-    } = React.useContext(ElephantContext);
+    } = elephantContext;
 
     let hash: number | undefined = Number(window.location.hash.split("#", 2)[1]);
     if (hash && !isNaN(hash)) {
@@ -197,6 +204,7 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
         }
     }, [sourceMnemonicFor, folderName, playCount, tasks, tagsFor]);
 
+    useWhyDidYouUpdate("autoSortBy", { mnemonic });
     const autoSortBy = React.useCallback((column: string) => ((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
         const aStr = mnemonicToString(mnemonic(column, ac.original));
         const bStr = mnemonicToString(mnemonic(column, bc.original));
@@ -205,8 +213,8 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
 
     //const sortByArtist = autoSortBy("Artist");
     //const sortByRating = autoSortBy("Rating");
-    const sortBySource = autoSortBy("Source");
-    const sortByLocation = autoSortBy("Location");
+    const sortBySource = React.useMemo(() => autoSortBy("Source"), [autoSortBy]);
+    const sortByLocation = React.useMemo(() => autoSortBy("Location"), [autoSortBy]);
     //const sortByPlays = autoSortBy("Plays");
     //const sortByTasks = autoSortBy("Tasks");
     //const sortByTags = autoSortBy("Tags");
@@ -401,6 +409,7 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
         mediaCondition,
     ]);
 
+    useWhyDidYouUpdate("sourceColumn", { cache, client, orderNumberId, priceId, sourceId, sortBySource });
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
             return [{
@@ -492,29 +501,8 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
         }
     }, [cache, client, tasks, tasksId]);
 
-    const collectionTableData = computed(() => {
-        for (const list of patches(lists)) {
-            const queries = list.definition.description.split("\n");
-            list.items.forEach((item) => {
-                const entries = lpdb?.entriesForRelease(item.id);
-                if (entries?.length) {
-                const instruction = item.comment;
-                const applyThisInstruction = applyInstruction.bind(null, instruction);
-                    for (const entry of entries) {
-                        runInAction(() => {
-                            queries.forEach((query) => {
-                                jsonpath.apply(entry, query, applyThisInstruction);
-                            });
-                        });
-                    }
-                }
-            });
-        }
-        return collectionSubset ?? collection.values();
-    });
 
-    const hashItem = computed(() => collectionTableData.get().find(({ instance_id }) => instance_id === hash));
-
+    useWhyDidYouUpdate("fieldColumns", { conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn });
     const fieldColumns = React.useMemo<Column<CollectionItem>[]>(() => {
         const columns: Column<CollectionItem>[] = [];
         const handledFieldNames: string[] = [];
@@ -730,6 +718,7 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
         sortType: sortByTags,
     }), [sortByTags, tagsFor]);
 
+    useWhyDidYouUpdate("collectionTableColumns", { coverColumn, fieldColumns, formatColumn, labelColumn, locationColumn, ratingColumn, releaseColumn, tagsColumn, yearColumn });
     const collectionTableColumns = React.useMemo<BootstrapTableColumn<CollectionItem>[]>(() => [
         coverColumn,
         releaseColumn,
@@ -753,13 +742,15 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
     const [savedSelection, setSavedSelection] = useStorageState<number[]>("session", [storageKey, "selection"], []);
     const onceRef = React.useRef(true);
     const [selectedRows, setSelectedRows] = React.useState<CollectionItem[]>();
+    const detail = React.useMemo(() => (item: CollectionItem): JSX.Element => <Details item={item} />, []);
+    const getRowId = React.useMemo(() => ({ instance_id }: CollectionItem) => instance_id.toString(), []);
     const sharedTableProps: Omit<BootstrapTableProps<CollectionItem>, "data"> = {
         columns: collectionTableColumns,
-        detail: (item) => <Details item={item} />,
-        rowClassName: rowClassName,
-        selectedRows: selectedRows,
-        setSelectedRows: setSelectedRows,
-        getRowId: ({ instance_id }) => instance_id.toString(),
+        detail,
+        rowClassName,
+        selectedRows,
+        setSelectedRows,
+        getRowId,
     };
     React.useEffect(() => {
         if (!onceRef.current) {
@@ -775,6 +766,32 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
             }
         }
     }), [collection, savedSelection]);
+
+    const collectionTableData = React.useMemo(() => computed(() => {
+        for (const list of patches(lists)) {
+            const queries = list.definition.description.split("\n");
+            list.items.forEach((item) => {
+                const entries = lpdb?.entriesForRelease(item.id);
+                if (entries?.length) {
+                    const instruction = item.comment;
+                    const applyThisInstruction = applyInstruction.bind(null, instruction);
+                    for (const entry of entries) {
+                        runInAction(() => {
+                            queries.forEach((query) => {
+                                jsonpath.apply(entry, query, applyThisInstruction);
+                            });
+                        });
+                    }
+                }
+            });
+        }
+        return collectionSubset ?? collection.values();
+    }), [collection, collectionSubset, lists, lpdb]);
+
+    useWhyDidYouUpdate("hashItem", { collectionTableData, hash });
+    const hashItem = React.useMemo(() => computed(() => collectionTableData.get().find(({ instance_id }) => instance_id === hash)), [collectionTableData, hash]);
+    const searchAndFilter = React.useMemo(() => ({ goto: hashItem.get(), ...tableSearch }), [hashItem, tableSearch]);
+
     return <>
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
             <div className="multi">
@@ -785,13 +802,16 @@ export default function CollectionTable({ tableSearch, collectionSubset, storage
                 />
             </div>
         </ElephantSelectionContext.Provider>}
-        <BootstrapTable
-            sessionKey={collectionSubset ? undefined : "Collection"}
-            searchAndFilter={{ goto: hashItem.get(), ...tableSearch }}
-            data={collectionTableData.get()}
-            mnemonic={mnemonic}
-            {...sharedTableProps}
-        />
+        <Observer>{() => {
+            const data = toJS(collectionTableData.get());
+            return <BootstrapTable
+                sessionKey={collectionSubset ? undefined : "Collection"}
+                searchAndFilter={searchAndFilter}
+                data={data}
+                mnemonic={mnemonic}
+                {...sharedTableProps} />;
+        }
+        }</Observer>
     </>;
 
 }

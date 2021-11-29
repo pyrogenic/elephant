@@ -199,7 +199,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         if (this.highPriorityKey(key)) {
             this.priorityGets.set(key, p);
         }
-        p.then(() => {
+        const after = () => {
             if (this.log) console.log(`Active request completed for ${key}`);
             if (this.activeGets.get(key) === p) {
                 if (this.log) console.log(`Deleted cached promise: ${key}`);
@@ -209,7 +209,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 if (this.log) console.log(`Deleted cached priority promise: ${key}`);
                 this.priorityGets.delete(key);
             }
-        });
+        };
+        p.then(after, after);
         return p;
     };
 
@@ -401,13 +402,22 @@ function test(query: string | RegExp, value: string | object | null): boolean {
             }
             return query.test(value);
         } else if (typeof query === "string") {
-            const result = jsonpath.query(value, query, 1);
-            return result.length > 0;
+            try {
+                const result = jsonpath.query(value, query, 1);
+                return result.length > 0;
+            } catch (e) {
+                try {
+                    jsonpath.parse(query);
+                } catch (parseError) {
+                    console.error("Failed to parse JSONPath expression", query, parseError);
+                }
+                throw e;
+            }
         } else {
             return test(query, JSON.stringify(value));
         }
     } catch (e) {
-        console.error(e);
+        console.error("Error running test on value", test, value, e);
         return false;
     }
 }

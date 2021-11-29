@@ -77,6 +77,8 @@ export const ArtistModel = types.model("Artist", {
             } else {
                 console.warn(`Failed to retrieve artist ${self.id} from Discogs`);
             }
+        } catch (e) {
+            console.warn(`Failed to retrieve artist ${self.id} from Discogs`, e);
         } finally {
             actionState.resolve?.();
         }
@@ -127,8 +129,12 @@ const ArtistStoreModel = types.model("ArtistStore", {
             const { db } = getEnv<StoreEnv>(self);
             const concreteResult = result;
             concreteResult.startLoading();
+            const onError = (error: any) => {
+                console.error(error);
+                concreteResult.refresh();
+            };
             db
-                .then((db) => db.get("artists", id))
+                .then((db) => db.get("artists", id), onError)
                 .then((patch) => {
                     if (patch) {
                         // console.log(`loaded artist ${patch.name} from db`);
@@ -137,11 +143,7 @@ const ArtistStoreModel = types.model("ArtistStore", {
                     } else {
                         concreteResult.refresh()
                     }
-                })
-                .catch((e) => {
-                    console.error(e);
-                    concreteResult.refresh();
-                });
+                }, onError);
         }
         return result;
     };

@@ -68,7 +68,7 @@ function Folders() {
         if (!folder || !rename || folder.name === rename || rename === newName) return;
         const p0 = client?.editFolder(folder.id, rename);
         const p1 = newName && client?.createFolder(newName);
-        setPromise(Promise.all(compact([p0, p1])).then(() => cache?.clear(FOLDER_NAMES_QUERY)));
+        setPromise(Promise.all(compact([p0, p1])).then(() => cache?.clear(FOLDER_NAMES_QUERY, true)));
     }, [cache, client, setPromise]);
     return <>
         <Row>
@@ -143,7 +143,7 @@ function Folders() {
                             return promise;
                         });
                         Promise.all(promises).then(action(() => {
-                            cache?.clear(collectionItemCacheQuery(...checkedItems));
+                            cache?.clear(collectionItemCacheQuery(...checkedItems), true);
                         }));
                     }}>
                     <Dropdown.Toggle>Move {checkedItems.length} items…</Dropdown.Toggle>
