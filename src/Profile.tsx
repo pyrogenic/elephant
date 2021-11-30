@@ -12,6 +12,7 @@ import ElephantContext from "./ElephantContext";
 import { Remote } from "./Remote";
 import RefreshButton from "./shared/RefreshButton";
 import { PromiseType } from "./shared/TypeConstraints";
+import { injectedValues, injectValue } from "./shared/yaml";
 
 // function yes(...args: any): boolean {
 //     return true;
@@ -19,15 +20,15 @@ import { PromiseType } from "./shared/TypeConstraints";
 
 type DiscogsProfile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
-// type FolderMetadata = {
-//     purpose?: "listed" | "remain" | "service",
-//     notes?: string,
-// };
+type FolderMetadata = {
+    purpose?: "listed" | "remain" | "service",
+    notes?: string,
+};
 
-// type ProfileMetadata = {
-//     scratchpad?: string,
-//     folders?: { [id: number]: FolderMetadata },
-// };
+type ProfileMetadata = {
+    scratchpad?: string,
+    folders?: { [id: number]: FolderMetadata },
+};
 
 export default function Profile() {
     const { cache, client } = React.useContext(ElephantContext);
@@ -42,8 +43,7 @@ export default function Profile() {
 
     const [profile, setProfile] = React.useState<Remote<DiscogsProfile>>({ status: "pending" });
     const [editingProfile, setEditingProfile] = React.useState(false);
-
-
+    const profileMetadata = React.useMemo(() => profile.status === "ready" ? injectedValues(profile.value.profile).values : undefined, [profile]);
 
     React.useEffect(() => {
         console.log(`Promise: ${promise}`);
@@ -91,6 +91,10 @@ export default function Profile() {
                                     />
                                     :
                                     <DiscoTag src={floatingValue ?? profile.value.profile} uri={profile.value.uri} />}
+                                {floatingValue && <Form.Group>
+                                    <Form.Label>Test</Form.Label>
+                                    <Form.Control onChange={(e) => floatingValue && setFloatingValue(injectValue(floatingValue, "test", e.target.value))} />
+                                </Form.Group>}
                             </Card.Body>
                             {editingProfile && <Card.Footer>
                                 <Button
@@ -119,6 +123,7 @@ export default function Profile() {
                 </Form>}
             </Col>
             <Col>
+                {profileMetadata && <ReactJson src={profileMetadata} collapsed={false} />}
                 {profile.status === "ready" && <ReactJson src={profile.value} collapsed={true} />}
             </Col>
         </Row>

@@ -12,7 +12,6 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
-import yaml from "yaml";
 import autoFormat from "../autoFormat";
 import boxInfo from "../boxInfo";
 import { useClearCacheForCollectionItem } from "../collectionItemCache";
@@ -27,6 +26,7 @@ import Check from "../shared/Check";
 import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
 import usePromiseState from "../shared/usePromiseState";
+import { injectValue } from "../shared/yaml";
 import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
 import useBusy from "../useBusy";
 import useFolderSets from "../useFolderSets";
@@ -412,22 +412,3 @@ function htmlEscape(value: string): string {
 function htmlUnescape(value: string): string {
     return value;//.replaceAll("'", "\"").replaceAll(" and ", "&");
 }
-
-function injectedValues(src: string) {
-    return yaml.parseAllDocuments(src).pop()!.contents?.toJSON() ?? {};
-}
-
-function injectValue(src: string, key: string, value: any): string {
-    const currentValues = injectedValues(src);
-    if (currentValues[key] === value) {
-        return src;
-    }
-    let [preamble, document] = src.split(/---/, 2);
-    if (!document) {
-        document = yaml.stringify({});
-    }
-    const data = yaml.parse(document);
-    data[key] = value;
-    return `${preamble}\n---\n${yaml.stringify(data)}`
-}
-
