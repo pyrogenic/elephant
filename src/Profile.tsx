@@ -20,15 +20,15 @@ import { injectedValues, injectValue } from "./shared/yaml";
 
 type DiscogsProfile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 
-type FolderMetadata = {
-    purpose?: "listed" | "remain" | "service",
-    notes?: string,
-};
+// type FolderMetadata = {
+//     purpose?: "listed" | "remain" | "service",
+//     notes?: string,
+// };
 
-type ProfileMetadata = {
-    scratchpad?: string,
-    folders?: { [id: number]: FolderMetadata },
-};
+// type ProfileMetadata = {
+//     scratchpad?: string,
+//     folders?: { [id: number]: FolderMetadata },
+// };
 
 export default function Profile() {
     const { cache, client } = React.useContext(ElephantContext);

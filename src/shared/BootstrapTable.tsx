@@ -45,7 +45,6 @@ import {
 import "./BootstrapTable.scss";
 import Pager, { Spine } from "./Pager";
 import { Content, resolve } from "./resolve";
-import useWhyDidYouUpdate from "./useWhyDidYouUpdate";
 
 export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column<TElement> & UseSortByColumnOptions<TElement> & {
     id?: TColumnIds,
