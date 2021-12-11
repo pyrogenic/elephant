@@ -64,7 +64,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     errorPause: number = 0;
     unpause?: () => void;
     pauseCheck?: NodeJS.Timeout;
-    oneRequest = true;
+    oneRequest = false;
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
