@@ -369,12 +369,15 @@ export default function CollectionTable(props: {
                                     </Button>);
                             }
                             if (!orderOrListingElements.length) {
-                                orderOrListingElements.push(<div className="condition-row"><Observer key={orderOrListingElements.length} render={() => {
+                                orderOrListingElements.push(<div
+                                    className="condition-row"
+                                    key={orderOrListingElements.length}
+                                ><Observer render={() => {
                                     const condition = mediaCondition(item.notes);
                                     if (!condition) return null;
                                     const suggestions = lpdb?.suggestions(item);
                                     if (suggestions?.status === "ready") {
-                                        const value = suggestions.value[condition];
+                                        const value = suggestions.value?.[condition];
                                         if (value) {
                                             return <span className="price price-preview t-small">{priceToString(value)}</span>;
                                         }
