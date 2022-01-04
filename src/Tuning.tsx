@@ -7,6 +7,7 @@ import React from "react";
 import { Card } from "react-bootstrap";
 import { SiAmazon, SiDiscogs } from "react-icons/si";
 import autoFormat from "./autoFormat";
+import { useMediaCondition } from "./CollectionTable";
 import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
@@ -322,6 +323,62 @@ export const noteById = action("noteById", (notes: CollectionNote[], id: number)
 export const getNote = action("getNote", (notes: CollectionNote[], id: number): string | undefined => {
     return noteById(notes, id)?.value;
 });
+
+const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+export type PlaysInfo = {
+    playsNote: DeepPendable<{
+        field_id: number;
+        value: string;
+    }>,
+    plays: number,
+    history: string[],
+};
+
+export function usePlaysInfo(): (item: CollectionItem) => PlaysInfo | undefined {
+    const { playsId } = useNoteIds();
+    const mediaCondition = useMediaCondition();
+
+    return React.useCallback(({ notes, rating, date_added }: CollectionItem) => {
+        if (!playsId) return undefined;
+        const playsNote = noteById(notes, playsId)!;
+        let playsValue = pendingValue(playsNote.value ?? "0");
+        let [playsStr, ...history] = playsValue.split("\n")
+        for (var i = 0; i < history.length; ++i) {
+            const [y, m, d] = history[i].split(".");
+            if (m) {
+                history[i] = [y, Number(m) + 1, d].join("-");
+            }
+        }
+        let plays = Number(playsStr);
+        if (plays) {
+            return { playsNote, plays, history };
+        }
+        const now = Date.now();
+        const dateAdded = new Date(date_added);
+        const dateAddedTime = dateAdded.getTime();
+        // console.log({ playsNote, playsStr, history, plays, now, date_added, dateAdded, dateNow, dateAddedTime, TEN_DAYS_MS });
+        if ((now - dateAddedTime) < TEN_DAYS_MS) {
+            return { playsNote, plays, history };
+        }
+        if (rating) {
+            plays = 1;
+        } else {
+            const media = mediaCondition(notes);
+            if (media) {
+                plays = 1;
+            }
+        }
+        return { playsNote, plays, history };
+    }, [mediaCondition, playsId]);
+}
+
+export function usePlayCount() {
+    const playsInfo = usePlaysInfo();
+    return React.useCallback((item: CollectionItem) => {
+        return playsInfo(item)?.plays ?? 0;
+    }, [playsInfo]);
+}
 
 export function useTagsFor() {
     const { lpdb, folders } = React.useContext(ElephantContext);

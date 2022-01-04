@@ -34,7 +34,7 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
     const [cacheCount, setCacheCount] = React.useState(0);
     const effectCleanupSemaphore = React.useRef(true);
     React.useEffect(() => {
-        cache?.count(cacheQuery).then((r) => effectCleanupSemaphore.current && setCacheCount(r));
+        cache?.count(cacheQuery).then((r) => effectCleanupSemaphore.current && setCacheCount(r), console.warn);
         return () => { effectCleanupSemaphore.current = false };
     }, [cache, cacheQuery, release, item, master]);
 
@@ -125,6 +125,11 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         {cacheCount ? <FiRefreshCw className="prepend-inline-icon" /> : false}
                         Refresh
                     </Button>
+                    <Button
+                        onClick={() => {
+                            cache?.count(cacheQuery).then(console.log, console.warn);
+                        }}
+                    >Check</Button>
                 </Col>
                 <Col xs={4}>
                     <ReactJson

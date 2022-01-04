@@ -28,7 +28,8 @@ export default function RatingEditor(props: {
     if (!client || !cache || !lpdb || !release) { return <></>; }
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, rating } = row;
-        const globalRating = release.rating;
+        const globalRatingValue = release.rating;
+        const globalRatingVotes = release.ratingCount;
         const value = pendingValue(rating);
         const commit = async (newValue: number) => {
             const promise = client.editReleaseInstanceRating(folder_id, release_id, instance_id, newValue as any);
@@ -40,8 +41,17 @@ export default function RatingEditor(props: {
         };
         return <>
             <Stars disabled={pending(rating)} value={value} count={5} setValue={commit} />
-            {globalRating ? <Stars disabled={true} value={globalRating} count={5} setValue={noop} roundUp={true} /> :
-                release.stale ? <IconSpinner />
+            {globalRatingValue
+                ? <Stars
+                    disabled={true}
+                    value={globalRatingValue}
+                    count={5}
+                    votes={globalRatingVotes}
+                    setValue={noop}
+                    roundUp={true}
+                />
+                : release.stale
+                    ? <IconSpinner />
                     : false}
         </>;
     }} />;

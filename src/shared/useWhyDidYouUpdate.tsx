@@ -27,7 +27,7 @@ export default function useWhyDidYouUpdate(name: string, props: any) {
             if (Object.keys(changesObj).length) {
                 console.log("[why-did-you-update]", name, changesObj);
             } else {
-                console.log("[why-did-you-update]", name, "update for some other reason");
+                console.debug("[why-did-you-update]", name, "update for some other reason");
             }
         }
         // Finally update previousProps with current props for next hook call

@@ -57,6 +57,7 @@
     "react-json-view": "~1.21.3",
     "react-keyboard-event-handler": "~1.5.4",
     "react-multi-select-component": "~4.0.2",
+    "react-overlays": "~5.1.1",
     "react-router-dom": "~5.2.0",
     "react-scripts": "~4.0.3",
     "react-table": "~7.7.0",

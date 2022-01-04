@@ -39,25 +39,28 @@ function clip(value: number, thisBand: number, roundUp?: boolean) {
     }
     return 0.5;
 }
+
 export default function Stars({
     disabled,
     value,
     count,
     roundUp,
+    votes,
     setValue,
 }: {
     disabled: boolean,
     value: number,
     count: number,
     roundUp?: boolean,
+        votes?: number,
     setValue(value: number): void,
 }) {
     const [floatingValue, setFloatingValue] = React.useState<number>();
     const handle = React.useRef<any>();
-
+    const votesStr = votes ? ` (${votes} votes)` : "";
     return <div
         className={`stars ${disabled ? "disabled" : ""}`}
-        title={`${value} stars`}
+        title={`${value} stars${votesStr}`}
     >
         {range(1, count + 1).map((n) => <Star
             key={n}

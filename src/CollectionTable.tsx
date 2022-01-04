@@ -1,4 +1,4 @@
-import { arraySetAdd, arraySetRemove, compare } from "@pyrogenic/asset/lib";
+import { compare } from "@pyrogenic/asset/lib";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { CurrenciesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
@@ -11,7 +11,7 @@ import noop from "lodash/noop";
 import omit from "lodash/omit";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { action, autorun, computed, observable, reaction, runInAction, toJS } from "mobx";
+import { action, autorun, computed, observable, reaction, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import "popper.js/dist/popper";
 import React from "react";
@@ -19,7 +19,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
-import { FiArrowLeft, FiArrowRight, FiCheck, FiDisc, FiDollarSign, FiNavigation, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiDisc, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { collectionItemCacheQuery, useClearCacheForCollectionItem } from "./collectionItemCache";
@@ -41,16 +41,17 @@ import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
 import RefreshButton from "./shared/RefreshButton";
-import { Content } from "./shared/resolve";
-import { Variant } from "./shared/Shared";
 import "./shared/Shared.scss";
-import Spinner from "./shared/Spinner";
 import { ElementType } from "./shared/TypeConstraints";
 import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
 import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, useTagsFor, useTasks } from "./Tuning";
+import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, usePlayCount, useTagsFor, useTasks } from "./Tuning";
 import useRefreshInventory from "./useRefreshInventory";
+import useRootClose from "react-overlays/useRootClose";
+import PlayCountSpinner from "./PlayCountSpinner";
+import LocationCell from "./LocationCell";
+import { injectValue } from "./shared/yaml";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -84,8 +85,6 @@ function applyInstruction(instruction: string, _src: any) {
 };
 
 const ARTIST_COLUMN_TITLE = "Release";
-
-const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
 export default function CollectionTable(props: {
     tableSearch?: TableSearch<CollectionItem>,
@@ -128,41 +127,7 @@ export default function CollectionTable(props: {
 
     const mediaCondition = useMediaCondition();
     const sleeveCondition = useSleeveCondition();
-    const playsInfo = React.useCallback(({ notes, rating, date_added }: CollectionItem) => {
-        if (!playsId) return undefined;
-        const playsNote = noteById(notes, playsId)!;
-        let playsValue = pendingValue(playsNote.value ?? "0");
-        let [playsStr, ...history] = playsValue.split("\n")
-        for (var i = 0; i < history.length; ++i) {
-            const [y, m, d] = history[i].split(".");
-            if (m) {
-                history[i] = [y, Number(m) + 1, d].join("-");
-            }
-        }
-        let plays = Number(playsStr);
-        if (plays) {
-            return { playsNote, plays, history };
-        }
-        const now = Date.now();
-        const dateAdded = new Date(date_added);
-        const dateAddedTime = dateAdded.getTime();
-        // console.log({ playsNote, playsStr, history, plays, now, date_added, dateAdded, dateNow, dateAddedTime, TEN_DAYS_MS });
-        if ((now - dateAddedTime) < TEN_DAYS_MS) {
-            return { playsNote, plays, history };
-        }
-        if (rating) {
-            plays = 1;
-        } else {
-            const media = mediaCondition(notes);
-            if (media) {
-                plays = 1;
-            }
-        }
-        return { playsNote, plays, history };
-    }, [mediaCondition, playsId]);
-    const playCount = React.useCallback((item: CollectionItem) => {
-        return playsInfo(item)?.plays ?? 0;
-    }, [playsInfo]);
+    const playCount = usePlayCount();
 
     const tagsFor = useTagsFor();
 
@@ -412,17 +377,39 @@ export default function CollectionTable(props: {
         mediaCondition,
     ]);
 
+    const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     useWhyDidYouUpdate("sourceColumn", { cache, client, orderNumberId, priceId, sourceId, sortBySource });
     const sourceColumn = React.useCallback<() => ColumnFactoryResult>(() => {
-        if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined) {
+        if (client && cache && sourceId !== undefined && orderNumberId !== undefined && priceId !== undefined && notesId !== undefined) {
             return [{
                 Header: "Source",
                 accessor(row) {
-                    const { notes } = row;
-                    const source = autoFormat(getNote(notes, sourceId));
-                    const orderNumber = autoFormat(getNote(notes, orderNumberId));
-                    const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(notes, priceId) ?? "")) ? "$" : null;
-                    const price = cache && client && <div className="d-flex d-flex-row d-inline-flex price t-small">{unit}<FieldEditor noteId={priceId} row={row} /></div>;
+                    const { notes: allNotes } = row;
+                    const notes = getNote(allNotes, notesId);
+                    const source = autoFormat(getNote(allNotes, sourceId));
+                    const orderNumber = autoFormat(getNote(allNotes, orderNumberId));
+                    const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(allNotes, priceId) ?? "")) ? "$" : null;
+                    const price = cache && client && <div className="d-flex d-flex-row d-inline-flex price t-small">
+                        {unit}
+                        <FieldEditor
+                            noteId={priceId}
+                            row={row}
+                            contextDropdownMenu={notes === undefined ? undefined : <Dropdown.Menu>
+                                <Dropdown.Item onSelect={() => {
+                                    injectValue(notes, "original-price", price);
+
+                                    const { folder_id, id: release_id, instance_id } = row;
+                                    const note = noteById(allNotes, notesId);
+                                    const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, notesId, notes);
+                                    mutate(note, "value", notes, promise).then(() => {
+                                        clearCacheForCollectionItem(row);
+                                    }, (e) => {
+                                        console.error(e);
+                                    });
+                                }}>Test</Dropdown.Item>
+                            </Dropdown.Menu>}
+                        />
+                    </div>;
                     let { uri, Icon } = orderUri(source as Source, orderNumber);
                     Icon = Icon ?? (() => <div><Badge bg="dark">{source}</Badge> {orderNumber}</div>);
                     if (uri) {
@@ -434,7 +421,7 @@ export default function CollectionTable(props: {
             } as BootstrapTableColumn<CollectionItem>,
             [KnownFieldTitle.source, KnownFieldTitle.orderNumber, KnownFieldTitle.price]];
         }
-    }, [cache, client, orderNumberId, priceId, sourceId, sortBySource]);
+    }, [client, cache, sourceId, orderNumberId, priceId, notesId, sortBySource, clearCacheForCollectionItem]);
 
     const sortByPlays = React.useCallback((ac: { original: CollectionItem }, bc: { original: CollectionItem }) => {
         const a = playCount(ac.original) ?? -1;
@@ -446,37 +433,12 @@ export default function CollectionTable(props: {
             return [{
                 Header: "Plays",
                 className: "centered-column",
-                accessor(row) {
-                    return <Observer render={() => {
-                        const { folder_id, id: release_id, instance_id } = row;
-                        const info = playsInfo(row);
-                        if (isCD(row) || !info) {
-                            return null;
-                        }
-                        const { plays, playsNote, history } = info;
-                        return <Spinner value={plays ?? 0} min={0} onChange={change} title={history.join("\n")} />;
-
-                        function change(value: number) {
-                            const newPlayCount = value.toString();
-                            const now = new Date();
-                            const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join("-");
-                            const segments = [newPlayCount, ...history];
-                            if (value > plays) {
-                                arraySetAdd(segments, today);
-                            } else {
-                                arraySetRemove(segments, today);
-                            }
-                            const newFieldValue = segments.join("\n");
-                            const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, playsId!, newFieldValue)
-                            mutate(playsNote, "value", newFieldValue, promise);
-                        }
-                    }} />;
-                },
+                accessor: (row) => <PlayCountSpinner {...row} />,
                 sortType: sortByPlays,
             } as BootstrapTableColumn<CollectionItem>,
             [KnownFieldTitle.plays]];
         }
-    }, [client, playsId, playsInfo, sortByPlays]);
+    }, [client, playsId, sortByPlays]);
 
     const notesColumn = React.useCallback<() => ColumnFactoryResult>(() => {
         if (client && cache && notesId) {
@@ -641,68 +603,9 @@ export default function CollectionTable(props: {
     const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: "Location",
         className: "minimal-column multi-capable",
-        Cell: ({ row: { original: item } }: CollectionCell<string>) => {
-            let { selection } = React.useContext(ElephantSelectionContext);
-            return <Observer>{() => {
-                const folderId = pendingValue(item.folder_id);
-                const value = folderName(folderId);
-            let { label, status, type } = parseLocation(value);
-            let extra: Content = status;
-            let className: string | undefined = undefined;
-            let bg: Variant | undefined = undefined;
-            switch (status) {
-                case "remain":
-                    extra = false;
-                    break;
-                case "unknown":
-                    bg = "warning";
-                    extra = false;
-                    break;
-                case "leave":
-                    extra = FiNavigation;
-                    className = "badge-light listed";
-                    break;
-                case "listed":
-                    className = "badge-light listed";
-                    extra = FiCheck;
-                    break;
-                case "sold":
-                    extra = FiDollarSign;
-                    type = TagKind.tag;
-                    className = "badge-success";
-                    break;
-            }
-                selection = selection ?? [item];
-                return <Dropdown
-                    onSelect={(newFolderIdStr) => {
-                        const newFolderId = Number(newFolderIdStr);
-                        if (!client || !newFolderIdStr || isNaN(newFolderId)) {
-                            return;
-                        }
-                        selection?.forEach(async (e) => {
-                            await mutate(e, "folder_id", newFolderId, client.moveReleaseInstanceToFolder(e.folder_id, e.id, e.instance_id, newFolderId));
-                            cache?.clear(collectionItemCacheQuery(e));
-                        });
-                    }}
-                >
-                <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row")} kind={type} tag={label} extra={extra} />
-                <Dropdown.Menu>
-                    {folders?.map((folder, i) => {
-                        let menuItem = <Dropdown.Item key={folder.id} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name} ({folder.count})</Dropdown.Item>;
-                        if (i && folders[i - 1].name.split("(")[0] !== folder.name.split("(")[0]) {
-                            menuItem = <>
-                                <Dropdown.Divider />
-                                {menuItem}
-                            </>;
-                        }
-                        return menuItem;
-                    })}
-                </Dropdown.Menu>
-            </Dropdown>;
-            }}</Observer>;
-        },
+        Cell: ({ row }: CollectionCell<string>) => <LocationCell item={row.original} />,
         sortType: sortByLocation,
-    }), [cache, client, folderName, folders, sortByLocation]);
+    }), [sortByLocation]);
 
     const tagsColumn = React.useMemo(() => ({
         Header: "Tags",
@@ -806,11 +709,10 @@ export default function CollectionTable(props: {
             </div>
         </ElephantSelectionContext.Provider>}
         <Observer>{() => {
-            const data = toJS(collectionTableData.get());
             return <BootstrapTable
                 sessionKey={collectionSubset ? undefined : "Collection"}
                 searchAndFilter={searchAndFilter}
-                data={data}
+                data={[...collectionTableData.get()]}
                 mnemonic={mnemonic}
                 {...sharedTableProps} />;
         }
@@ -930,19 +832,26 @@ function priceUnit(currency: CurrenciesEnum | undefined) {
     return unit;
 }
 
+type FEPII<As> = FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> : As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never);
+
+type FEPI<As> = Omit<FEPII<As>, "contextMenu">;
+
 function FieldEditor<As = "text">(props: {
     as?: As,
     row: CollectionItem,
     noteId: number,
-} & FormControlProps & (As extends "text" ? React.InputHTMLAttributes<"text"> : As extends "textarea" ? React.TextareaHTMLAttributes<"textarea"> : never)): JSX.Element {
+    contextDropdownMenu?: JSX.Element,
+} & FEPI<As>): JSX.Element {
     const {
         row,
         noteId,
+        contextDropdownMenu: contextMenu,
     } = props;
     const {
         client,
         setError,
     } = React.useContext(ElephantContext);
+    const [showContextMenu, setShowContextMenu] = React.useState(false);
     const [floatingValue, setFloatingValue] = React.useState<string>();
     const [editing, setEditing0] = React.useState<boolean>(false);
     const focusRef = React.useRef<HTMLInputElement>();
@@ -967,6 +876,8 @@ function FieldEditor<As = "text">(props: {
         clear = () => clearInterval(h);
         return clear;
     }, [editing]);
+    const menuRef = React.useRef<HTMLDivElement>(null);
+    useRootClose(menuRef, () => setShowContextMenu(false), { disabled: !showContextMenu });
     return <Observer render={() => {
         const { folder_id, id: release_id, instance_id, notes } = row;
         const note = noteById(notes, noteId)!;
@@ -1008,6 +919,7 @@ function FieldEditor<As = "text">(props: {
                     "client",
                     "cache",
                     "setError",
+                    "contextDropdownMenu",
                 )}
                 className="hover-lined"
                 disabled={pending(pendable)}
@@ -1016,7 +928,29 @@ function FieldEditor<As = "text">(props: {
                 onBlur={commit}
             />;
         }
-        return <div className={props.as ? "flex flex-column" : undefined}>
+        if (contextMenu) {
+            if (!editing) {
+                const ogControl = control;
+                control = <Dropdown
+                    show={showContextMenu}
+                >
+                    {ogControl}
+                    <div ref={menuRef}>
+                        {contextMenu}
+                    </div>
+                </Dropdown>;
+                //console.log(`not editing '${row.basic_information.title}' / ${floatingValue}, adding dropdown`);
+            } else {
+                //console.log(`editing '${row.basic_information.title}' / ${floatingValue}`);
+            }
+        }
+        return <div
+            className={props.as ? "flex flex-column" : undefined}
+            onContextMenu={(editing || !contextMenu) ? undefined : (e) => {
+                e.preventDefault();
+                setShowContextMenu(true);
+            }}
+        >
             {control}
         </div>;
     }} />;
@@ -1046,9 +980,9 @@ function TasksEditor(props: {
     } = React.useContext(ElephantContext);
     const clearCacheForCollectionItem = useClearCacheForCollectionItem();
     const tasks = React.useMemo<Array<{ checked: boolean, task: string }>>(() => {
-        if (!noteId) { return []; }
+        if (!noteId) { return observable([]); }
         let value = getNote(row.notes, noteId);
-        if (!value) { return []; }
+        if (!value) { return observable([]); }
         value = pendingValue(value);
         return observable(sortBy(value.split("\n").map((src) => {
             const match = src.match(/^\[(?<checked>[ X])\] (?<task>.*)$/);
@@ -1070,10 +1004,8 @@ function TasksEditor(props: {
             if (floatingValue !== undefined) {
                 const promise = client!.editCustomFieldForInstance(folder_id, release_id, instance_id, noteId, floatingValue);
                 mutate(note, "value", floatingValue, promise).then(() => {
-                    // setFloatingValue(undefined);
                     clearCacheForCollectionItem(row);
                 }, (e) => {
-                    // setFloatingValue(undefined);
                     setError(e);
                 });
             }
@@ -1085,9 +1017,15 @@ function TasksEditor(props: {
         return <>
             {tasks.map((taskObj) => {
                 const { task, checked } = taskObj;
-                return <Check key={task} disabled={pending(pendable)} label={task} value={checked} setValue={action((value) => taskObj.checked = value)} />;
+                return <Check key={task} disabled={pending(pendable)} label={task} value={checked} setValue={action((value) => {
+                    taskObj.checked = value;
+                })} />;
             })}
-            {availableTasks && <Dropdown onSelect={action((task) => task && tasks.push({ task, checked: false }))}>
+            {availableTasks && <Dropdown onSelect={action((task) => {
+                if (task) {
+                    tasks.push({ task, checked: false });
+                }
+            })}>
                 <Dropdown.Toggle as={"div"} className="no-toggle"><FiPlus /></Dropdown.Toggle>
                 <Dropdown.Menu>
                     {availableTasks.map((task) => <Dropdown.Item key={task} eventKey={task}>{task}</Dropdown.Item>)}

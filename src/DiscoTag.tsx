@@ -1,6 +1,5 @@
 import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import React from "react";
-import { HTMLProps } from "react";
 import * as Router from "react-router-dom";
 import autoFormat from "./autoFormat";
 import DiscogsLinkback from "./DiscogsLinkback";
