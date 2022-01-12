@@ -18,6 +18,10 @@ import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import { TagKind, TagProps } from "./Tag";
 
+import VinylPostLogo from "./vinyl-post-logo.png";
+import BlackBoxLogo from "./black-box-logo.png";
+import ExternalLink from "./shared/ExternalLink";
+
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
     sleeveCondition = "Sleeve Condition",
@@ -41,11 +45,24 @@ export function useNoteIds() {
     return { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId };
 }
 
+/*
+Amazon
+Black Box
+Discogs
+Gift
+Grooves
+Originals
+PFC
+Thrillhouse
+Vinyl Post
+*/
 export enum Source {
     amazon = "Amazon",
+    blackbox = "Black Box",
     discogs = "Discogs",
     gift = "Gift",
     pfc = "PFC",
+    vinylpost = "Vinyl Post",
 }
 
 export function orderUri(source: Source, orderNumber: string) {
@@ -60,6 +77,15 @@ export function orderUri(source: Source, orderNumber: string) {
             return {
                 Icon: SiDiscogs,
                 uri: `https://www.discogs.com/sell/order/${orderNumber}`,
+            };
+        case Source.vinylpost:
+            return {
+                Icon: () => <img alt={source} src={VinylPostLogo} className="icon" />,
+                uri: `https://vinylpost.co/${orderNumber}/`,
+            };
+        case Source.blackbox:
+            return {
+                Icon: () => <img alt={source} src={BlackBoxLogo} className="icon" />,
             };
         default:
             return {};
@@ -259,6 +285,11 @@ const IDIOMS = [
 
 function Tuning() {
     return <Card>
+        <Card.Header>Discogs Links</Card.Header>
+        <Card.Body>
+            <ExternalLink href="https://support.discogs.com/hc/en-us/articles/360007331734">Formatting Text</ExternalLink>
+            <ExternalLink href="https://www.discogs.com/forum/thread/810326">Common Etchings</ExternalLink>
+        </Card.Body>
         <Card.Header>Tuning</Card.Header>
         <Card.Body>
             <dl>
@@ -269,7 +300,7 @@ function Tuning() {
                         <dt>Novel Formats</dt>
                         <dd>{novelFormats.get().join(", ")}</dd>
                         <dt>Idioms</dt>
-                        <dd>{IDIOMS.map((s, i) => <code key={i}>{s}</code>)}</dd>
+                        <dd>{IDIOMS.map((s, i) => <code className="me-5" key={i}>{s}</code>)}</dd>
                     </>}
                 </Observer>
             </dl>
