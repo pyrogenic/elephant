@@ -211,8 +211,8 @@ export const FORMATS: {
     "12\"": { as: TagKind.format },
 
     "33 ⅓ RPM": { as: TagKind.format, name: "33⅓" },
-    "45 RPM": { as: TagKind.format, name: "45rpm", abbr: "45" },
-    "78 RPM": { as: TagKind.format, name: "78rpm", abbr: "78" },
+    "45 RPM": { as: TagKind.format, name: "45rpm", abbr: <Circled>45</Circled> },
+    "78 RPM": { as: TagKind.format, name: "78rpm", abbr: <Circled>78</Circled> },
 
     "140g": { as: TagKind.format },
     "180g": { as: TagKind.format },
