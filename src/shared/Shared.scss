@@ -66,6 +66,10 @@ svg.prepend-inline-icon {
     margin-inline-end: 0.25rem;
 }
 
+img.icon {
+    height: 1em;
+}
+
 .comma-sep {
     white-space: pre-wrap;
     &:not(:last-of-type)::after {

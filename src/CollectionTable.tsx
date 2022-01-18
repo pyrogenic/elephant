@@ -411,11 +411,14 @@ export default function CollectionTable(props: {
                         />
                     </div>;
                     let { uri, Icon } = orderUri(source as Source, orderNumber);
-                    Icon = Icon ?? (() => <div><Badge bg="dark">{source}</Badge> {orderNumber}</div>);
+                    Icon = Icon ?? (() => <Badge bg="dark">{source}</Badge>);
                     if (uri) {
                         return <><ExternalLink href={uri}><Icon className="me-1" /></ExternalLink>{price}</>;
                     }
-                    return <><Icon />{price}</>;
+                    if (orderNumber) {
+                        return <><Icon className="me-1" /><div className="me-1">{orderNumber}</div></>;
+                    }
+                    return <><Icon className="me-1" />{price}</>;
                 },
                 sortType: sortBySource,
             } as BootstrapTableColumn<CollectionItem>,
@@ -575,7 +578,7 @@ export default function CollectionTable(props: {
         id: "Cover",
         className: "minimal-column",
         accessor: (row) => <ExternalLink href={releaseUrl(row)}>
-            <img className="cover" src={row.basic_information.thumb} width={64} height={64} alt="Cover" />
+            <img className="cover" src={row.basic_information.thumb} width={64} alt="Cover" />
         </ExternalLink>,
     }), []);
 
