@@ -58,23 +58,37 @@ export default function Pager({
     const [lastMove, setLastMove] = React.useState<{ op: "prev" | "next", bad: boolean }>();
     const prevPage = React.useMemo(() => () => gotoPage(clamp(currentPage - 1, 0, maxPage)), [currentPage, gotoPage, maxPage]);
     const nextPage = React.useMemo(() => () => gotoPage(clamp(currentPage + 1, 0, maxPage)), [currentPage, gotoPage, maxPage]);
+    const firstPage = React.useMemo(() => () => gotoPage(clamp(0, 0, maxPage)), [gotoPage, maxPage]);
+    const lastPage = React.useMemo(() => () => gotoPage(clamp(maxPage, 0, maxPage)), [gotoPage, maxPage]);
     const noPrev = React.useMemo(() => currentPage === 0, [currentPage]);
     const noNext = React.useMemo(() => currentPage === maxPage, [currentPage, maxPage]);
     const keyEventHandler = React.useMemo(() => (key: string, e: KeyboardEvent) => {
         // console.log({ key, e, type: e.type, currentPage });
         switch (key) {
             case "left":
+            case "pageup":
                 e.preventDefault();
                 prevPage();
                 setLastMove({ op: "prev", bad: noPrev });
                 break;
             case "right":
+            case "pagedown":
                 e.preventDefault();
                 nextPage();
                 setLastMove({ op: "next", bad: noNext });
                 break;
+            case "home":
+                e.preventDefault();
+                firstPage();
+                setLastMove({ op: "prev", bad: noPrev });
+                break;
+            case "end":
+                e.preventDefault();
+                lastPage();
+                setLastMove({ op: "next", bad: noNext });
+                break;
         };
-    }, [nextPage, noNext, noPrev, prevPage]);
+    }, [firstPage, lastPage, nextPage, noNext, noPrev, prevPage]);
     const spineInfo = React.useMemo(() => {
         const spines: ReturnType<SpineFactory>[] = [];
         const sections: [page: number, label: string][] = [];
@@ -96,7 +110,7 @@ export default function Pager({
         {keyboardNavigation === "global" && <KeyboardEventHandler
             isExclusive={true}
             handleEventType={"keydown"}
-            handleKeys={["left", "right"]}
+            handleKeys={["left", "right", "home", "end", "pageup", "pagedown"]}
             onKeyEvent={keyEventHandler} />}
         <Col>
             <InputGroup>
@@ -112,7 +126,7 @@ export default function Pager({
                     </Button>
                     <Button
                         className={"prev"}
-                        key={"page - 1"}
+                        key={"page- 1"}
                         variant={variant}
                         disabled={noPrev}
                         onClick={prevPage}
@@ -139,13 +153,13 @@ export default function Pager({
                 </Dropdown>
                 <>
                     {currentPage < maxShownPage && range(currentPage + 1, maxShownPage + 1).map((page: number) =>
-                        <PageButton key={page}  autoHide={page > maxShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
+                        <PageButton key={page} autoHide={page > maxShownPageSm} spine={spine} gotoPage={gotoPage} page={page} variant={variant} />)}
                     {maxShownPage < maxPage && <InputGroup.Text key={maxPage}>
                         <FiMoreHorizontal />
                     </InputGroup.Text>}
                     <Button
                         className={"next"}
-                        key={"page + 1"}
+                        key={"page+ 1"}
                         variant={variant}
                         disabled={noNext}
                         onClick={nextPage}
