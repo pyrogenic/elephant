@@ -18,6 +18,7 @@ import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import { TagKind, TagProps } from "./Tag";
 
+import AcousticSoundsLogo from "./acoustic-sounds-logo.svg";
 import VinylPostLogo from "./vinyl-post-logo.png";
 import BlackBoxLogo from "./black-box-logo.png";
 import ExternalLink from "./shared/ExternalLink";
@@ -57,6 +58,7 @@ Thrillhouse
 Vinyl Post
 */
 export enum Source {
+    acousticsounds = "Acoustic Sounds",
     amazon = "Amazon",
     blackbox = "Black Box",
     discogs = "Discogs",
@@ -68,6 +70,11 @@ export enum Source {
 export function orderUri(source: Source, orderNumber: string) {
     orderNumber = orderNumber.split("\n").pop()!;
     switch (source) {
+        case Source.acousticsounds:
+            return {
+                Icon: () => <img alt={source} src={AcousticSoundsLogo} className="icon" />,
+                uri: `https://store.acousticsounds.com/index.cfm?get=account&do=orderdetail&order_id=${orderNumber}`,
+            };
         case Source.amazon:
             return {
                 Icon: SiAmazon,

@@ -416,7 +416,7 @@ export default function CollectionTable(props: {
                         return <><ExternalLink href={uri}><Icon className="me-1" /></ExternalLink>{price}</>;
                     }
                     if (orderNumber) {
-                        return <><Icon className="me-1" /><div className="me-1">{orderNumber}</div></>;
+                        return <><Icon className="me-1" />{price}<div className="me-1">{orderNumber}</div></>;
                     }
                     return <><Icon className="me-1" />{price}</>;
                 },

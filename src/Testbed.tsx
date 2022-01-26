@@ -38,7 +38,7 @@ export default function Testbed() {
             >Go</Button>
             {result && result.results.map((release) => <Row>
                 <Col className="minimal-column">
-                    <ExternalLink href={release.uri}>
+                    <ExternalLink href={`https://discogs.com${release.uri}`}>
                         <img className="cover" src={release.thumb} width={64} height={64} alt="Cover" />
                     </ExternalLink>
                 </Col>
