@@ -32,6 +32,7 @@ import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
 import useActivityMonitor from "./useActivityMonitor";
 import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
+import useInSoldFolder from "./useInSoldFolder";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -73,7 +74,7 @@ function SpeedTracker() {
     </>;
 }
 
-type CollectionFilter = (item: CollectionItem) => boolean | undefined;
+export type CollectionFilter = (item: CollectionItem) => boolean | undefined;
 
 
 export default function Masthead({
@@ -118,6 +119,8 @@ export default function Masthead({
     const getNewCollectionEntries = useGetNewCollectionEntries();
 
     const folderName = useFolderName();
+
+    const inCollection = useInCollection();
 
     const listedMissingLocation: CollectionFilter = React.useCallback((item: CollectionItem) => {
         if (!isVinyl(item)) return false;
@@ -269,14 +272,20 @@ export default function Masthead({
                 className="me-3"
                 collection={collection}
                 search={search}
+                filter={filter}
                 setSearch={setSearch}
             />
+            <Navbar.Text>
+                <Check label="In Collection" value={filter === inCollection} setValue={(on) => setFilter(on ? inCollection : undefined)} />
+            </Navbar.Text>
+            {/*
             <Navbar.Text>
                 <Check label="Listed Missing Location" value={filter === listedMissingLocation} setValue={(on) => setFilter(on ? listedMissingLocation : undefined)} />
             </Navbar.Text>
             <Navbar.Text>
                 <Check label="Listed" value={filter === listed} setValue={(on) => setFilter(on ? listed : undefined)} />
             </Navbar.Text>
+            */}
             <Navbar.Text>
                 <SelectBox<InventoryStatusesEnum> size={"sm"} variant="outline-secondary" options={Object.values(InventoryStatusesEnum) as InventoryStatusesEnum[]} value={inventoryStatus} setValue={setInventoryStatus} placeholder="status" />
             </Navbar.Text>
@@ -368,3 +377,19 @@ export default function Masthead({
         <Navbar.Toggle />
     </Navbar>;
 }
+
+function useInCollection(): CollectionFilter {
+    const { lpdb } = React.useContext(ElephantContext);
+    const inSoldFolder = useInSoldFolder();
+    return React.useCallback((item: CollectionItem) => {
+        if (!isVinyl(item))
+            return false;
+        const listing = lpdb?.listing(item);
+        if (listing)
+            return false;
+        if (inSoldFolder(item))
+            return false;
+        return true;
+    }, [inSoldFolder, lpdb]);
+}
+

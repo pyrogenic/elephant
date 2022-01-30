@@ -29,6 +29,15 @@ export default class OrderedMap<TKey, TValue> {
     public has = (key: TKey) => {
         return this.content.has(key);
     };
+    public count = (filter: (value: OB<TValue>) => boolean | undefined) => {
+        let result = 0;
+        this.inOrder.forEach((e) => {
+            if (filter(e)) {
+                result++;
+            }
+        });
+        return result;
+    };
     public set = action((key: TKey, value: OB<TValue>) => {
         const i = this.insertionOrder.get(key);
         if (i !== undefined) {

@@ -90,7 +90,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
                 <div className="title">{trimTitle ? title.split(BAD_SEPS).shift() : title.replace(BAD_SEPS, SEP)}</div>
                 <div className="space" />
                 <div className="label">
-                    {labels.map((l, i) => <span key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div>{logos && <> <LazyMusicLabel label={l} showName={false} /></>}</span>)}
+                    {labels.map((l, i) => <React.Fragment key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div>{logos && <> <LazyMusicLabel label={l} showName={false} /></>}</React.Fragment>)}
                 </div>
             </div>
         </div>;

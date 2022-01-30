@@ -52,6 +52,7 @@ import useRootClose from "react-overlays/useRootClose";
 import PlayCountSpinner from "./PlayCountSpinner";
 import LocationCell from "./LocationCell";
 import { injectValue } from "./shared/yaml";
+import useInSoldFolder from "./useInSoldFolder";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -184,9 +185,7 @@ export default function CollectionTable(props: {
     //const sortByTasks = autoSortBy("Tasks");
     //const sortByTags = autoSortBy("Tags");
 
-    const inSoldFolder = React.useCallback((item: CollectionItem) => {
-        return parseLocation(folderName(item.folder_id)).status === "sold";
-    }, [folderName]);
+    const isInSoldFolder = useInSoldFolder();
 
     const sortByCondition = React.useCallback((ac, bc) => {
         const mca = mediaCondition(ac.original.notes);
@@ -268,10 +267,10 @@ export default function CollectionTable(props: {
                                 }
                             } else {
                                 if (numSold) {
-                                    const numInSoldFolder = lpdb?.entriesForRelease(item.id)?.filter(inSoldFolder).length ?? 0;
+                                    const numInSoldFolder = lpdb?.entriesForRelease(item.id)?.filter(isInSoldFolder).length ?? 0;
                                     if (numSold > numInSoldFolder) {
                                         newFolderId = soldFolder;
-                                    } else if (!inSoldFolder(item)) {
+                                    } else if (!isInSoldFolder(item)) {
                                         orderOrListingElements.pop();
                                     }
                                 }
@@ -370,7 +369,7 @@ export default function CollectionTable(props: {
         folderName,
         soldFolder,
         lpdb,
-        inSoldFolder,
+        isInSoldFolder,
         client,
         cache,
         refreshInventory,
@@ -386,10 +385,10 @@ export default function CollectionTable(props: {
                 accessor(row) {
                     const { notes: allNotes } = row;
                     const notes = getNote(allNotes, notesId);
-                    const source = autoFormat(getNote(allNotes, sourceId));
+                    const source = autoFormat(getNote(allNotes, sourceId)) as Source;
                     const orderNumber = autoFormat(getNote(allNotes, orderNumberId));
                     const unit = /^\d+\.\d\d$/.test(pendingValue(getNote(allNotes, priceId) ?? "")) ? "$" : null;
-                    const price = cache && client && <div className="d-flex d-flex-row d-inline-flex price t-small">
+                    const price = cache && client && !(source === Source.pfc || source === Source.gift) && <div className="d-flex d-flex-row d-inline-flex price t-small">
                         {unit}
                         <FieldEditor
                             noteId={priceId}
@@ -642,11 +641,11 @@ export default function CollectionTable(props: {
     ], [coverColumn, fieldColumns, formatColumn, labelColumn, locationColumn, ratingColumn, releaseColumn, tagsColumn, yearColumn]);
 
     const rowClassName = React.useCallback((item: CollectionItem) => {
-        if (inSoldFolder(item)) {
+        if (isInSoldFolder(item)) {
             return "sold";
         }
         return undefined;
-    }, [inSoldFolder]);
+    }, [isInSoldFolder]);
 
     const [savedSelection, setSavedSelection] = useStorageState<number[]>("session", [storageKey, "selection"], []);
     const onceRef = React.useRef(true);
