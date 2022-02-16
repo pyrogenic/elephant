@@ -126,10 +126,16 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         Refresh
                     </Button>
                     <Button
+                        size="sm"
+                        onClick={() => {
+                            console.log(lpdb.collection.get(item.instance_id));
+                        }}
+                    >RG</Button>
+                    {/* <Button
                         onClick={() => {
                             cache?.count(cacheQuery).then(console.log, console.warn);
                         }}
-                    >Check</Button>
+                    >Check</Button> */}
                 </Col>
                 <Col xs={4}>
                     <ReactJson

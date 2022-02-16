@@ -6,11 +6,12 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import { useReactToPrint } from "react-to-print";
+import autoFormat from "../autoFormat";
 import { CollectionItem } from "../Elephant";
-import "./Insert.scss";
 import LazyMusicLabel from "../LazyMusicLabel";
 import Check from "../shared/Check";
 import Spinner from "../shared/Spinner";
+import "./Insert.scss";
 
 const BAD_SEPS = / - |: | \(/g;
 const SEP = " ⋄ ";
@@ -18,7 +19,7 @@ const SEP = " ⋄ ";
 const BAD_LABELS = / Record(ings?)?s?/g;
 
 export default function Insert({ item }: { item: CollectionItem }) {
-    const artists = item.basic_information.artists.map(({ name }) => name).join(SEP);
+    const artists = item.basic_information.artists.map(({ name }) => autoFormat(name)).join(SEP);
     const multilineArtists = flatten(item.basic_information.artists.map(({ name }) => [<>{name}</>, <br />]));
     multilineArtists.pop();
     const title = item.basic_information.title;

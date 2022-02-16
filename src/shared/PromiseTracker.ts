@@ -42,8 +42,8 @@ class PromiseTrackerImpl {
             item.error = error;
             this.send("end", item);
         });
-        promise.then(record.bind(null, undefined), record);
         this.logEntries.push(item);
+        promise.then(record.bind(null, undefined), record);
         this.send("start", item);
     }
 

@@ -73,7 +73,7 @@ const sortByTasks: SortByFn<CollectionItem> = (ac, bc) => {
     return r;
 }
 
-function applyInstruction(instruction: string, _src: any) {
+function applyInstruction(instruction: string, src: any) {
     let value: any;
     switch (instruction[0]) {
         case "=":
@@ -81,6 +81,9 @@ function applyInstruction(instruction: string, _src: any) {
             break;
         default:
             value = instruction;
+    }
+    if (typeof src === "object") {
+        value = JSON.parse(value);
     }
     return value;
 };
@@ -683,13 +686,14 @@ export default function CollectionTable(props: {
                 if (entries?.length) {
                     const instruction = item.comment;
                     const applyThisInstruction = applyInstruction.bind(null, instruction);
-                    for (const entry of entries) {
-                        runInAction(() => {
+                    runInAction(() => {
+                        for (let entry of entries) {
+                            entry = lpdb?.collection.get(entry.instance_id)!;
                             queries.forEach((query) => {
                                 jsonpath.apply(entry, query, applyThisInstruction);
                             });
-                        });
-                    }
+                        }
+                    });
                 }
             });
         }

@@ -13,7 +13,6 @@ type OB<TValue> =
     : TValue;
 
 export default class OrderedMap<TKey, TValue> {
-    private content = observable(new Map<TKey, OB<TValue>>());
     private insertionOrder = new Map<TKey, number>();
     private inOrder: OB<TValue>[] = observable([]);
     constructor() {
@@ -24,10 +23,14 @@ export default class OrderedMap<TKey, TValue> {
     public get size() { return this.inOrder.length; }
     public values = () => this.inOrder;
     public get = (key: TKey) => {
-        return this.content.get(key);
+        const i = this.insertionOrder.get(key);
+        if (i === undefined) {
+            return undefined;
+        }
+        return this.inOrder[i];
     };
     public has = (key: TKey) => {
-        return this.content.has(key);
+        return this.insertionOrder.has(key);
     };
     public count = (filter: (value: OB<TValue>) => boolean | undefined) => {
         let result = 0;
@@ -46,10 +49,9 @@ export default class OrderedMap<TKey, TValue> {
             this.insertionOrder.set(key, this.inOrder.length);
             this.inOrder.push(value);
         }
-        this.content.set(key, value);
     });
     public getOrCreate = action((id: TKey, factory: () => OB<TValue>) => {
-        let result = this.content.get(id);
+        let result = this.get(id);
         if (result === undefined) {
             result = factory();
             this.set(id, result);
@@ -57,7 +59,7 @@ export default class OrderedMap<TKey, TValue> {
         return result;
     });
     public getOrRefresh = action((id: TKey, factory: (existing?: OB<TValue>) => OB<TValue>, refresh?: boolean) => {
-        let result = this.content.get(id);
+        let result = this.get(id);
         if (result === undefined || refresh) {
             result = factory(result);
             this.set(id, result);
