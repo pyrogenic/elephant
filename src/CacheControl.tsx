@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import ElephantContext from "./ElephantContext";
+import type { CacheQuery } from "./IDiscogsCache";
 import Badge from "./shared/Badge";
 import BootstrapTable, { BootstrapTableColumn } from "./shared/BootstrapTable";
 import { ButtonVariant, Variant } from "./shared/Shared";
@@ -22,55 +23,71 @@ export const RELEASES_QUERY = { url: /discogs\.com\/releases\// };
 export const ARTISTS_QUERY = { url: /discogs\.com\/artists\// };
 export const LISTS_QUERY = { url: /discogs\.com\/lists\// };
 
-export function CacheControl({ variant, badgeVariant = "light", badgeText = "dark" }: { variant?: ButtonVariant, badgeVariant?: Variant, badgeText?: Variant }) {
-    const counts: {
-        collectionCount: number;
-        inventoryCount: number;
-        marketplaceCount: number;
-        ordersCount: number;
-        folderNamesCount: number;
-        mastersCount: number;
-        releasesCount: number;
-        artistsCount: number;
-        listsCount: number;
-        allCount: number;
-    } = React.useMemo(() => observable({
-        collectionCount: 0,
-        inventoryCount: 0,
-        marketplaceCount: 0,
-        ordersCount: 0,
-        folderNamesCount: 0,
-        mastersCount: 0,
-        releasesCount: 0,
-        artistsCount: 0,
-        listsCount: 0,
-        allCount: 0,
-    }), []);
-    type Readout = {
-        category: string,
-        cached: number,
-        stored: number,
+export function CacheControl({ variant, badgeVariant = "light", badgeTextVariant = "dark" }: { variant?: ButtonVariant, badgeVariant?: Variant, badgeTextVariant?: Variant }) {
+    type CountEntry = {
+        p?: LabeledPromise<number>;
+        c: number;
     };
-    const columns = React.useMemo<BootstrapTableColumn<Readout>[]>(() => [
-        {
 
-            accessor: "category",
-        },
-    ], []);
+    const counts: {
+        collectionCount: CountEntry;
+        inventoryCount: CountEntry;
+        marketplaceCount: CountEntry;
+        ordersCount: CountEntry;
+        folderNamesCount: CountEntry;
+        mastersCount: CountEntry;
+        releasesCount: CountEntry;
+        artistsCount: CountEntry;
+        listsCount: CountEntry;
+        allCount: CountEntry;
+    } = React.useMemo(() => observable({
+        collectionCount: { c: 0 },
+        inventoryCount: { c: 0 },
+        marketplaceCount: { c: 0 },
+        ordersCount: { c: 0 },
+        folderNamesCount: { c: 0 },
+        mastersCount: { c: 0 },
+        releasesCount: { c: 0 },
+        artistsCount: { c: 0 },
+        listsCount: { c: 0 },
+        allCount: { c: 0 },
+    }), []);
+    // type Readout = {
+    //     category: string,
+    //     cached: number,
+    //     stored: number,
+    // };
+    // const columns = React.useMemo<BootstrapTableColumn<Readout>[]>(() => [
+    //     {
+
+    //         accessor: "category",
+    //     },
+    // ], []);
 
     const { cache } = React.useContext(ElephantContext);
+    const cacheCount = React.useCallback((label: string & keyof typeof counts, query: CacheQuery | undefined) => {
+        if (!cache) return;
+        const p: LabeledPromise<number> = cache.count(query);
+        p.label = label;
+        counts[label] = { ...counts[label], p };
+        p.then(action((result) => {
+            counts[label] = { c: result };
+        }));
+        return p;
+    }, [cache, counts]);
+
     if (!cache) { return null; }
 
-    cache.count(COLLECTION_QUERY).then(action((result) => counts.collectionCount = result));
-    cache.count(INVENTORY_QUERY).then(action((result) => counts.inventoryCount = result));
-    cache.count(MARKETPLACE_QUERY).then(action((result) => counts.marketplaceCount = result));
-    cache.count(ORDERS_QUERY).then(action((result) => counts.ordersCount = result));
-    cache.count(FOLDER_NAMES_QUERY).then(action((result) => counts.folderNamesCount = result));
-    cache.count(MASTERS_QUERY).then(action((result) => counts.mastersCount = result));
-    cache.count(RELEASES_QUERY).then(action((result) => counts.releasesCount = result));
-    cache.count(ARTISTS_QUERY).then(action((result) => counts.artistsCount = result));
-    cache.count(LISTS_QUERY).then(action((result) => counts.listsCount = result));
-    cache.count().then(action((result) => counts.allCount = result));
+    cacheCount("collectionCount", COLLECTION_QUERY);
+    cacheCount("inventoryCount", INVENTORY_QUERY);
+    cacheCount("marketplaceCount", MARKETPLACE_QUERY);
+    cacheCount("ordersCount", ORDERS_QUERY);
+    cacheCount("folderNamesCount", FOLDER_NAMES_QUERY);
+    cacheCount("mastersCount", MASTERS_QUERY);
+    cacheCount("releasesCount", RELEASES_QUERY);
+    cacheCount("artistsCount", ARTISTS_QUERY);
+    cacheCount("listsCount", LISTS_QUERY);
+    cacheCount("allCount", undefined);
 
     return <Observer render={() => {
         const {
@@ -85,89 +102,75 @@ export function CacheControl({ variant, badgeVariant = "light", badgeText = "dar
             listsCount,
             allCount,
         } = counts;
-        const allBadge = allCount ? <> <Badge bg={badgeVariant} text={badgeText}>{allCount}</Badge></> : null;
-
         return <>
-            <BootstrapTable
+            {/* <BootstrapTable
                 columns={columns}
                 data={[]}
-            />
+            /> */}
             <Row>
                 <Col>
                     <InputGroup className="mb-2">
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, COLLECTION_QUERY, true)}
-                        >
-                            Collection
-                            {collectionCount ? <> <Badge bg={badgeVariant} text={badgeText}>{collectionCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, INVENTORY_QUERY, true)}
-                        >
-                            Inventory
-                            {inventoryCount ? <> <Badge bg={badgeVariant} text={badgeText}>{inventoryCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, ORDERS_QUERY, true)}
-                        >
-                            Orders
-                            {ordersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{ordersCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, MARKETPLACE_QUERY, true)}
-                        >
-                            Marketplace
-                            {marketplaceCount ? <> <Badge bg={badgeVariant} text={badgeText}>{marketplaceCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, FOLDER_NAMES_QUERY, true)}
-                        >
-                            Folders
-                            {folderNamesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{folderNamesCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, MASTERS_QUERY, true)}
-                        >
-                            Masters
-                            {mastersCount ? <> <Badge bg={badgeVariant} text={badgeText}>{mastersCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, RELEASES_QUERY, true)}
-                        >
-                            Releases
-                            {releasesCount ? <> <Badge bg={badgeVariant} text={badgeText}>{releasesCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, ARTISTS_QUERY, true)}
-                        >
-                            Artists
-                            {artistsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{artistsCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, LISTS_QUERY, true)}
-                        >
-                            Lists
-                            {listsCount ? <> <Badge bg={badgeVariant} text={badgeText}>{listsCount}</Badge></> : null}
-                        </Button>
-                        <Button
-                            variant={variant}
-                            onClick={cache.clear.bind(cache, undefined, true)}
-                        >
-                            All
-                            {allBadge}
-                        </Button>
+                        <CountAndClearButton query={COLLECTION_QUERY} label={"Collection"} count={collectionCount} />
+                        <CountAndClearButton query={INVENTORY_QUERY} label={"Inventory"} count={inventoryCount} />
+                        <CountAndClearButton query={ORDERS_QUERY} label={"Orders"} count={ordersCount} />
+                        <CountAndClearButton query={MARKETPLACE_QUERY} label={"Marketplace"} count={marketplaceCount} />
+                        <CountAndClearButton query={FOLDER_NAMES_QUERY} label={"Folders"} count={folderNamesCount} />
+                        <CountAndClearButton query={MASTERS_QUERY} label={"Masters"} count={mastersCount} />
+                        <CountAndClearButton query={RELEASES_QUERY} label={"Releases"} count={releasesCount} />
+                        <CountAndClearButton query={ARTISTS_QUERY} label={"Artists"} count={artistsCount} />
+                        <CountAndClearButton query={LISTS_QUERY} label={"Lists"} count={listsCount} />
+                        <CountAndClearButton query={undefined} label={"All"} count={allCount} />
                     </InputGroup>
                 </Col>
             </Row>
         </>;
     }} />;
+
+    function CountAndClearButton({ query, label, count }: { query: CacheQuery | undefined, label: string, count: CountEntry, }) {
+        if (!cache) return null;
+        const onClick = () => {
+            const p: LabeledPromise = cache.clear(query, true);
+            p.label = `Clearing ${label}...`;
+            return p;
+        };
+        return <OpButton count={count.c} promise={count.p} badgeVariant={badgeVariant} badgeTextVariant={badgeTextVariant} variant={variant} onClick={onClick} label={label} />;
+    }
 }
+
+type LabeledPromise<T = any> = Promise<T> & {
+    label?: string;
+};
+
+function OpButton({
+    count,
+    badgeVariant,
+    badgeTextVariant,
+    variant,
+    onClick,
+    label,
+    promise: outerPromise,
+}: {
+    count: number,
+    badgeVariant?: Variant,
+    badgeTextVariant?: Variant,
+    variant?: ButtonVariant,
+    onClick: () => LabeledPromise,
+    label: string,
+    promise?: LabeledPromise,
+}) {
+    const [promise, setPromise] = React.useState<LabeledPromise>();
+    const clearPromise = React.useCallback(() => setPromise(undefined), []);
+    const badge = count ? <>&nbsp;<Badge bg={badgeVariant} text={badgeTextVariant}>{count}</Badge></> : null;
+    const activePromise = (outerPromise ?? promise);
+    const collectionButton = <Button
+        variant={variant}
+        onClick={() => setPromise(onClick().then(clearPromise))}
+        disabled={activePromise !== undefined}
+        title={activePromise?.label}
+    >
+        {label}
+        {badge}
+    </Button>;
+    return collectionButton;
+}
+

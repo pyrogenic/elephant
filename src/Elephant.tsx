@@ -2,6 +2,7 @@ import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
+import noop from "lodash/noop";
 import { action, reaction, runInAction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
@@ -116,7 +117,9 @@ export default function Elephant() {
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
   const lpdb = React.useMemo(() => new LPDB(client, cache), [cache, client]);
-  const [, setCollectionTimestamp] = React.useState<Date>(new Date());
+  //const [, setCollectionTimestamp] = React.useState<Date>(new Date());
+
+  const setCollectionTimestamp = noop;
 
   const { collection, inventory, lists } = lpdb;
 

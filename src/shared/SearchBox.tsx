@@ -5,6 +5,8 @@ import { FiSearch, FiX } from "react-icons/fi";
 import "./SearchBox.scss";
 import classConcat, {ClassNames} from "@pyrogenic/perl/lib/classConcat";
 import type { CollectionFilter } from "../Masthead";
+import { computed } from "mobx";
+import { Observer } from "mobx-react";
 
 export default function SearchBox(
     props: {
@@ -21,14 +23,14 @@ export default function SearchBox(
         setSearch,
         filter,
     } = props;
-    const count = React.useMemo(() => {
+    const count = React.useMemo(() => computed(() => {
         return filter ? collection.count(filter) : collection.size;
-    }, [collection, filter]);
+    }), [collection, filter]);
     return <div className={classConcat("search-box", className)}>
-        <Form.Control
-            placeholder={`search ${count} records`} value={search} onChange={({ target: { value } }) => {
+        <Observer render={() => <Form.Control
+            placeholder={`search ${count.get()} records`} value={search} onChange={({ target: { value } }) => {
             setSearch(value);
-        }} />
+            }} />} />
         <FiSearch className="prepend"/>
         <FiX className={classConcat("append", !search && "d-none")} onClick={setSearch.bind(null, "")} />
     </div>;
