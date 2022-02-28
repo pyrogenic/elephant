@@ -25,6 +25,8 @@ export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
 const CURRENT_VERSION = 3;
 
+const VERBOSE = false;
+
 export const ReleaseModel = types.model("Release", {
     id: types.identifierNumber,
     title: types.optional(types.string, "unknown"),
@@ -52,17 +54,17 @@ export const ReleaseModel = types.model("Release", {
     };
     const persist = flow(function* persist(): MultipleYieldGenerator {
         if (actionState.hydrating) {
-            console.log(`skipped persisting ${self.title} because it was just loaded from the db`);
+            if (VERBOSE) console.log(`skipped persisting ${self.title} because it was just loaded from the db`);
             actionState.hydrating = false;
             return;
         }
         const { db: store } = getEnv<StoreEnv>(self);
-        //console.log(`persist ${self.title}`);
+        //if (VERBOSE) console.log(`persist ${self.title}`);
         const db: PromiseType<ElephantMemory> = yield store;
         const tx = db.transaction(["releases", "artistRoles"], "readwrite");
         let result = yield tx.db.put("releases", getSnapshot(self));
         const existingKeys: string[] = yield tx.db.getAllKeysFromIndex("artistRoles", "by-release", self.id);
-        //console.log(`persist ${self.title} result: ${result}`);
+        //if (VERBOSE) console.log(`persist ${self.title} result: ${result}`);
         for (const { artist, role } of self.artists) {
             if (!artist) {
                 console.warn(`bogus element in ${self.title}'s artists, role is ${role}`);
@@ -70,16 +72,16 @@ export const ReleaseModel = types.model("Release", {
                 const [ar, id] = artistRole(artist.id, role, self.id);
                 if (!arraySetRemove(existingKeys, id)) {
                     result = yield tx.db.put("artistRoles", ar, id);
-                    //console.log(`persist ${id} result: ${result}`);
+                    //if (VERBOSE) console.log(`persist ${id} result: ${result}`);
                 }
             }
         }
         for (const id of existingKeys) {
-            console.log(`remove stale ${id}`);
+            if (VERBOSE) console.log(`remove stale ${id}`);
             yield tx.db.delete("artistRoles", id);
         }
         result = yield tx.done;
-        console.log(`persist tx result: ${result}`);
+        if (VERBOSE) console.log(`${self.title}: persist tx result: ${result}`);
     });
     const refresh = flow(function* refresh(fromDiscogs = false) {
         const { cache, client } = getEnv<StoreEnv>(self);
@@ -95,7 +97,7 @@ export const ReleaseModel = types.model("Release", {
         patch.ratingCount = response.community.rating.count;
         patch.version = CURRENT_VERSION;
         // TODO: connect master
-        console.log(`refresh ${self.title}: applying patch...`);
+        if (VERBOSE) console.log(`refresh ${self.title}: applying patch...`);
         applySnapshot(self, patch);
     });
     function afterCreate() {
@@ -138,7 +140,7 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
 }).actions((self) => {
     const loadedAll = false;
     function putInternal(release: Release) {
-        console.log(`new release ${release.id}`);
+        if (VERBOSE) console.log(`created new release object in store for ID ${release.id}`);
         self.releases.put(release);
     }
     function get(id: number) {
@@ -150,15 +152,15 @@ const ReleaseStoreModel = types.model("ReleaseStore", {
             const concreteResult = result;
             store
                 .then((db) => {
-                    console.log(`fetching release ${id} from db…`);
+                    if (VERBOSE) console.log(`fetching release ${id} from db…`);
                     return db.get("releases", id);
                 })
                 .then((patch) => {
                     if (patch) {
-                        console.log(`loaded release ${patch.title} from db`);
+                        if (VERBOSE) console.log(`loaded release ${patch.title} from db`);
                         concreteResult.hydrate(patch);
                     } else {
-                        console.log(`fetching release ${id} from discogs`);
+                        if (VERBOSE) console.log(`fetching release ${id} from discogs`);
                         concreteResult.refresh();
                     }
                 })
@@ -209,7 +211,6 @@ export const ReleaseByIdReference = types.maybe(
             return releaseStore.get(Number(id));
         },
         set(value: Release) {
-            console.log(value);
             return value.id;
         },
     }));
