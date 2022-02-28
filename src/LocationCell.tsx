@@ -62,12 +62,15 @@ export default function LocationCell({ item }: { item: CollectionItem; }) {
             <Dropdown.Toggle as={Tag} bg={bg} className={classConcat(className, "d-flex", "d-flex-row")} kind={type} tag={label} extra={extra} />
             <Dropdown.Menu>
                 {folders?.map((folder, i) => {
-                    let menuItem = <Dropdown.Item key={i} eventKey={folder.id} active={item.folder_id === folder.id}>{folder.name} ({folder.count})</Dropdown.Item>;
+                    let menuItem = <Dropdown.Item
+                        key={i}
+                        eventKey={folder.id}
+                        active={item.folder_id === folder.id}
+                    >
+                        {folder.name} ({folder.count})
+                    </Dropdown.Item>;
                     if (i && folders[i - 1].name.split("(")[0] !== folder.name.split("(")[0]) {
-                        menuItem = <>
-                            <Dropdown.Divider />
-                            {menuItem}
-                        </>;
+                        return [<Dropdown.Divider key={`${i}.d`} />, menuItem];
                     }
                     return menuItem;
                 })}

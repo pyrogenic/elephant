@@ -25,7 +25,7 @@ export default function LazyTabs({
         onSelect={(eventKey) => setCurrentTab(eventKey ?? undefined)}
     >
         {titles.map((props) =>
-            <Tab {...props}>
+            <Tab key={props.eventKey} {...props}>
                 {props.eventKey === activeKey ? content() : false}
             </Tab>)}
     </Tabs>;
