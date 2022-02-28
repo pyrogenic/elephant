@@ -560,7 +560,7 @@ export default function CollectionTable(props: {
         accessor: ({ basic_information: { formats } }) => formats,
         Cell: ({ row: { original }, value }: CollectionCell<Formats>) => <>
             {isCD(original) ? <FiDisc className="cd" title="CD" /> : <FiDisc className="vinyl" title="Vinyl" />}
-            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }) => tag)}
+            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }, n) => <React.Fragment key={n}>{tag}</React.Fragment>)}
         </>,
         sortType: autoSortBy("Type"),
     }), [autoSortBy]);

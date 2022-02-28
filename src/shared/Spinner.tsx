@@ -11,6 +11,7 @@ export default function Spinner({
     step,
     title,
     onChange,
+    onClick,
 }: {
     value: number,
     min?: number,
@@ -18,6 +19,7 @@ export default function Spinner({
     step?: number,
         title?: string,
     onChange: (value: number) => void,
+        onClick?: () => void,
 }) {
     step = step ?? 1;
     return <InputGroup className="spinner">
@@ -30,9 +32,10 @@ export default function Spinner({
             <FiMinus />
         </Button>
 
-        <div className="count" title={title}>
+        <div className="count" title={title} onClick={onClick}>
             <InputGroup.Text>{value}</InputGroup.Text>
         </div>
+
         <Button
             size="sm"
             variant="outline-secondary"

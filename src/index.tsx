@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import Elephant from "./Elephant";
 import reportWebVitals from "./reportWebVitals";
-
+import "react-datepicker/dist/react-datepicker.css";
 import "./index.scss";
 
 ReactDOM.render(

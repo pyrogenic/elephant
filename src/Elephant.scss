@@ -348,3 +348,17 @@ a.music-label {
         border: 1px dotted red;
     }
 }
+
+.react-datepicker__day--keyboard-selected, .react-datepicker__day--keyboard-selected:hover {
+    &:not(.react-datepicker__day--highlighted) {
+        background-color: inherit !important;
+        color: inherit !important;
+    }
+    &.react-datepicker__day--highlighted { 
+        background-color: #3dcc4a;
+        color: #fff;
+    }
+    outline-color: #2579ba;
+    outline-width: 2px;
+    outline-style: solid;
+}

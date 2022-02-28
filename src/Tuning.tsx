@@ -22,6 +22,8 @@ import AcousticSoundsLogo from "./acoustic-sounds-logo.svg";
 import VinylPostLogo from "./vinyl-post-logo.png";
 import BlackBoxLogo from "./black-box-logo.png";
 import ExternalLink from "./shared/ExternalLink";
+import { injectedValues } from "./shared/yaml";
+import { IComputedValue } from "mobx/dist/internal";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -371,6 +373,7 @@ export type PlaysInfo = {
     }>,
     plays: number,
     history: string[],
+    dates: IComputedValue<Date[]>,
 };
 
 export function usePlaysInfo(): (item: CollectionItem) => PlaysInfo | undefined {
@@ -390,14 +393,14 @@ export function usePlaysInfo(): (item: CollectionItem) => PlaysInfo | undefined 
         }
         let plays = Number(playsStr);
         if (plays) {
-            return { playsNote, plays, history };
+            return { playsNote, plays, history, dates: computed(historyToDates.bind(null, history)) };
         }
         const now = Date.now();
         const dateAdded = new Date(date_added);
         const dateAddedTime = dateAdded.getTime();
         // console.log({ playsNote, playsStr, history, plays, now, date_added, dateAdded, dateNow, dateAddedTime, TEN_DAYS_MS });
         if ((now - dateAddedTime) < TEN_DAYS_MS) {
-            return { playsNote, plays, history };
+            return { playsNote, plays, history, dates: computed(historyToDates.bind(null, history)) };
         }
         if (rating) {
             plays = 1;
@@ -407,7 +410,7 @@ export function usePlaysInfo(): (item: CollectionItem) => PlaysInfo | undefined 
                 plays = 1;
             }
         }
-        return { playsNote, plays, history };
+        return { playsNote, plays, history, dates: computed(historyToDates.bind(null, history)) };
     }, [mediaCondition, playsId]);
 }
 
@@ -459,4 +462,27 @@ export function variantFor(status: ReturnType<LPDB["details"]>["status"]): Varia
         case "error":
             return "danger";
     }
+}
+
+function historyToDates(history: string[]): Date[] {
+    const result: Date[] = [];
+    history.forEach((src) => {
+        const [y, m, d] = src.split("-").map(Number);
+        const playDate = new Date(y, m - 1, d);
+        result.push(playDate);
+    });
+    return result;
+}
+
+export function useRating() {
+    const { client } = React.useContext(ElephantContext);
+    const notesId = useNoteIds().notesId;
+    return React.useCallback((collectionItem: CollectionItem) => computed(() => {
+        const { notes, rating } = collectionItem;
+        if (!client || notesId === undefined) return rating;
+        const note = getNote(notes, notesId);
+        if (!note) return rating;
+        const originalRating = injectedValues<{ rating?: number; }>(note).values.rating;
+        return originalRating ?? rating;
+    }), [client, notesId]);
 }

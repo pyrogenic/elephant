@@ -170,17 +170,25 @@ export default class LPDB {
       status: "pending",
     });
     let refresh = () => { };
-    refresh = () => this.client.getRelease(id).then(
-      action((value) => {
-        set(result!, "status", "ready");
-        set(result!, "value", value);
-        set(result!, "refresh", refresh);
-      }),
-      action((error) => {
-        set(result!, "status", "error");
-        set(result!, "error", error);
-        set(result!, "refresh", refresh);
-      }));
+    refresh = () => {
+      if (result?.status === "ready") {
+        const query = { url: result.value.resource_url };
+        if (this.cache.count(query)) {
+          return this.cache.clear(query).then(refresh);
+        }
+      }
+      return this.client.getRelease(id).then(
+        action((value) => {
+          set(result!, "status", "ready");
+          set(result!, "value", value);
+          set(result!, "refresh", refresh);
+        }),
+        action((error) => {
+          set(result!, "status", "error");
+          set(result!, "error", error);
+          set(result!, "refresh", refresh);
+        }));
+    };
     this.releases.set(id, result);
     refresh();
     return result;

@@ -1,5 +1,7 @@
 import yaml from "yaml";
 
+const allKeys = new Set();
+
 export function injectedValues<T>(src: string): {
     preamble: string,
     values: Partial<T>,
@@ -9,6 +11,11 @@ export function injectedValues<T>(src: string): {
         return { preamble, values: {} };
     }
     const values = yaml.parse(document);
+    Object.keys(values).forEach((k) => {
+        if (allKeys.add(k)) {
+            console.log(`New key: ${k}`);
+        }
+    })
     return { preamble, values };
 }
 

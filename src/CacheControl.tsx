@@ -1,4 +1,4 @@
-import { action, observable } from "mobx";
+import { action, observable, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
@@ -8,7 +8,6 @@ import Row from "react-bootstrap/Row";
 import ElephantContext from "./ElephantContext";
 import type { CacheQuery } from "./IDiscogsCache";
 import Badge from "./shared/Badge";
-import BootstrapTable, { BootstrapTableColumn } from "./shared/BootstrapTable";
 import { ButtonVariant, Variant } from "./shared/Shared";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
@@ -69,7 +68,7 @@ export function CacheControl({ variant, badgeVariant = "light", badgeTextVariant
         if (!cache) return;
         const p: LabeledPromise<number> = cache.count(query);
         p.label = label;
-        counts[label] = { ...counts[label], p };
+        runInAction(() => counts[label] = { ...counts[label], p });
         p.then(action((result) => {
             counts[label] = { c: result };
         }));

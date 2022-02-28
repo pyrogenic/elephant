@@ -18,13 +18,11 @@ import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import isVinyl from "./isVinyl";
 import { labelRoutePaths } from "./LabelRoute";
-import { useFolderName } from "./location";
 import "./Masthead.scss";
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import Loader from "./shared/Loader";
 import LoadingIcon from "./shared/LoadingIcon";
-import { pendingValue } from "./shared/Pendable";
 import SearchBox from "./shared/SearchBox";
 import SelectBox from "./shared/SelectBox";
 import { statRoutePaths } from "./StatsRoute";
@@ -118,32 +116,32 @@ export default function Masthead({
 
     const getNewCollectionEntries = useGetNewCollectionEntries();
 
-    const folderName = useFolderName();
+    // const folderName = useFolderName();
 
     const inCollection = useInCollection();
 
-    const listedMissingLocation: CollectionFilter = React.useCallback((item: CollectionItem) => {
-        if (!isVinyl(item)) return false;
-        const listing = lpdb?.listing(item);
-        if (!listing) return false;
-        if (listing.status === InventoryStatusesEnum.SOLD) return false;
-        if (!listing.location.length) {
-            console.log(`Has no listing location: ${listing.release.title} @ ${listing.location}`, listing);
-            return true;
-        }
-        const inFolderName = folderName(item.folder_id);
-        if (inFolderName.indexOf(listing.location) >= 0) return false;
-        console.log(`Location '${inFolderName}' doesn't contain '${listing.location}': ${listing.release.title}`);
-        return true;
-    }, [folderName, lpdb]);
+    // const listedMissingLocation: CollectionFilter = React.useCallback((item: CollectionItem) => {
+    //     if (!isVinyl(item)) return false;
+    //     const listing = lpdb?.listing(item);
+    //     if (!listing) return false;
+    //     if (listing.status === InventoryStatusesEnum.SOLD) return false;
+    //     if (!listing.location.length) {
+    //         console.log(`Has no listing location: ${listing.release.title} @ ${listing.location}`, listing);
+    //         return true;
+    //     }
+    //     const inFolderName = folderName(item.folder_id);
+    //     if (inFolderName.indexOf(listing.location) >= 0) return false;
+    //     console.log(`Location '${inFolderName}' doesn't contain '${listing.location}': ${listing.release.title}`);
+    //     return true;
+    // }, [folderName, lpdb]);
 
     const [inventoryStatus, setInventoryStatus] = useStorageState<InventoryStatusesEnum>("session", ["Masthead", "inventoryStatus"], InventoryStatusesEnum.ALL);
-    const listed: CollectionFilter = React.useCallback((item: CollectionItem) => {
-        const listing = lpdb?.listing(item);
-        if (!listing) return false;
-        if (inventoryStatus === InventoryStatusesEnum.ALL) return true;
-        return pendingValue(listing.status) === inventoryStatus;
-    }, [inventoryStatus, lpdb]);
+    // const listed: CollectionFilter = React.useCallback((item: CollectionItem) => {
+    //     const listing = lpdb?.listing(item);
+    //     if (!listing) return false;
+    //     if (inventoryStatus === InventoryStatusesEnum.ALL) return true;
+    //     return pendingValue(listing.status) === inventoryStatus;
+    // }, [inventoryStatus, lpdb]);
 
     type AllParams = {
         artistId?: string;
