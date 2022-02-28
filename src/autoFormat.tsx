@@ -49,6 +49,10 @@ export default function autoFormat(str: string | undefined) {
             str = str.replace(/'s(\s|$)/, "’s$1");
             str = str.replace(/n't(\s|$)/, "n’t$1");
             str = str.replace(/ 'n(\s|$)/i, " ’n$1");
+            str = str.replace(/ Of /, " of ");
+            str = str.replace(/ The /, " the ");
+            str = str.replace(/ A /, " a ");
+            str = str.replace(/ An /, " an ");
             return str;
     }
 }
