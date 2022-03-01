@@ -64,7 +64,10 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     errorPause: number = 0;
     unpause?: () => void;
     pauseCheck?: NodeJS.Timeout;
-    oneRequest = false;
+    lastErrorTimestamp?: number;
+
+    simultaneousRequestLimit = 20;
+    requestPerMinuteCap = 50;
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
@@ -104,27 +107,36 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             log: observable,
             version: observable,
             waiting: observable,
+            simultaneousRequestLimit: observable,
+            requestPerMinuteCap: observable,
             tracker: computed,
             inflight: computed,
-            completed: computed,
+            history: computed,
             clear: action,
         });
         this.tracker.listeners.push(this.checkRate);
     }
 
     private checkRate = () => {
-        const rpm = this.rpm;
-        if (rpm >= 30 || this.errorPause > Date.now()) {
+        const [rpm, hardCap] = this.rpm;
+        var cap = this.requestPerMinuteCap;
+        if (hardCap < cap) {
+            cap = hardCap;
+        } else {
+            //runInAction(() => this.lastErrorTimestamp = undefined);
+        }
+        if (rpm >= cap || this.errorPause > Date.now()) {
             if (this.unpause === undefined) {
                 this.pause = new Promise<void>((unpause, _) => {
                     if (this.log) console.log("paused");
                     this.unpause = unpause;
                 });
-                this.pause.then(() => {
+                const doUnpause = () => {
                     if (this.log) console.log("unpaused");
                     this.pause = undefined;
                     this.unpause = undefined;
-                });
+                };
+                this.pause.then(doUnpause, doUnpause);
                 this.pauseCheck = setInterval(this.checkRate, 1000);
             }
             return
@@ -140,13 +152,21 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     };
 
     public get rpm() {
-        const history = this.tracker.history("discogs", 60 * 1000);
-        return history[0]?.length ?? 0;
+        let window = 60 * 1000;
+        let maxRateAdjust = 1;
+        if (this.lastErrorTimestamp) {
+            const eWindow = Date.now() - this.lastErrorTimestamp;
+            if (eWindow < 2 * window) {
+                window = eWindow;
+                maxRateAdjust = 0.1; // <-- backoff rate
+            }
+        }
+        const history = this.tracker.history("discogs", window);
+        return [history[0]?.length ?? 0, (window / 1000) * maxRateAdjust];
     }
 
     public get inflight() {
-        const history = this.tracker.inflight("discogs");
-        return history.map(({ detail }) => detail);
+        return this.tracker.inflight("discogs");
     }
 
     public get dbInflight() {
@@ -154,10 +174,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         return history.map(({ detail }) => detail);
     }
 
-    public get completed() {
-        const history = this.tracker.history("discogs");
-        const ended = history.filter(({ end }) => end);
-        return ended.map(({ detail, error }) => ({ detail, error }));
+    public get history() {
+        return this.tracker.history("discogs", 60 * 1000);
     }
 
     private activeGets = new Map<string, Promise<any>>();
@@ -231,9 +249,22 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     }
 
                     this.checkRate();
+
                     while (this.priorityGets.size && !this.priorityGets.has(key)) {
+                        waited++;
                         if (this.log) console.log(`Waiting for ${this.priorityGets.size} higher-priority gets: ${key}`);
                         await Promise.all(this.priorityGets.values()).catch(noop);
+                    }
+
+                    while (this.simultaneousRequestLimit) {
+                        const inflight = this.tracker.inflight("discogs");
+                        if (inflight.length >= this.simultaneousRequestLimit) {
+                            waited++;
+                            if (this.log) console.log(`Waiting for the number of inflight requests (${inflight.length}) to drop: ${key}`);
+                            await Promise.any(inflight.map((e) => e.promise!)).catch(noop);
+                        } else {
+                            break;
+                        }
                     }
 
                     if (this.pause === undefined) {
@@ -242,7 +273,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
 
                     waited++;
                     if (this.log) console.log(`Waiting #${waited}: ${key}`);
-                    await this.pause;
+                    await this.pause.catch(noop);
                 }
             }
             catch (e) {
@@ -261,16 +292,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 const promise = factory();
                 this.tracker.track("discogs", key, promise);
                 let newValue: T;
-                try {
-                    if (this.oneRequest && this.pause === undefined) {
-                        this.pause = promise;
-                    }
-                    newValue = await promise;
-                } finally {
-                    if (this.pause === promise) {
-                        this.pause = undefined;
-                    }
-                }
+                newValue = await promise;
                 if (log) { console.log({ key, newValue }); }
                 if (cache) {
                     this.cacheValue<T>(key, newValue);
@@ -283,7 +305,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 }
                 console.warn(e);
                 const interval = 10 * 1000; // 10 seconds
-                const t = Date.now() + interval;
+                const now = Date.now();
+                this.lastErrorTimestamp = now;
+                const t = now + interval;
                 this.errorPause = t;
                 setTimeout(this.clearErrorPause, interval, t);
                 if (--retries <= 0) {

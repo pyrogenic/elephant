@@ -1,16 +1,22 @@
+import compact from "lodash/compact";
+import map from "lodash/map";
+import max from "lodash/max";
+import min from "lodash/min";
 import uniqBy from "lodash/uniqBy";
+import { action } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
+import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
+import { FiRefreshCw } from "react-icons/fi";
 import { CacheControl } from "./CacheControl";
+import CollectionItemLink from "./CollectionItemLink";
 import ElephantContext from "./ElephantContext";
 import Badge from "./shared/Badge";
 import { patches } from "./Tuning";
-import { FiRefreshCw } from "react-icons/fi";
-import CollectionItemLink from "./CollectionItemLink";
 
 // const progress = observable<{
 //     releaseId?: number,
@@ -109,6 +115,20 @@ export const DataIndex = observer(() => {
             <Card>
                 <Card.Header>Request Tracker</Card.Header>
                 <Card.Body>
+                    <Form>
+                        <Form.Group>
+                            <Form.Label>Simultaneous Request Limit</Form.Label>
+                            <Form.Control type="number" min={0} max={cache.requestPerMinuteCap} value={cache.simultaneousRequestLimit} onChange={action(({ target: { value } }) => cache.simultaneousRequestLimit = Number(value))} />
+                        </Form.Group>
+                        <Form.Group>
+                            <Form.Label>Request Per Minute Cap</Form.Label>
+                            <Form.Control type="number" min={0} max={120} value={cache.requestPerMinuteCap} onChange={action(({ target: { value } }) => cache.requestPerMinuteCap = Number(value))} />
+                        </Form.Group>
+                        <Form.Group>
+                            <Form.Label>Error Rate Limit</Form.Label>
+                            <div><Form.Text>{cache.rpm[1]}</Form.Text></div>
+                        </Form.Group>
+                    </Form>
                     <h5>Cache Checks</h5>
                     <div>
                         {cache.dbInflight.map((detail, i) => <Badge key={i}>{prettyPrint(detail)}</Badge>)}
@@ -120,19 +140,47 @@ export const DataIndex = observer(() => {
                     </div>
                     <hr />
                     <h5>Active Discogs Requests</h5>
-                    <div>
-                        {cache.inflight.map((detail, i) => <Badge key={i}>{prettyPrint(detail)}</Badge>)}
-                    </div>
+                    <ol>
+                        {cache.inflight.map(({ detail, start }, i) => {
+                            const end = Date.now();
+                            return <li key={i}><Badge key={i}>{prettyPrint(detail)} ({(end - start) / 1000})</Badge></li>;
+                        })}
+                    </ol>
                     <hr />
                     <h5>Completed Requests</h5>
                     <div>
-                        {cache.completed.reverse().map(({ detail, error }, i) => <Badge key={i} className={error ? "text-danger" : "text-muted"}>{prettyPrint(detail)} {error && error.message}</Badge>)}
+                        {cache.history.reverse().map((entries, index) => {
+                            const ts = compact(map(entries, "end"));
+                            const inflightCount = entries.length - ts.length;
+                            if (!ts.length) {
+                                if (!inflightCount) return undefined;
+                                return <div key={index}>
+                                    <h6>+{index}m  +{inflightCount} in-flight</h6>
+                                </div>;
+                            }
+                            const minTs = min(ts);
+                            const maxTs = max(ts);
+                            const minTsStr = timestampToMinSec(minTs);
+                            const maxTsStr = timestampToMinSec(maxTs);
+                            return <div key={index}>
+                                <h6>+{index}m ({minTsStr}-{maxTsStr}){inflightCount ? ` +${inflightCount} in-flight` : ""}</h6>
+                                <ol>
+                                    {entries.map(({ start, end, detail, error }, i) => end ? <li key={i}>
+                                        <Badge className={error ? "text-danger" : "text-muted"}>{prettyPrint(detail)} ({(end - start) / 1000}) {error && error.message}</Badge>
+                                    </li> : false)}
+                                </ol>
+                            </div>;
+                        })}
                     </div>
                 </Card.Body>
             </Card>
         </Col>
     </Row>;
 });
+
+function timestampToMinSec(minTs: number | undefined) {
+    return minTs ? new Date(minTs).toLocaleTimeString(undefined, { minute: "numeric", second: "numeric" }) : "?";
+}
 
 function prettyPrint(url: string) {
     return url.replace("https://api.discogs.com/", "");

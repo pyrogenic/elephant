@@ -14,7 +14,7 @@ export default function useActivityMonitor() {
         total: number,
     }>({ total: 0 });
     const update = React.useMemo(() => () => {
-        const newRpm = cache?.rpm;
+        const newRpm = cache?.rpm?.[0];
         const newDb = cache?.dbInflight.length;
         const newWaiting = cache?.waiting.length;
         const newErrorPause = cache?.errorPause;

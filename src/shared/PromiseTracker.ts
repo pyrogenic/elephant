@@ -1,12 +1,13 @@
 import { action, makeObservable, observable } from "mobx";
 
-interface ILogEntry {
+type ILogEntry = {
     key: string;
     detail: string;
     start: number;
+    promise?: Promise<any>;
     end?: number;
     error?: Error;
-}
+};
 
 type Op = "start" | "end";
 
@@ -24,6 +25,7 @@ class PromiseTrackerImpl {
 
     public track(key: string, detail: string, promise: Promise<any>) {
         const item: ILogEntry = {
+            promise,
             detail,
             key,
             start: Date.now(),
@@ -38,6 +40,7 @@ class PromiseTrackerImpl {
             error: observable,
         });
         const record = action((error?: Error) => {
+            delete item.promise;
             item.end = Date.now();
             item.error = error;
             this.send("end", item);
@@ -55,9 +58,10 @@ class PromiseTrackerImpl {
         const buckets: ILogEntry[][] = [];
         const now = Date.now();
         // make sure there is a bucket for now
-        buckets[0] = [];
+        buckets[0] = this.inflight(key);
         // const maxDiff = now - (minBy(logEntries, "start")?.start ?? now);
         logEntries.forEach((entry) => {
+            if (buckets[0].includes(entry)) return;
             const bucketId = Math.floor((now - entry.start) / width);
             const bucket = buckets[bucketId] ?? (buckets[bucketId] = []);
             bucket.push(entry);
