@@ -68,11 +68,10 @@ export function CacheControl({ variant, badgeVariant = "light", badgeTextVariant
         if (!cache) return;
         const p: LabeledPromise<number> = cache.count(query);
         p.label = label;
-        runInAction(() => counts[label] = { ...counts[label], p });
+        setImmediate(() => runInAction(() => counts[label] = { ...counts[label], p }));
         p.then(action((result) => {
             counts[label] = { c: result };
         }));
-        return p;
     }, [cache, counts]);
 
     if (!cache) { return null; }

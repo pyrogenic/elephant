@@ -2,8 +2,7 @@ import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
-import noop from "lodash/noop";
-import { action, reaction, runInAction } from "mobx";
+import { reaction, runInAction, transaction } from "mobx";
 import "popper.js/dist/popper";
 import React from "react";
 import Alert from "react-bootstrap/Alert";
@@ -99,8 +98,8 @@ export default function Elephant() {
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
   const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean | undefined }>({});
-  const [reactive, setReactive] = useStorageState<boolean>("local", "reactive", false);
-  const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", false);
+  const [reactive, setReactive] = useStorageState<boolean>("local", "reactive", true);
+  const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", true);
   const [showRuler, setShowRuler] = useStorageState<boolean>("local", "showRuler", false);
   const [verbose, setVerbose] = useStorageState<boolean>("local", "verbose", false);
   const [bypassCache, setBypassCache] = useStorageState<boolean>("local", "bypassCache", false);
@@ -117,9 +116,7 @@ export default function Elephant() {
   }, [fieldsById]);
   const [profile, setProfile] = React.useState<Profile>();
   const lpdb = React.useMemo(() => new LPDB(client, cache), [cache, client]);
-  //const [, setCollectionTimestamp] = React.useState<Date>(new Date());
-
-  const setCollectionTimestamp = noop;
+  const [, setCollectionTimestamp] = React.useState<Date>(new Date());
 
   const { collection, inventory, lists } = lpdb;
 
@@ -237,23 +234,31 @@ export default function Elephant() {
   }
 
   function addToCollection(items: CollectionItems) {
-    items.forEach(lpdb.addToCollection);
-    setCollectionTimestamp(new Date());
+    transaction(() => {
+      items.forEach(lpdb.addToCollection);
+      setCollectionTimestamp(new Date());
+    });
   }
 
   function addToInventory(items: InventoryItems) {
-    items.forEach(action((item) => inventory.set(item.release.id, item)));
-    setCollectionTimestamp(new Date());
+    transaction(() => {
+      items.forEach((item) => inventory.set(item.release.id, item));
+      setCollectionTimestamp(new Date());
+    });
   }
 
   function addToOrders(items: OrdersList) {
-    items.forEach(action((item) => orders.set(item.id, item)));
-    setCollectionTimestamp(new Date());
+    transaction(() => {
+      items.forEach((item) => orders.set(item.id, item));
+      setCollectionTimestamp(new Date());
+    });
   }
 
   function addToLists(items: DiscogsLists["lists"]) {
-    items.forEach((item) => client.getListItems(item.id).then(({ items }) => items).then(action((items) => lists.set(item.id, { definition: item, items }))));
-    setCollectionTimestamp(new Date());
+    transaction(() => {
+      items.forEach((item) => client.getListItems(item.id).then(({ items }) => items).then((items) => lists.set(item.id, { definition: item, items })));
+      setCollectionTimestamp(new Date());
+    });
   }
 
   function getCollection() {
