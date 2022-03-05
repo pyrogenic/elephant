@@ -118,15 +118,15 @@ export const DataIndex = observer(() => {
                     <Form>
                         <Form.Group>
                             <Form.Label>Simultaneous Request Limit</Form.Label>
-                            <Form.Control type="number" min={0} max={cache.requestPerMinuteCap} value={cache.simultaneousRequestLimit} onChange={action(({ target: { value } }) => cache.simultaneousRequestLimit = Number(value))} />
+                            <Form.Control type="number" min={0} max={cache.requestPerMinuteCap.value} value={cache.simultaneousRequestLimit.value} onChange={action(({ target: { value } }) => cache.simultaneousRequestLimit.value = Number(value))} />
                         </Form.Group>
                         <Form.Group>
                             <Form.Label>Request Per Minute Cap</Form.Label>
-                            <Form.Control type="number" min={0} max={120} value={cache.requestPerMinuteCap} onChange={action(({ target: { value } }) => cache.requestPerMinuteCap = Number(value))} />
+                            <Form.Control type="number" min={0} max={120} value={cache.requestPerMinuteCap.value} onChange={action(({ target: { value } }) => cache.requestPerMinuteCap.value = Number(value))} />
                         </Form.Group>
                         <Form.Group>
                             <Form.Label>Error Rate Limit</Form.Label>
-                            <div><Form.Text>{cache.rpm[1]}</Form.Text></div>
+                            <div><Form.Text>{cache.rpm[1]} rpm</Form.Text></div>
                         </Form.Group>
                     </Form>
                     <h5>Cache Checks</h5>
@@ -143,7 +143,7 @@ export const DataIndex = observer(() => {
                     <ol>
                         {cache.inflight.map(({ detail, start }, i) => {
                             const end = Date.now();
-                            return <li key={i}><Badge key={i}>{prettyPrint(detail)} ({(end - start) / 1000})</Badge></li>;
+                            return <li key={i}><Badge key={i}>{prettyPrint(detail)} ({Math.floor((end - start) / 100) / 10}s)</Badge></li>;
                         })}
                     </ol>
                     <hr />

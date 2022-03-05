@@ -3,7 +3,7 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import * as idb from "idb";
 import jsonpath from "jsonpath";
 import noop from "lodash/noop";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import { action, makeObservable, observable, reaction, runInAction } from "mobx";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { Artist } from "./model/Artist";
 import { Release } from "./model/Release";
@@ -52,6 +52,28 @@ interface MyDB extends idb.DBSchema {
 
 export type ElephantMemory = Promise<idb.IDBPDatabase<MyDB>>;
 
+function observableStorage<T extends number | string | boolean>(key: string, def: T) {
+    const obj = observable({ value: def }, undefined, { name: key });
+    const current = localStorage.getItem(key);
+    if (current !== null) {
+        obj.value = current as T;
+    }
+    reaction(() => `${obj.value}`, localStorage.setItem.bind(localStorage, key));
+    return obj;
+}
+
+function throttled<T>(name: string, factory: () => T, interval: number = 500) {
+    let expire = 0;
+    let value = factory();
+    function get() {
+        const now = Date.now();
+        if (now < expire) return value;
+        expire = now + interval;
+        return value = factory();
+    }
+    return get;
+}
+
 export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMemoOptions> {
     storage: ElephantMemory;
     cache: boolean = true;
@@ -64,10 +86,10 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     errorPause: number = 0;
     unpause?: () => void;
     pauseCheck?: NodeJS.Timeout;
-    lastErrorTimestamp?: number;
 
-    simultaneousRequestLimit = 20;
-    requestPerMinuteCap = 50;
+    lastErrorTimestamp = observableStorage<number>("lastErrorTimestamp", 0);
+    simultaneousRequestLimit = observableStorage<number>("simultaneousRequestLimit", 20);
+    requestPerMinuteCap = observableStorage<number>("requestPerMinuteCap", 50);;
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
@@ -109,9 +131,6 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             waiting: observable,
             simultaneousRequestLimit: observable,
             requestPerMinuteCap: observable,
-            tracker: computed,
-            inflight: computed,
-            history: computed,
             clear: action,
         });
         this.tracker.listeners.push(this.checkRate);
@@ -119,7 +138,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
 
     private checkRate = () => {
         const [rpm, hardCap] = this.rpm;
-        var cap = this.requestPerMinuteCap;
+        var cap = this.requestPerMinuteCap.value;
         if (hardCap < cap) {
             cap = hardCap;
         } else {
@@ -151,31 +170,41 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         }
     };
 
-    public get rpm() {
+    private rpmCache = throttled("rpm", () => {
         let window = 60 * 1000;
         let maxRateAdjust = 1;
-        if (this.lastErrorTimestamp) {
-            const eWindow = Date.now() - this.lastErrorTimestamp;
-            if (eWindow < 2 * window) {
-                window = eWindow;
-                maxRateAdjust = 0.1; // <-- backoff rate
-            }
+        const errorWindow = Date.now() - this.lastErrorTimestamp.value;
+        if (errorWindow < 2 * window) {
+            window = errorWindow;
+            maxRateAdjust = 0.1; // <-- backoff rate
         }
         const history = this.tracker.history("discogs", window);
-        return [history[0]?.length ?? 0, (window / 1000) * maxRateAdjust];
-    }
+        return [history[0]?.length ?? 0, Math.floor((window / 100) * maxRateAdjust) / 10];
+    });
 
-    public get inflight() {
+    public get rpm() { return this.rpmCache(); }
+
+    private inflightCache = throttled("inflight", () => {
         return this.tracker.inflight("discogs");
-    }
+    });
 
-    public get dbInflight() {
+    public get inflight() { return this.inflightCache(); }
+
+    private dbInflightCache = throttled("dbInflight", () => {
         const history = this.tracker.inflight("idb");
         return history.map(({ detail }) => detail);
+    });
+
+    public get dbInflight() {
+        return this.dbInflightCache();
     }
 
-    public get history() {
+    private historyCache = throttled("history", () => {
         return this.tracker.history("discogs", 60 * 1000);
+    });
+
+    public get history() {
+        return this.historyCache();
     }
 
     private activeGets = new Map<string, Promise<any>>();
@@ -256,9 +285,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                         await Promise.all(this.priorityGets.values()).catch(noop);
                     }
 
-                    while (this.simultaneousRequestLimit) {
+                    while (this.simultaneousRequestLimit.value) {
                         const inflight = this.tracker.inflight("discogs");
-                        if (inflight.length >= this.simultaneousRequestLimit) {
+                        if (inflight.length >= this.simultaneousRequestLimit.value) {
                             waited++;
                             if (this.log) console.log(`Waiting for the number of inflight requests (${inflight.length}) to drop: ${key}`);
                             await Promise.any(inflight.map((e) => e.promise!)).catch(noop);
@@ -306,7 +335,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 console.warn(e);
                 const interval = 10 * 1000; // 10 seconds
                 const now = Date.now();
-                this.lastErrorTimestamp = now;
+                runInAction(() => this.lastErrorTimestamp.value = now);
                 const t = now + interval;
                 this.errorPause = t;
                 setTimeout(this.clearErrorPause, interval, t);
