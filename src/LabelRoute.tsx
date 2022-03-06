@@ -3,7 +3,7 @@ import flatten from "lodash/flatten";
 import groupBy from "lodash/groupBy";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { autorun, computed, IComputedValue, reaction } from "mobx";
+import { autorun, computed, IComputedValue, IObservableArray, reaction } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
@@ -25,6 +25,7 @@ import LazyTabs from "./shared/lazy/LazyTabs";
 import LoadingIcon from "./shared/LoadingIcon";
 import RefreshButton from "./shared/RefreshButton";
 import { Content, resolve } from "./shared/resolve";
+import useObservableFilter from "./useObservableFilter";
 
 const LabelPanel = observer(() => {
     const { labelId: labelIdSrc, labelName } = Router.useParams<{ labelId?: string; labelName?: string; }>();
@@ -35,7 +36,7 @@ const LabelPanel = observer(() => {
     if (!lpdb) { return null; }
 
     const label = React.useMemo(() => lpdb?.label(labelId), [labelId, lpdb]);
-    const collectionSubset = React.useMemo(() => computed(() => collection.values().filter(({ basic_information: { labels } }) => labels.find(({ id }) => labelId === id))), [collection, labelId]);
+    const collectionSubset = useObservableFilter(collection.values, ({ basic_information: { labels } }) => !!labels.find(({ id }) => labelId === id));
     const generateGraph = useCollectionGraphGenerator(collectionSubset, lpdb);
     return <>
         <div className="mb-3">
@@ -60,7 +61,7 @@ const LabelPanel = observer(() => {
                     title: "Albums",
                     content: () => <Observer>
                         {() => <CollectionTable
-                            collectionSubset={collectionSubset.get()}
+                            collectionSubset={collectionSubset}
                             storageKey={"label"}
                         />}
                     </Observer>,
@@ -84,7 +85,7 @@ const LabelIndex = observer(() => {
     </>;
 });
 
-function useCollectionGraphGenerator(collectionSubset: IComputedValue<CollectionItem[]>, lpdb: LPDB) {
+function useCollectionGraphGenerator(collectionSubset: IObservableArray<CollectionItem>, lpdb: LPDB) {
     return React.useMemo(() => {
         console.log("Buiding new graph generator");
         return function* (): Gener {
@@ -92,7 +93,7 @@ function useCollectionGraphGenerator(collectionSubset: IComputedValue<Collection
             const ready: Release[] = [];
             const done: Release[] = [];
             autorun(() => {
-                const subset = collectionSubset.get();
+                const subset = collectionSubset;
                 subset.forEach((e) => {
                     const item = lpdb.details(e);
                     if (!pending.includes(item) && (item.status !== "ready" || !ready.includes(item.value) || !done.includes(item.value))) {

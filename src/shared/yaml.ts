@@ -1,6 +1,6 @@
 import yaml from "yaml";
 
-const allKeys = new Set();
+const allKeys: Set<string> = ((window as any).yamlAllKeys = (window as any).yamlAllKeys ?? new Set());
 
 export function injectedValues<T>(src: string): {
     preamble: string,
@@ -12,8 +12,9 @@ export function injectedValues<T>(src: string): {
     }
     const values = yaml.parse(document);
     Object.keys(values).forEach((k) => {
-        if (allKeys.add(k)) {
+        if (!allKeys.has(k)) {
             console.log(`New key: ${k}`);
+            allKeys.add(k);
         }
     })
     return { preamble, values };

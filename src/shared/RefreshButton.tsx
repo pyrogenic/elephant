@@ -12,6 +12,7 @@ type RemoteProps = {
     as?: ButtonAs,
     size?: ButtonSize,
     className?: ClassNames,
+    bare?: boolean,
 };
 
 type Refresh = () => void;
@@ -24,6 +25,7 @@ type RefreshProps = {
     as?: ButtonAs,
     size?: ButtonSize,
     className?: ClassNames,
+    bare?: boolean,
 };
 
 export default function RefreshButton(props: React.PropsWithChildren<RemoteProps | RefreshProps>) {
@@ -47,6 +49,18 @@ export default function RefreshButton(props: React.PropsWithChildren<RemoteProps
         pending = remote?.status === "pending";
     };
     if (refresh) {
+        if (props.bare) {
+            if (pending) {
+                return <IconSpinner />;
+            }
+            return <FiRefreshCw
+                className="prepend-inline-icon"
+                onClick={() => {
+                    refresh?.();
+                }}
+                title={title}
+            />;
+        }
         return <Button
             as={props.as}
             className={className}

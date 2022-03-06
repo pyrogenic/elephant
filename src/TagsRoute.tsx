@@ -13,24 +13,20 @@ import Disclosure from "./shared/Disclosure";
 import { resolveToString } from "./shared/resolve";
 import Tag from "./Tag";
 import { useTagsFor } from "./Tuning";
+import useObservableFilter from "./useObservableFilter";
 
 const TagPanel = () => {
     let { tagName } = Router.useParams<{ tagName: string; }>();
     tagName = decodeURIComponent(tagName);
     const { collection } = React.useContext(ElephantContext);
     const tagsFor = useTagsFor();
-    const collectionSubset = computed(() => {
-        const result = collection.values().filter((item) => {
+    const collectionSubset = useObservableFilter(collection.values, (item) => {
             const itemTags = tagsFor(item, { includeLocation: true }).get();
             const match = itemTags.find(({ tag }) => tag === tagName);
-            return match;
-        });
-        return result;
-    }, {
-
+        return !!match;
     });
     return <Observer render={() => {
-        const items = collectionSubset.get();
+        const items = collectionSubset;
         return <>
             <h2>{tagName}</h2>
             <Disclosure title="Stats">
