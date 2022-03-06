@@ -2,15 +2,17 @@
 import compact from "lodash/compact";
 import sortBy from "lodash/sortBy";
 import uniq from "lodash/uniq";
-import { computed } from "mobx";
+import { autorun, computed } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";
 import * as Router from "react-router-dom";
+import { arraySetToggle } from "@pyrogenic/asset/lib";
 import CollectionItemLink from "./CollectionItemLink";
 import CollectionTable from "./CollectionTable";
 import DiscoTag from "./DiscoTag";
+import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import RouterPaths from "./RouterPaths";
 import Disclosure from "./shared/Disclosure";
@@ -19,20 +21,28 @@ const ArtistPanel = () => {
   const { artistId: artistIdSrc, artistName } = Router.useParams<{ artistId?: string; artistName?: string; }>();
   const { lpdb, collection } = React.useContext(ElephantContext);
   const artistId = Number(artistIdSrc);
-  if (!isFinite(artistId)) { return null; }
-  if (!lpdb) { return null; }
-  const artist = lpdb.artist(artistId, artistName);
-  const roles = lpdb.store.roles(artist.id);
-  const collectionSubset = computed(() => {
-    return collection.values().filter(({ basic_information: { artists }, id }) => {
+  const artist = lpdb ? lpdb.artist(artistId, artistName) : undefined;
+  const roles = (artist && lpdb) ? lpdb.store.roles(artist.id) : undefined;
+  const collectionSubset = React.useMemo<CollectionItem[]>(() => [], []);
+  const includeItem = React.useCallback(({ basic_information: { artists }, id }: CollectionItem) => {
       if (artists.find(({ id }) => id === artistId)) {
         return true;
       }
-      return roles.find((role) => {
+    return roles?.find((role) => {
         return typeof role.release === "object" && role.release.id === id;
       });
+  }, []);
+  React.useMemo(() => autorun(() => {
+    collection.values().forEach((item) => {
+      const shouldInclude = !!includeItem(item);
+      const doesInclude = !!collectionSubset.includes(item);
+      // console.log({ item: item.basic_information.title, shouldInclude, doesInclude });
+      if (doesInclude != shouldInclude) {
+        arraySetToggle(collectionSubset, item);
+      }
     });
-  });
+  }), [artistId, collection, roles]);
+  if (!isFinite(artistId) || !lpdb || !artist || !roles) { return null; }
   const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)));
   return <Observer>{() => <>
     <Disclosure title={(icon) => <h2>{artistName ?? artist.name}{icon}</h2>} content={() => <>
@@ -49,7 +59,7 @@ const ArtistPanel = () => {
     </>} />
 
     <CollectionTable
-      collectionSubset={collectionSubset.get()}
+      collectionSubset={collectionSubset}
       storageKey={`artist-${artistId}`}
     />
   </>}</Observer>;

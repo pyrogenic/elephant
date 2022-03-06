@@ -44,6 +44,7 @@ import RefreshButton from "./shared/RefreshButton";
 import "./shared/Shared.scss";
 import { ElementType } from "./shared/TypeConstraints";
 import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
+//import useWhyDidYouUpdate from "lodash/noop";
 import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, usePlayCount, useTagsFor, useTasks } from "./Tuning";
@@ -117,7 +118,7 @@ export default function CollectionTable(props: {
 
     let hash: number | undefined = Number(window.location.hash.split("#", 2)[1]);
     if (hash && !isNaN(hash)) {
-        console.log({ hash });
+        // console.log({ hash });
     } else {
         hash = undefined;
     }
@@ -678,6 +679,7 @@ export default function CollectionTable(props: {
         }
     }), [collection, savedSelection]);
 
+    useWhyDidYouUpdate("collectionTableData", { collection, collectionSubset, lists, lpdb });
     const collectionTableData = React.useMemo(() => computed(() => {
         for (const list of patches(lists)) {
             const queries = list.definition.description.split("\n");
@@ -700,7 +702,6 @@ export default function CollectionTable(props: {
         return collectionSubset ?? collection.values();
     }), [collection, collectionSubset, lists, lpdb]);
 
-    useWhyDidYouUpdate("hashItem", { collectionTableData, hash });
     const hashItem = React.useMemo(() => computed(() => collectionTableData.get().find(({ instance_id }) => instance_id === hash)), [collectionTableData, hash]);
     const searchAndFilter = React.useMemo(() => ({ goto: hashItem.get(), ...tableSearch }), [hashItem, tableSearch]);
 

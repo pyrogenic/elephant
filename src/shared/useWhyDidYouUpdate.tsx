@@ -1,4 +1,5 @@
 import React from "react";
+import * as changesets from "json-diff-ts";
 
 export default function useWhyDidYouUpdate(name: string, props: any) {
     // Get a mutable ref object where we can store props ...
@@ -17,10 +18,14 @@ export default function useWhyDidYouUpdate(name: string, props: any) {
                 // If previous is different from current
                 if (prev !== curr) {
                     // Add to changesObj
-                    changesObj[key] = {
-                        from: toStr(prev),
-                        to: toStr(curr),
-                    };
+                    try {
+                        changesObj[key] = changesets.compare(prev, curr);
+                    } catch {
+                        changesObj[key] = {
+                            from: toStr(prev),
+                            to: toStr(curr),
+                        };
+                    }
                 }
             });
             // If changesObj not empty then output to console

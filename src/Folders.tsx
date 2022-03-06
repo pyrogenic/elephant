@@ -191,7 +191,12 @@ function Folders() {
                                         checked={arraySetHas(checked, item.instance_id)}
                                         onChange={chg}
                                     />
-                                    <ReleaseCell as={Form.Check.Label} instance_id={item.instance_id} {...item.basic_information} />
+                                    <Form.Check.Label style={{ display: "flex" }}>
+                                        <div style={{ width: "1rem" }}>
+                                            {item.rating}
+                                        </div>
+                                        <ReleaseCell as={"div"} instance_id={item.instance_id} {...item.basic_information} />
+                                    </Form.Check.Label>
                                 </Form.Check>;
                             })}
                         </Card.Body>

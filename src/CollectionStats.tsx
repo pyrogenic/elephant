@@ -9,6 +9,7 @@ import React from "react";
 import Col from "react-bootstrap/esm/Col";
 import Row from "react-bootstrap/esm/Row";
 import Chart from "react-google-charts";
+import CollectionItemLink from "./CollectionItemLink";
 import { priceToString } from "./CollectionTable";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
@@ -314,7 +315,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 </div>
                 {selectedDateInfo && <Col>
                     <h4>{selectedDateInfo.date.toDateString()}</h4>
-                    {selectedDateInfo.items.map(({ basic_information: { title }, id }, n) => <li key={n}>{title}</li>)}
+                    {selectedDateInfo.items.map((item, n) => <Row key={n}><CollectionItemLink item={item} thumb /></Row>)}
                 </Col>}
             </Row>
         </dd>
