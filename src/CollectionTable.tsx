@@ -702,8 +702,14 @@ export default function CollectionTable(props: {
         return collectionSubset ?? collection.values();
     }), [collection, collectionSubset, lists, lpdb]);
 
-    const hashItem = React.useMemo(() => computed(() => collectionTableData.get().find(({ instance_id }) => instance_id === hash)), [collectionTableData, hash]);
-    const searchAndFilter = React.useMemo(() => ({ goto: hashItem.get(), ...tableSearch }), [hashItem, tableSearch]);
+    const searchAndFilter = React.useMemo<{ goto?: CollectionItem } & TableSearch<CollectionItem>>(() => ({}), []);
+    React.useMemo(() => autorun(() => {
+        searchAndFilter.goto = collectionTableData.get().find(({ instance_id }) => instance_id === hash);
+    }), [collectionTableData, hash]);
+    React.useEffect(() => {
+        searchAndFilter.filter = tableSearch?.filter;
+        searchAndFilter.search = tableSearch?.search;
+    }, [tableSearch]);
 
     return <>
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
