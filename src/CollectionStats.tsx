@@ -116,9 +116,23 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         // ["Release", "Price", "Rating"],
         ...compact((items.map(({ basic_information: { title }, notes, rating }) => {
             const price = priceId && getNote(notes, priceId);
-            return price && !isNaN(Number(price)) && rating && !isNaN(Number(rating)) && [Number(price), rating, title];
+            return price && !isNaN(Number(price)) && rating && !isNaN(Number(rating)) && [Number(price), rating, title] as [price: number, rating: number, title: string];
         }))),
     ], [items, priceId])
+
+    const priceRatingBubbleData = React.useMemo(() => {
+        const buckets: { [priceBucket: number]: { [rating: number]: number } } = {};
+        priceRatingData.forEach(([price, rating]) => {
+            const x = Math.ceil(price);
+            const y = Math.ceil(rating);
+            const ratings = buckets[x] = buckets[x] ?? {};
+            const bucket = ratings[y] = ratings[y] ?? 0;
+            buckets[x][y] = bucket + 1;
+        })
+        const result: [label: string, priceBucket: number, rating: number, color: number, count: number][] = [];
+        Object.entries(buckets).forEach(([x, ys]) => Object.entries(ys).forEach(([y, v]) => result.push(["", Number(x), Number(y), Number(y), v])));
+        return result;
+    }, [items, priceId])
 
     const purchasePrice = React.useMemo(() => {
         const prices = priceData.map(([, n]) => isNaN(Number(n)) ? 0 : Number(n));
@@ -189,7 +203,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
 
     const [showSales, setShowSales] = useStorageState<boolean>("session", ["CollectionStats", "showSales"], false);
 
-    const [selectedDateInfo, setSelectedDateInfo] = React.useState<{ date: Date, items: CollectionItem[] }>();
+    const [selectedDateInfo, setSelectedDateInfo] = React.useState<{ row: number, date: Date, items: CollectionItem[] }>();
 
     return <dl>
         <dt>Count</dt>
@@ -253,23 +267,35 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 chartType="Histogram"
                 data={priceData.map(([release, price, soldFor]) => showSales ? [price, soldFor] : [price])}
             />
+
             <Chart
-                chartType="ScatterChart"
+                chartType="BubbleChart"
                 data={[[
+                    { label: "Bubble", type: "string" },
                     { label: "Price", type: "number", pattern: "$0.00" },
                     { label: "Rating", type: "number" },
-                    {
-                        label: "Title",
-                        type: "string",
-                        role: "tooltip" as GoogleDataTableColumnRoleType,
-                    },
+                    { type: "number" },
+                    { label: "Count", type: "number" },
+                    // {
+                    //     label: "Title",
+                    //     type: "string",
+                    //     role: "tooltip" as GoogleDataTableColumnRoleType,
+                    // },
                 ],
-                    ...priceRatingData]}
+                    ...priceRatingBubbleData]}
                 options={{
                     legend: { position: "none" },
                     hAxis: { title: "Price" },
-                    vAxis: { title: "Star Rating", ticks: [0, 1, 2, 3, 4, 5] },
+                    vAxis: { title: "Star Rating", ticks: [0, 1, 2, 3, 4, 5], maxValue: 6 },
+                    colors: [
+                        "#BC6161",
+                        "#8F7C63",
+                        "#639766",
+                        "#36B269",
+                        "#0ACE6C",
+                    ],
                 }}
+                height={400}
             />
         </dd>
         <dt>Listening History</dt>
@@ -293,14 +319,25 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                             ...listensByDate.map(([a, b]) => [a, b])]}
                         options={{
                             height: 800,
-                }}
+                        }}
                         chartEvents={[
+                            // {
+                            //     eventName: "ready",
+                            //     callback: ({ chartWrapper }) => {
+                            //         const table = chartWrapper.getDataTable();
+                            //         if (table && selectedDateInfo) {
+                            //             table.setRowProperty(selectedDateInfo.row, "className", "t-primary")
+                            //         }
+                            //     },
+                            // },
                             {
                                 eventName: "select",
                                 callback: ({ chartWrapper }) => {
-                                    const selection = chartWrapper.getChart().getSelection()?.[0].row;
+                                    const selectionData = chartWrapper.getChart().getSelection()?.[0];
+                                    const selection = selectionData.row;
                                     if (selection) {
                                         setSelectedDateInfo({
+                                            row: selection,
                                             date: listensByDate[selection][0],
                                             items: listensByDate[selection][2],
                                         });
