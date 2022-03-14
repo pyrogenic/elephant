@@ -2,10 +2,10 @@ import React from "react";
 import { CollectionItem } from "./Elephant";
 import { parseLocation, useFolderName } from "./location";
 
-export default function useInSoldFolder() {
+
+export default function useInOfflineFolder() {
     const folderName = useFolderName();
     return React.useCallback((item: CollectionItem) => {
-        return parseLocation(folderName(item.folder_id)).status === "sold";
+        return parseLocation(folderName(item.folder_id)).status === "unknown";
     }, [folderName]);
 }
-

@@ -24,7 +24,7 @@ const RATING_COLS = ["Year", 0, 1, 2, 3, 4, 5];
 
 type ReactGoogleChartProps = ConstructorParameters<typeof Chart>[0];
 type GoogleDataTableColumn = Exclude<ElementType<Exclude<ReactGoogleChartProps["columns"], undefined>>, string>;
-type GoogleDataTableColumnRoleType = Exclude<GoogleDataTableColumn["role"], undefined>;
+//type GoogleDataTableColumnRoleType = Exclude<GoogleDataTableColumn["role"], undefined>;
 
 function masterYear(lpdb: LPDB, original: CollectionItem) {
     return computed(() => {
@@ -132,7 +132,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         const result: [label: string, priceBucket: number, rating: number, color: number, count: number][] = [];
         Object.entries(buckets).forEach(([x, ys]) => Object.entries(ys).forEach(([y, v]) => result.push(["", Number(x), Number(y), Number(y), v])));
         return result;
-    }, [items, priceId])
+    }, [priceRatingData])
 
     const purchasePrice = React.useMemo(() => {
         const prices = priceData.map(([, n]) => isNaN(Number(n)) ? 0 : Number(n));

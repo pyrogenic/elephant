@@ -3,7 +3,7 @@ import flatten from "lodash/flatten";
 import groupBy from "lodash/groupBy";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
-import { autorun, computed, IComputedValue, IObservableArray, reaction } from "mobx";
+import { autorun, IObservableArray, reaction } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
 // import { GraphConfiguration, GraphLink, GraphNode } from "react-d3-graph";

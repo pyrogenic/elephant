@@ -705,11 +705,11 @@ export default function CollectionTable(props: {
     const searchAndFilter = React.useMemo<{ goto?: CollectionItem } & TableSearch<CollectionItem>>(() => ({}), []);
     React.useMemo(() => autorun(() => {
         searchAndFilter.goto = collectionTableData.get().find(({ instance_id }) => instance_id === hash);
-    }), [collectionTableData, hash]);
+    }), [collectionTableData, hash, searchAndFilter]);
     React.useEffect(() => {
         searchAndFilter.filter = tableSearch?.filter;
         searchAndFilter.search = tableSearch?.search;
-    }, [tableSearch]);
+    }, [searchAndFilter, tableSearch]);
 
     return <>
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>

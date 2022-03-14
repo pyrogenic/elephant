@@ -1,7 +1,6 @@
 import sortBy from "lodash/sortBy";
 import { Observer } from "mobx-react";
 import React from "react";
-import { FiAlertTriangle } from "react-icons/fi";
 import * as Router from "react-router-dom";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
@@ -37,7 +36,7 @@ export function MusicLabelLogo({ remote, id, name, images, showName, hq }: { rem
                 });
             }
         }
-    });
+    }, [imgRef]);
     if (image && !brokenImage) {
         const { uri, uri150 } = image;
         return <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label">

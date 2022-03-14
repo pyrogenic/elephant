@@ -31,6 +31,7 @@ import { taskRoutePaths } from "./TasksRoute";
 import useActivityMonitor from "./useActivityMonitor";
 import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
 import useInSoldFolder from "./useInSoldFolder";
+import useInOfflineFolder from "./useInOfflineFolder";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -379,6 +380,7 @@ export default function Masthead({
 function useInCollection(): CollectionFilter {
     const { lpdb } = React.useContext(ElephantContext);
     const inSoldFolder = useInSoldFolder();
+    const inOfflineFolder = useInOfflineFolder();
     return React.useCallback((item: CollectionItem) => {
         if (!isVinyl(item))
             return false;
@@ -387,7 +389,9 @@ function useInCollection(): CollectionFilter {
             return false;
         if (inSoldFolder(item))
             return false;
+        if (inOfflineFolder(item))
+            return false;
         return true;
-    }, [inSoldFolder, lpdb]);
+    }, [inOfflineFolder, inSoldFolder, lpdb]);
 }
 

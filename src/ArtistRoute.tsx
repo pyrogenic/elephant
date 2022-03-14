@@ -2,7 +2,7 @@
 import compact from "lodash/compact";
 import sortBy from "lodash/sortBy";
 import uniq from "lodash/uniq";
-import { computed, IObservableArray } from "mobx";
+import { computed } from "mobx";
 import { Observer, observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
