@@ -73,7 +73,7 @@ function SpeedTracker() {
     </>;
 }
 
-export type CollectionFilter = (item: CollectionItem) => boolean | undefined;
+export type CollectionFilter = { id: string, fn(item: CollectionItem): boolean } | undefined;
 
 
 export default function Masthead({
@@ -275,7 +275,7 @@ export default function Masthead({
                 setSearch={setSearch}
             />
             <Navbar.Text>
-                <Check label="In Collection" value={filter === inCollection} setValue={(on) => setFilter(on ? inCollection : undefined)} />
+                <Check label="In Collection" value={filter?.id === inCollection?.id} setValue={(on) => setFilter(on ? inCollection : undefined)} />
             </Navbar.Text>
             {/*
             <Navbar.Text>
@@ -381,17 +381,19 @@ function useInCollection(): CollectionFilter {
     const { lpdb } = React.useContext(ElephantContext);
     const inSoldFolder = useInSoldFolder();
     const inOfflineFolder = useInOfflineFolder();
-    return React.useCallback((item: CollectionItem) => {
-        if (!isVinyl(item))
-            return false;
-        const listing = lpdb?.listing(item);
-        if (listing)
-            return false;
-        if (inSoldFolder(item))
-            return false;
-        if (inOfflineFolder(item))
-            return false;
-        return true;
-    }, [inOfflineFolder, inSoldFolder, lpdb]);
+    return {
+        id: "in-collection",
+        fn: React.useCallback((item: CollectionItem) => {
+            if (!isVinyl(item))
+                return false;
+            const listing = lpdb?.listing(item);
+            if (listing)
+                return false;
+            if (inSoldFolder(item))
+                return false;
+            if (inOfflineFolder(item))
+                return false;
+            return true;
+        }, [inOfflineFolder, inSoldFolder, lpdb]),
+    };
 }
-

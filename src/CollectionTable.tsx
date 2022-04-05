@@ -36,15 +36,15 @@ import LPDB from "./LPDB";
 import RatingEditor from "./RatingEditor";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
-import BootstrapTable, { BootstrapTableColumn, BootstrapTableProps, Mnemonic, mnemonicToString, TableSearch } from "./shared/BootstrapTable";
+import BootstrapTable, { BootstrapTableColumn, BootstrapTableProps, Mnemonic, mnemonicToString } from "./shared/BootstrapTable";
 import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
 import RefreshButton from "./shared/RefreshButton";
 import "./shared/Shared.scss";
 import { ElementType } from "./shared/TypeConstraints";
-import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
-//import useWhyDidYouUpdate from "lodash/noop";
+//import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
+import useWhyDidYouUpdate from "lodash/noop";
 import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
 import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, usePlayCount, useTagsFor, useTasks } from "./Tuning";
@@ -92,7 +92,8 @@ function applyInstruction(instruction: string, src: any) {
 const ARTIST_COLUMN_TITLE = "Release";
 
 export default function CollectionTable(props: {
-    tableSearch?: TableSearch<CollectionItem>,
+    search?: string,
+    filter?: (item: CollectionItem) => boolean,
     collectionSubset?: ReturnType<Collection["values"]>,
     storageKey: string,
 }) {
@@ -102,7 +103,7 @@ export default function CollectionTable(props: {
 
     useWhyDidYouUpdate("CollectionTable", { ...props, elephantContext });
 
-    const { tableSearch, collectionSubset, storageKey } = props;
+    const { search, filter, collectionSubset, storageKey } = props;
 
     const {
         cache,
@@ -282,11 +283,10 @@ export default function CollectionTable(props: {
                             if (newFolderId) {
                                 orderOrListingElements.push(
                                     <Button
-                                        className="badge"
-                                        variant={"dark"}
-                                        //bg={"warning"}
-                                        key={orderOrListingElements.length}
+                                        className="badge text-light"
+                                        variant="dark"
                                         size="sm"
+                                        key={orderOrListingElements.length}
                                         disabled={!client || !newFolderId}
                                         title={arrowButtonTitle}
                                         onClick={
@@ -308,10 +308,10 @@ export default function CollectionTable(props: {
                             if (listing && newLocation) {
                                 orderOrListingElements.push(
                                     <Button
-                                        className="badge"
-                                        variant={"dark"}
-                                        key={orderOrListingElements.length}
+                                        className="badge text-light"
+                                        variant="dark"
                                         size="sm"
+                                        key={orderOrListingElements.length}
                                         disabled={!client || !newLocation}
                                         title={arrowButtonTitle}
                                         onClick={
@@ -702,14 +702,10 @@ export default function CollectionTable(props: {
         return collectionSubset ?? collection.values();
     }), [collection, collectionSubset, lists, lpdb]);
 
-    const searchAndFilter = React.useMemo<{ goto?: CollectionItem } & TableSearch<CollectionItem>>(() => ({}), []);
+    const [goto, setGoto] = React.useState<CollectionItem>();
     React.useMemo(() => autorun(() => {
-        searchAndFilter.goto = collectionTableData.get().find(({ instance_id }) => instance_id === hash);
-    }), [collectionTableData, hash, searchAndFilter]);
-    React.useEffect(() => {
-        searchAndFilter.filter = tableSearch?.filter;
-        searchAndFilter.search = tableSearch?.search;
-    }, [searchAndFilter, tableSearch]);
+        setGoto(collectionTableData.get().find(({ instance_id }) => instance_id === hash));
+    }), [collectionTableData, hash]);
 
     return <>
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
@@ -724,7 +720,9 @@ export default function CollectionTable(props: {
         <Observer>{() => {
             return <BootstrapTable
                 sessionKey={collectionSubset ? undefined : "Collection"}
-                searchAndFilter={searchAndFilter}
+                search={search}
+                filter={filter}
+                goto={goto}
                 data={[...collectionTableData.get()]}
                 mnemonic={mnemonic}
                 {...sharedTableProps} />;

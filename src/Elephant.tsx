@@ -20,7 +20,7 @@ import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
 import { LabelMode } from "./LabelRoute";
 import LPDB from "./LPDB";
-import Masthead from "./Masthead";
+import Masthead, { CollectionFilter } from "./Masthead";
 import OrderedMap from "./OrderedMap";
 import { DeepPendable } from "./shared/Pendable";
 import Ruler from "./shared/Ruler";
@@ -97,7 +97,7 @@ export default function Elephant() {
   }, [cache, token]);
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
-  const [filter, setFilter] = React.useState<{ filter?: (item: CollectionItem) => boolean | undefined }>({});
+  const [filter, setFilter] = React.useState<CollectionFilter>();
   const [reactive, setReactive] = useStorageState<boolean>("local", "reactive", true);
   const [fluid, setFluid] = useStorageState<boolean>("local", "fluid", true);
   const [showRuler, setShowRuler] = useStorageState<boolean>("local", "showRuler", false);
@@ -133,8 +133,6 @@ export default function Elephant() {
   }, [bypassCache, cache, verbose]);
   const updateCollectionReaction = React.useRef<ReturnType<typeof reaction> | undefined>();
 
-  const tableSearch = React.useMemo(() => ({ search, ...filter }), [filter, search]);
-
   const context = React.useMemo<IElephantContext>(() => ({
     cache,
     client,
@@ -160,10 +158,10 @@ export default function Elephant() {
         profile={profile}
         search={search}
         setBypassCache={setBypassCache}
-        filter={filter?.filter}
+        filter={filter}
         setFilter={(newFilter) => {
-          if (newFilter !== filter.filter) {
-            setFilter({ ...filter, filter: newFilter });
+          if (newFilter?.id !== filter?.id) {
+            setFilter(newFilter);
           }
         }}
         setFluid={setFluid}
@@ -208,7 +206,8 @@ export default function Elephant() {
           </Router.Route>
           <Router.Route path={COLLECTION_PATH}>
             <CollectionTable
-              tableSearch={tableSearch}
+              search={search}
+              filter={filter?.fn}
               storageKey={COLLECTION_PATH}
             />
           </Router.Route>

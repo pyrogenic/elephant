@@ -24,7 +24,7 @@ export default function SearchBox(
         filter,
     } = props;
     const count = React.useMemo(() => computed(() => {
-        return filter ? collection.count(filter) : collection.size;
+        return filter ? collection.count(filter.fn) : collection.size;
     }), [collection, filter]);
     return <div className={classConcat("search-box", className)}>
         <Observer render={() => <Form.Control

@@ -51,12 +51,6 @@ export type BootstrapTableColumn<TElement extends {}, TColumnIds = any> = Column
     className?: ClassNames,
 };
 
-export type TableSearch<TElement extends {}> = {
-    search?: string;
-    filter?: (item: TElement) => boolean | undefined;
-    goto?: TElement;
-};
-
 export type Mnemonic = MinDiffSrc;
 
 export function mnemonicToString(src: Mnemonic): string {
@@ -74,7 +68,9 @@ export type BootstrapTableProps<TElement extends {}, TColumnIds = any> = {
     columns: BootstrapTableColumn<TElement, TColumnIds>[];//ColumnSetItem<TElement, TColumnIds>[];
     data: TElement[],
     pager?: boolean,
-    searchAndFilter?: TableSearch<TElement>,
+    search?: string,
+    filter?: (item: TElement) => boolean,
+    goto?: TElement,
     sessionKey?: string,
     mnemonic?: (sortedBy: TColumnIds | undefined, item: TElement) => Mnemonic,
     detail?: (item: TElement) => Content,
@@ -106,9 +102,16 @@ function mnemonicString(q: Mnemonic): string | undefined {
     return q?.[1];
 }
 
+type TableSearch<TElement> = {
+    filter?: (item: TElement) => boolean,
+    goto?: TElement,
+    search?: string,
+};
+
 export default function BootstrapTable<TElement extends {}>(props: BootstrapTableProps<TElement>) {
     type TotalState = UsePaginationState<TElement> & UseExpandedState<TElement> & UseSortByState<TElement> & UseGlobalFiltersState<TElement> & UseRowSelectState<TElement>;
     type InitialState = UseTableOptions<TElement>["initialState"] & Partial<TotalState>;
+
     // typed version of UseGlobalFiltersOptions<TElement>["globalFilter"]
     type GlobalFilterCallbackSignature = ((rows: Row<TElement>[], columnIds: string[], filterValue: TableSearch<TElement>) => any);
 
@@ -118,7 +121,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     //   skipPageResetRef.current = false;
     // });
     // useWhyDidYouUpdate("BootstrapTable", props);
-    const { data, detail, mnemonic, rowClassName, sessionKey, searchAndFilter, selectedRows, setSelectedRows, getRowId } = props;
+    const { data, detail, mnemonic, rowClassName, sessionKey, search, goto, filter, selectedRows, setSelectedRows, getRowId } = props;
     let { pager: showPager } = props;
     showPager = showPager ?? true;
     const [initialPageIndex, setInitialPageIndex] =
@@ -258,33 +261,34 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
     React.useEffect(() => setInitialSortBy(sortBy), [setInitialSortBy, sortBy]);
     React.useEffect(() => setInitialPageSize(pageSize), [setInitialPageSize, pageSize]);
     const wrappedSetGlobalFilter = React.useCallback(() => {
-        setGlobalFilter(searchAndFilter);
-    }, [searchAndFilter, setGlobalFilter]);
+        setGlobalFilter({ filter, goto, search });
+    }, [setGlobalFilter, filter, goto, search]);
     const [debouncedSetGlobalFilter] = useDebounce(wrappedSetGlobalFilter, { leading: true, wait: 200, periodic: true });
-    React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, searchAndFilter]);
+    React.useEffect(debouncedSetGlobalFilter, [debouncedSetGlobalFilter, search]);
+    React.useEffect(wrappedSetGlobalFilter, [wrappedSetGlobalFilter, filter]);
     React.useEffect(() => {
-        if (lastSearch.current.search && lastSearch.current.search !== searchAndFilter?.search) {
+        if (lastSearch.current.search && lastSearch.current.search !== search) {
             setInitialPageIndex(0);
             gotoPage(0);
             setInitialSortBy([]);
             setSortBy([]);
         }
-        lastSearch.current.search = searchAndFilter?.search;
+        lastSearch.current.search = search;
         return () => { };
-    }, [gotoPage, searchAndFilter?.search, setInitialPageIndex, setInitialSortBy, setSortBy]);
+    }, [gotoPage, search, setInitialPageIndex, setInitialSortBy, setSortBy]);
     React.useEffect(() => {
-        if (searchAndFilter?.goto && lastSearch.current.goto !== searchAndFilter.goto) {
+        if (goto && lastSearch.current.goto !== goto) {
             const targetItemIndex = rows.findIndex(({ original }) => {
-                return original === searchAndFilter.goto;
+                return original === goto;
             });
             if (targetItemIndex >= 0) {
                 const newPageIndex = Math.floor(targetItemIndex / pageSize);
                 gotoPage(newPageIndex);
-                lastSearch.current.goto = searchAndFilter?.goto;
+                lastSearch.current.goto = goto;
             }
         }
         return () => { };
-    }, [gotoPage, pageSize, rows, searchAndFilter?.goto]);
+    }, [gotoPage, pageSize, rows, goto]);
     React.useEffect(() => {
         if (setSelectedRows) {
             setSelectedRows(map(rows.filter((row) => selectedRowIds[row.id]), "original"));
@@ -384,7 +388,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                     }
                     const rowProps = row.getRowProps();
                     return [
-                        <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original), searchAndFilter?.goto === row.original && "flash")} onClick={onClick}>
+                        <tr data-key={rowProps.key} {...rowProps} className={classConcat(rowProps, rowClassName?.(row.original), goto === row.original && "flash")} onClick={onClick}>
                             {row.cells.map(cell => {
                                 const cellProps = cell.getCellProps();
                                 const column = cell.column as BootstrapTableColumn<TElement>;

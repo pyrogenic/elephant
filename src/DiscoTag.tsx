@@ -50,10 +50,10 @@ export default function DiscoTag({ className, onClick, prewrap, src, uri: discog
                 const pre = groups.pre;
                 if (pre) {
                     const brs = pre.split(/[\r\n]\n?/);
-                    elements.push(<span key={elements.length}>{wrap(brs.pop(), bold, italic, underline, url)}</span>);
+                    elements.push(<span key={elements.length}>{wrap(brs.shift(), bold, italic, underline, url)}</span>);
                     while (brs.length) {
                         elements.push(<br key={elements.length} />);
-                        elements.push(<span key={elements.length}>{wrap(brs.pop(), bold, italic, underline, url)}</span>);
+                        elements.push(<span key={elements.length}>{wrap(brs.shift(), bold, italic, underline, url)}</span>);
                     }
                 }
                 const fullTag = groups.tag;

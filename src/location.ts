@@ -64,6 +64,7 @@ export function parseLocation(str: string): Location {
             break;
         case "Sold":
             status = "sold";
+            label = statusSrc;
             break;
         case "Uncategorized":
             status = "unknown";
