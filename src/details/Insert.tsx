@@ -1,5 +1,6 @@
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import compact from "lodash/compact";
 import flatten from "lodash/flatten";
 import React, { HTMLProps } from "react";
 import Button from "react-bootstrap/Button";
@@ -13,7 +14,7 @@ import Check from "../shared/Check";
 import Spinner from "../shared/Spinner";
 import "./Insert.scss";
 
-const BAD_SEPS = / - |: | \(/g;
+const BAD_SEPS = / - |: | \(|\)/g;
 const SEP = " ⋄ ";
 
 const BAD_LABELS = / Record(ings?)?s?/g;
@@ -88,7 +89,7 @@ export default function Insert({ item }: { item: CollectionItem }) {
                 <div className="cat-no">{labels.map(({ catno }) => catno).join(SEP)}</div>
                 <div className="space" />
                 {artists !== title && <div className="artist">{artists}</div>}
-                <div className="title">{trimTitle ? title.split(BAD_SEPS).shift() : title.replace(BAD_SEPS, SEP)}</div>
+                <div className="title">{trimTitle ? title.split(BAD_SEPS).shift() : compact(title.split(BAD_SEPS)).join(SEP)}</div>
                 <div className="space" />
                 <div className="label">
                     {labels.map((l, i) => <React.Fragment key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div>{logos && <> <LazyMusicLabel label={l} showName={false} /></>}</React.Fragment>)}
