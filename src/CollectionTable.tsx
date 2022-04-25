@@ -7,7 +7,7 @@ import jsonpath from "jsonpath";
 import compact from "lodash/compact";
 import kebabCase from "lodash/kebabCase";
 import map from "lodash/map";
-import noop from "lodash/noop";
+import { default as noop, default as useWhyDidYouUpdate } from "lodash/noop";
 import omit from "lodash/omit";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
@@ -17,9 +17,11 @@ import "popper.js/dist/popper";
 import React from "react";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
+import Toast from "react-bootstrap/Toast";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import { FiArrowLeft, FiArrowRight, FiDisc, FiPlus, FiRefreshCw } from "react-icons/fi";
+import useRootClose from "react-overlays/useRootClose";
 import { CellProps, Column, Renderer, SortByFn } from "react-table";
 import autoFormat from "./autoFormat";
 import { collectionItemCacheQuery, useClearCacheForCollectionItem } from "./collectionItemCache";
@@ -32,7 +34,9 @@ import ElephantSelectionContext from "./ElephantSelectionContext";
 import isCD from "./isCD";
 import LazyMusicLabel from "./LazyMusicLabel";
 import { parseLocation, useFolderName } from "./location";
+import LocationCell from "./LocationCell";
 import LPDB from "./LPDB";
+import PlayCountSpinner from "./PlayCountSpinner";
 import RatingEditor from "./RatingEditor";
 import ReleaseCell, { ReleaseCellProps } from "./ReleaseCell";
 import Badge from "./shared/Badge";
@@ -41,19 +45,15 @@ import Check from "./shared/Check";
 import ExternalLink from "./shared/ExternalLink";
 import { mutate, pending, pendingValue } from "./shared/Pendable";
 import RefreshButton from "./shared/RefreshButton";
+import { Content, resolve } from "./shared/resolve";
 import "./shared/Shared.scss";
 import { ElementType } from "./shared/TypeConstraints";
-//import useWhyDidYouUpdate from "./shared/useWhyDidYouUpdate";
-import useWhyDidYouUpdate from "lodash/noop";
+import { injectValue } from "./shared/yaml";
 import { FILLED_STAR } from "./Stars";
 import Tag, { TagKind } from "./Tag";
-import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, usePlayCount, useTagsFor, useTasks } from "./Tuning";
-import useRefreshInventory from "./useRefreshInventory";
-import useRootClose from "react-overlays/useRootClose";
-import PlayCountSpinner from "./PlayCountSpinner";
-import LocationCell from "./LocationCell";
-import { injectValue } from "./shared/yaml";
+import { autoOrder, autoVariant, CollectionNotes, Formats, formats, formatToTag, getNote, KnownFieldTitle, KNOWN_FIELD_HELP, labelNames, Labels, MEDIA_CONDITIONS, noteById, orderUri, patches, SLEEVE_CONDITIONS, Source, useNoteIds, usePlayCount, useTagsFor, useTasks } from "./Tuning";
 import useInSoldFolder from "./useInSoldFolder";
+import useRefreshInventory from "./useRefreshInventory";
 
 export type Artist = ElementType<DiscogsCollectionItem["basic_information"]["artists"]>;
 
@@ -127,7 +127,7 @@ export default function CollectionTable(props: {
     const refreshInventory = useRefreshInventory();
     const folderName = useFolderName();
 
-    const { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId } = useNoteIds();
+    const { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId, noteIds } = useNoteIds();
 
     const { tasks, tasksId } = useTasks();
 
@@ -707,7 +707,29 @@ export default function CollectionTable(props: {
         setGoto(collectionTableData.get().find(({ instance_id }) => instance_id === hash));
     }), [collectionTableData, hash]);
 
+    const [showWarnings, setShowWarnings] = React.useState(true);
+    const warnings = React.useMemo(() => {
+        const result: Content[] = [];
+        Object.entries(noteIds).forEach(([key, val]) => {
+            if (val === undefined)
+                result.push(KNOWN_FIELD_HELP[key as keyof typeof KnownFieldTitle]);
+        });
+        return result;
+    }, [noteIds]);
+
     return <>
+        {showWarnings && (warnings.length > 0 && warnings.length < 8) && <Toast
+            className="m-5"
+            show={showWarnings}
+            onClose={setShowWarnings.bind(null, false)}
+        >
+            <Toast.Header>Custom Fields Enable More Functionality</Toast.Header>
+            <Toast.Body className="pb-2">
+                {warnings.map((e, i) => <div key={i}>
+                    {resolve(e)}
+                </div>)}
+            </Toast.Body>
+        </Toast>}
         {selectedRows && selectedRows.length > 0 && <ElephantSelectionContext.Provider value={{ selection: selectedRows }}>
             <div className="multi">
                 <BootstrapTable

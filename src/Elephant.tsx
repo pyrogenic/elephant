@@ -71,7 +71,8 @@ export type Field = ElementType<FieldsResponse["fields"]>;
 export type FieldsById = Map<number, Field>;
 export type FieldsByName = Map<string, Field>;
 
-const COLLECTION_PATH = "/";
+const ROOT_PATH = "/";
+const COLLECTION_PATH = ROOT_PATH;
 const AUTH_PATH = "/auth";
 const ARTISTS_PATH = "/artists";
 const LABELS_PATH = "/labels";
@@ -147,6 +148,16 @@ export default function Elephant() {
     setError,
   }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb, orders]);
 
+  // If token is unset, make auth the default location.
+  let collectionPath, authPath;
+  if (token) {
+    collectionPath = COLLECTION_PATH;
+    authPath = AUTH_PATH;
+  } else {
+    collectionPath = "/collection";
+    authPath = ROOT_PATH;
+  }
+
   return <ElephantContext.Provider value={context}>
     <Router.BrowserRouter basename="/elephant">
       <Masthead
@@ -177,7 +188,7 @@ export default function Elephant() {
         </Alert>}
         {showRuler && <Ruler />}
         <Router.Switch>
-          <Router.Route path="/auth">
+          <Router.Route path={authPath}>
             <AuthRoute
               setToken={setToken}
               token={token}
@@ -204,7 +215,7 @@ export default function Elephant() {
           <Router.Route path="/tuning">
             <Tuning />
           </Router.Route>
-          <Router.Route path={COLLECTION_PATH}>
+          <Router.Route path={collectionPath}>
             <CollectionTable
               search={search}
               filter={filter?.fn}

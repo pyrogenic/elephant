@@ -45,8 +45,33 @@ export function useNoteIds() {
     const playsId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.plays)?.id, [fieldsByName]);
     const notesId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.notes)?.id, [fieldsByName]);
     const priceId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.price)?.id, [fieldsByName]);
-    return { mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId };
+    const tasksId = React.useMemo(() => fieldsByName.get(KnownFieldTitle.tasks)?.id, [fieldsByName]);
+    const noteIds: { [K in keyof typeof KnownFieldTitle]: number | undefined
+    } = {
+        mediaCondition: mediaConditionId,
+        sleeveCondition: sleeveConditionId,
+        source: sourceId,
+        orderNumber: orderNumberId,
+        notes: notesId,
+        price: priceId,
+        plays: playsId,
+        tasks: tasksId,
+    };
+    return {
+        mediaConditionId, sleeveConditionId, playsId, sourceId, orderNumberId, priceId, notesId, noteIds: noteIds,
+    };
 }
+
+export const KNOWN_FIELD_HELP: { [K in keyof typeof KnownFieldTitle]: string } = {
+    mediaCondition: `Add a custom field named "${KnownFieldTitle.mediaCondition}" to track media conditions.`,
+    sleeveCondition: `Add a custom field named "${KnownFieldTitle.sleeveCondition}" to track sleeve conditions.`,
+    source: `Add a custom field named "${KnownFieldTitle.source}" to track where you got records (Amazon, Discogs, store names, etc.).`,
+    orderNumber: `Add a custom field named "${KnownFieldTitle.orderNumber}" to track which order or trip you got the record in or on. For many websites, this will show links to your oder page.`,
+    notes: `Add a custom field named "${KnownFieldTitle.notes}" to add your own notes to each record.`,
+    price: `Add a custom field named "${KnownFieldTitle.price}" to track how much you paid for each album.`,
+    plays: `Add a custom field named "${KnownFieldTitle.plays}" to track your play counts, as well as when you listened to a album.`,
+    tasks: `Add a custom field named "${KnownFieldTitle.tasks}" to keep a to-do checklist for each album.`,
+};
 
 /*
 Amazon
