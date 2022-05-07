@@ -14,6 +14,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Badge from "react-bootstrap/esm/Badge";
 import Container from "react-bootstrap/esm/Container";
 import { collectionItemCacheQuery } from "./collectionItemCache";
+import "./PlayCountSpinner.scss";
 
 export default function PlayCountSpinner(row: CollectionItem) {
     const { cache, client } = React.useContext(ElephantContext);

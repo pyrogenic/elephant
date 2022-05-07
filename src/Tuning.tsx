@@ -90,6 +90,7 @@ export enum Source {
     blackbox = "Black Box",
     discogs = "Discogs",
     gift = "Gift",
+    recordman = "Record Man",
     pfc = "PFC",
     vinylpost = "Vinyl Post",
 }
