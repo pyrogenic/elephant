@@ -150,7 +150,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
             if (!year) {
                 return;
             }
-            const rating = getRating(item).get();
+            const rating = pendingValue(getRating(item).get());
             const i = RATING_COLS.indexOf(Math.ceil(rating));
             if (i < 1)
                 return;

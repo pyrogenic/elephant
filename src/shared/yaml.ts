@@ -6,7 +6,7 @@ export function injectedValues<T>(src: string): {
     preamble: string,
     values: Partial<T>,
 } {
-    let [preamble, document] = src.split(/\n---\n/, 2);
+    let [preamble, document] = src.split(/(?:^|\n)---\n/, 2);
     if (!document) {
         return { preamble, values: {} };
     }

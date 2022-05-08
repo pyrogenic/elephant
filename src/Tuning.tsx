@@ -13,7 +13,7 @@ import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
 import LPDB from "./LPDB";
 import Circled from "./shared/Circled";
-import { DeepPendable, pendingValue } from "./shared/Pendable";
+import Pendable, { DeepPendable, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import { TagKind, TagProps } from "./Tag";
@@ -503,7 +503,7 @@ function historyToDates(history: string[]): Date[] {
 export function useRating() {
     const { client } = React.useContext(ElephantContext);
     const notesId = useNoteIds().notesId;
-    return React.useCallback((collectionItem: CollectionItem) => computed(() => {
+    return React.useCallback((collectionItem: CollectionItem) => computed((): Pendable<number> => {
         const { notes, rating } = collectionItem;
         if (!client || notesId === undefined) return rating;
         const note = getNote(notes, notesId);
