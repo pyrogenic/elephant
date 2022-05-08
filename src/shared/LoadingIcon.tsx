@@ -20,7 +20,8 @@ export default function LoadingIcon<
         return <Observer children={() => {
             const [container, key] = remote;
             if (container.status === "ready") {
-                return <>{resolve(container.value[key])}</>;
+                const containerValue: Content = container.value[key];
+                return <>{resolve(containerValue)}</>;
             } else if (children) {
                 return <>{children}{resolve(pc)}{SpinningIcon}</>;
             } else if (placeholder) {

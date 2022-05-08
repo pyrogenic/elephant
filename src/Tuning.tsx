@@ -378,10 +378,10 @@ export const noteById = action("noteById", (notes: CollectionNote[], id: number)
         result = { field_id: id, value: "" };
         notes.push(result);
         return result;
-    } catch (e) {
+    } catch (e: any) {
         return {
             field_id: id,
-            value: e.message,
+            value: "message" in e ? e.message : e,
         };
     }
 });

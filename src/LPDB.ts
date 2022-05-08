@@ -173,9 +173,7 @@ export default class LPDB {
     refresh = () => {
       if (result?.status === "ready") {
         const query = { url: result.value.resource_url };
-        if (this.cache.count(query)) {
-          return this.cache.clear(query).then(refresh);
-        }
+        return this.cache.clear(query).then(refresh);
       }
       return this.client.getRelease(id).then(
         action((value) => {

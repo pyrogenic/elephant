@@ -327,7 +327,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     this.cacheValue<T>(key, newValue);
                 }
                 return newValue;
-            } catch (e) {
+            } catch (e: any) {
                 if ("statusCode" in e) {
                     console.log(`${e.statusCode}: ${key}`);
                     return undefined;
