@@ -5,7 +5,8 @@ import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { useRouteMatch } from "react-router-dom";
 import Profile from "./Profile";
-import { useRoonId } from "./roon/useRoon";
+// TODO: ROON
+// import { useRoonId } from "./roon/useRoon.ts";
 import Folders from "./Folders";
 import Testbed from "./Testbed";
 
@@ -19,7 +20,8 @@ export default function AuthRoute({
     const r = useRouteMatch();
     const [key, setKey] = useStorageState<string | null>("session", r.path, null);
 
-    const [roonId, setRoonId] = useRoonId();
+    // TODO: ROON
+    // const [roonId, setRoonId] = useRoonId();
 
     return <Container fluid={false}>
         <Tabs
@@ -38,14 +40,16 @@ export default function AuthRoute({
                             onChange={({ target: { value } }) => setToken(value)}
                         />
                     </Form.Group>
-                    <Form.Group className="mb-2">
+                    {
+                    // TODO: ROON
+                    /* <Form.Group className="mb-2">
                         <Form.Label>Roon Extension Identitfier</Form.Label>
                         <Form.Control
                             type="text"
                             value={roonId}
                             onChange={({ target: { value } }) => setRoonId(value)}
                         />
-                    </Form.Group>
+                    </Form.Group> */}
                 </Form>
             </Tab>
             <Tab eventKey="profile" title="Profile">

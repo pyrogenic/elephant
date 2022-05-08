@@ -1,5 +1,6 @@
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import React from "react";
+/*
 import RoonApi, { Core as RoonCore, RoonWebSocketConfig, RoonZone } from "./RoonApi";
 
 const RoonApiBrowse = require("node-roon-api-browse");
@@ -63,3 +64,4 @@ export function useZones(core: RoonCore | undefined) {
     React.useEffect(() => core?.services.RoonApiTransport?.get_zones((error, body) => error ? setZones([]) : setZones(body.zones)), [core?.services.RoonApiTransport]);
     return zones;
 }
+*/

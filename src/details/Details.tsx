@@ -205,12 +205,13 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 </Col>
             </Row>;
 
-        const roonContent = () =>
-            <Row>
-                <Col>
-                    <RoonLink item={item} />
-                </Col>
-            </Row>;
+        // TODO: ROON
+        // const roonContent = () =>
+        //     <Row>
+        //         <Col>
+        //             <RoonLink item={item} />
+        //         </Col>
+        //     </Row>;
 
         return <>
             {/* <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
@@ -249,10 +250,11 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         title: "Graph",
                         content: graphContent,
                     },
-                    {
-                        title: "Roon",
-                        content: roonContent,
-                    },
+                    // TODO: ROON
+                    // {
+                    //     title: "Roon",
+                    //     content: roonContent,
+                    // },
                 ]} />
         </>;
     }}</Observer>;
