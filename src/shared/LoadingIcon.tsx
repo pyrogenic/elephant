@@ -4,13 +4,12 @@ import { FiLoader } from "react-icons/fi";
 import { Remote } from "../Remote";
 import "./LoadingIcon.scss";
 import { Content, resolve } from "./resolve";
-import { PropertyNamesOfType } from "./TypeConstraints";
 
 const SpinningIcon = <FiLoader className="spin" />;
 
 export default function LoadingIcon<
-    TContainer,
-    TKey extends PropertyNamesOfType<TContainer, Content>,
+    TKey extends string,
+    TContainer extends { [K in TKey]: Content },
     >({ remote, placeholder, children }: React.PropsWithChildren<{
         remote?: [container: Remote<TContainer>, key: TKey],
         placeholder?: Content,

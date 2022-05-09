@@ -1,14 +1,15 @@
 import React from "react";
 
-export type ValueOrFactory<T> = T | (() => T);
+export type ValueOrFactory<T> = T extends (() => T) ? never : T | (() => T);
 
 export type Content = ValueOrFactory<React.ReactNode>;
 
 /**
  * Given a value or a factory for that value type, return a value.
  */
-export function resolve<T>(content: T extends ((...args: any) => any) ? never : ValueOrFactory<T>): T {
-    if (typeof content === "function") {
+// export function resolve(content: Content): React.ReactNode;
+export function resolve<T>(content: ValueOrFactory<T>): T {
+    if (content instanceof Function && content.length === 0) {
         return resolve(content());
     }
     return content as T;

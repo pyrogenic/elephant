@@ -107,7 +107,7 @@ const Tag = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanEleme
             {extra ? <>
                 &nbsp;
                 {typeof extra === "function"
-                    ? resolve(extra)
+                    ? resolve(extra as Content)
                     : <ExtraBadge onClick={onClickExtra} extra={resolve(extra)} />}
             </> : null}
         </>;
@@ -144,7 +144,7 @@ function ExtraBadge({ onClick, extra }: { onClick?: () => void, extra: Content }
         onClick={onClick}
         title={title}
     >
-        {extra}
+        {resolve(extra)}
     </Badge>;
 }
 

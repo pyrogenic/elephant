@@ -1,6 +1,7 @@
 import React from "react";
 import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 import "./Disclosure.scss";
+import iconAsContent from "./iconAsContent";
 import { Content, resolve } from "./resolve";
 
 type Props = {
@@ -23,7 +24,7 @@ export default function Disclosure({ title, icons, children, content, disclosed,
         setDisclosed = setDisclosedState;
     }
     const disclose = React.useCallback(() => setDisclosed?.(!disclosed), [disclosed, setDisclosed]);
-    const icon = resolve(disclosed ? icons?.open ?? FiChevronDown : icons?.closed ?? FiChevronRight);
+    const icon = resolve(disclosed ? icons?.open ?? iconAsContent(FiChevronDown) : icons?.closed ?? iconAsContent(FiChevronRight));
     let result: Content;
     if (typeof title !== "string") {
         result = <div className="disclosure" onClick={disclose}>{resolve(title(icon))}</div>;
@@ -34,7 +35,7 @@ export default function Disclosure({ title, icons, children, content, disclosed,
         return <>{result}</>;
     }
     if (content) {
-        return <>{result}{resolve(content)}</>;
+        return <>{result}{resolve(content as Content)}</>;
     }
     return <>{result}{children}</>;
 }

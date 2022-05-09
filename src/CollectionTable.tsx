@@ -148,7 +148,7 @@ export default function CollectionTable(props: {
         return ["literal", source ?? ""];
     }, [sourceId, orderNumberId]);
 
-    const mnemonic = React.useCallback((sortedBy, item: CollectionItem): Mnemonic => {
+    const mnemonic = React.useCallback((sortedBy: string, item: CollectionItem): Mnemonic => {
         switch (sortedBy) {
             case ARTIST_COLUMN_TITLE:
                 return item.basic_information.artists[0].name;
@@ -192,7 +192,7 @@ export default function CollectionTable(props: {
 
     const isInSoldFolder = useInSoldFolder();
 
-    const sortByCondition = React.useCallback((ac, bc) => {
+    const sortByCondition = React.useCallback<SortByFn<CollectionItem>>((ac, bc) => {
         const mca = mediaCondition(ac.original.notes);
         const sca = sleeveCondition(ac.original.notes);
         const mcb = mediaCondition(bc.original.notes);
@@ -497,7 +497,7 @@ export default function CollectionTable(props: {
         return columns;
     }, [conditionColumn, fieldsById, notesColumn, playCountColumn, sourceColumn, tasksColumn]);
 
-    const sortByArtist = React.useCallback((ac, bc, columnId) => {
+    const sortByArtist = React.useCallback<SortByFn<CollectionItem>>((ac, bc, columnId) => {
         const collectionItemOne: DiscogsCollectionItem = ac.original;
         const collectionItemTwo: DiscogsCollectionItem = bc.original;
         const basicInfoOne = collectionItemOne.basic_information;
@@ -517,12 +517,12 @@ export default function CollectionTable(props: {
             library: true,
         });
     }, []);
-    const sortByRating = React.useCallback((ac, bc) => {
+    const sortByRating = React.useCallback<SortByFn<CollectionItem>>((ac, bc) => {
         const a = pendingValue(ac.original.rating);
         const b = pendingValue(bc.original.rating);
         return a - b;
     }, []);
-    const sortByTags = React.useCallback((ac, bc, columnId) => {
+    const sortByTags = React.useCallback<SortByFn<CollectionItem>>((ac, bc, columnId) => {
         const a = ac.values[columnId];
         const b = bc.values[columnId];
         return compare(a, b);
@@ -561,7 +561,7 @@ export default function CollectionTable(props: {
         accessor: ({ basic_information: { formats } }) => formats,
         Cell: ({ row: { original }, value }: CollectionCell<Formats>) => <>
             {isCD(original) ? <FiDisc className="cd" title="CD" /> : <FiDisc className="vinyl" title="Vinyl" />}
-            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }, n) => <React.Fragment key={n}>{tag}</React.Fragment>)}
+            {compact(formats(value).map((f) => formatToTag(f, true))).filter(({ kind, tag }) => kind === TagKind.format && tag !== "CD").map(({ tag }, n) => <React.Fragment key={n}>{resolve(tag)}</React.Fragment>)}
         </>,
         sortType: autoSortBy("Type"),
     }), [autoSortBy]);
@@ -571,7 +571,7 @@ export default function CollectionTable(props: {
         className: "centered-column",
         accessor: ({ basic_information: { labels } }) => uniqueLabels(labels),
         Cell: ({ value }: { value: Labels }) => {
-            return value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} />);
+            return <>{value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} />)}</>;
         },
         sortType: autoSortBy("Label"),
     }), [autoSortBy]);

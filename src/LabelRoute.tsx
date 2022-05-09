@@ -40,14 +40,14 @@ const LabelPanel = observer(() => {
     const generateGraph = useCollectionGraphGenerator(collectionSubset, lpdb);
     return <>
         <div className="mb-3">
-            <Disclosure title={(icon) => <h2>
+            <Disclosure title={(icon) => <h2><>
                 <LazyMusicLabel label={{ id: labelId, name: labelName ?? "…" }} showName={false} />
                 <span className="me-2" />
                 <ExternalLink href={label.status === "ready" ? label.value.uri : undefined}>
                     <LoadingIcon remote={[label, "name"]} />
                 </ExternalLink>
                 {icon}
-            </h2>} content={() => <>
+            </></h2>} content={() => <>
                 {label.status === "ready" && label.value.profile ? <>
                     <DiscoTag src={label.value.profile} {...label.value} />
                 </>

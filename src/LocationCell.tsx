@@ -7,11 +7,16 @@ import { collectionItemCacheQuery } from "./collectionItemCache";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import ElephantSelectionContext from "./ElephantSelectionContext";
+import iconAsContent from "./shared/iconAsContent";
 import { parseLocation, useFolderName } from "./location";
 import { mutate, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import Tag, { TagKind } from "./Tag";
+
+const FiNavigationContent = iconAsContent(FiNavigation);
+const FiCheckContent = iconAsContent(FiCheck);
+const FiDollarSignContent = iconAsContent(FiDollarSign);
 
 export default function LocationCell({ item }: { item: CollectionItem; }) {
     const { cache, client, folders } = React.useContext(ElephantContext);
@@ -33,15 +38,15 @@ export default function LocationCell({ item }: { item: CollectionItem; }) {
                 extra = false;
                 break;
             case "leave":
-                extra = FiNavigation;
+                extra = FiNavigationContent;
                 className = "badge-light listed";
                 break;
             case "listed":
                 className = "badge-light listed";
-                extra = FiCheck;
+                extra = FiCheckContent;
                 break;
             case "sold":
-                extra = FiDollarSign;
+                extra = FiDollarSignContent;
                 type = TagKind.tag;
                 className = "badge-success";
                 break;

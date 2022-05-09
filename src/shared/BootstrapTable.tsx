@@ -224,7 +224,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                                 </div>
                             ) : null;
                         },
-                    },
+                    } as any,
                     ...columns,
                 ])
             }

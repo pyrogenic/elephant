@@ -4,7 +4,7 @@ import Button from "react-bootstrap/Button";
 import { FiPlay } from "react-icons/fi";
 import ReactJson from "react-json-view";
 import { CollectionItem } from "../Elephant";
-import useRoon, { useZones } from "../roon/useRoon";
+import useRoon, { useZones } from "@pyrogenic/proon/lib/useRoon";
 import SelectBox from "../shared/SelectBox";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 
