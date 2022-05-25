@@ -7,6 +7,7 @@ import { useRouteMatch } from "react-router-dom";
 import Profile from "./Profile";
 import { useRoonId } from "@pyrogenic/proon/lib/useRoon";
 import Folders from "./Folders";
+import DiscogsSearch from "./DiscogsSearch";
 import Testbed from "./Testbed";
 
 export default function AuthRoute({
@@ -56,6 +57,9 @@ export default function AuthRoute({
             </Tab>
             <Tab eventKey="contact" title="Contact" disabled>
                 Contact
+            </Tab>
+            <Tab eventKey="search" title="Search">
+                <DiscogsSearch />
             </Tab>
             <Tab eventKey="testbed" title="Testbed">
                 <Testbed />

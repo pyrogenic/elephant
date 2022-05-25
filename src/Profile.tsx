@@ -37,8 +37,11 @@ export default function Profile() {
 
     const [refresh, setRefresh] = React.useState(1);
     const doRefresh = React.useCallback(() => {
+        if (!cache) return Promise.resolve();
         const p = setRefresh.bind(null, refresh + 1);
-        setPromise(cache?.clear(PROFILE_QUERY).then(p, p));
+        const promise = cache.clear(PROFILE_QUERY).then(p, p);
+        setPromise(promise);
+        return promise;
     }, [refresh, cache]);
 
     const [profile, setProfile] = React.useState<Remote<DiscogsProfile>>({ status: "pending" });

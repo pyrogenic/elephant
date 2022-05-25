@@ -1,4 +1,5 @@
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import Bottleneck from "bottleneck";
 import { Discojs, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
 import isEmpty from "lodash/isEmpty";
@@ -118,6 +119,10 @@ export default function Elephant() {
   const [profile, setProfile] = React.useState<Profile>();
   const lpdb = React.useMemo(() => new LPDB(client, cache), [cache, client]);
   const [, setCollectionTimestamp] = React.useState<Date>(new Date());
+  const limiter = React.useMemo(() => new Bottleneck({
+    maxConcurrent: 2,
+    minTime: 5,
+  }), []);
 
   const { collection, inventory, lists } = lpdb;
 
@@ -146,7 +151,8 @@ export default function Elephant() {
     lists,
     lpdb,
     setError,
-  }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, lists, lpdb, orders]);
+    limiter,
+  }), [cache, client, collection, fieldsById, fieldsByName, folders, inventory, limiter, lists, lpdb, orders]);
 
   // If token is unset, make auth the default location.
   let collectionPath, authPath;

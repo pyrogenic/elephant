@@ -80,9 +80,12 @@ const LabelIndex = observer(() => {
     const { collection } = React.useContext(ElephantContext);
     const labelsAcrossCollection = flatten(collection.values().map(({ basic_information: { labels } }) => labels));
     const labels = sortBy(uniqBy(labelsAcrossCollection, "id"), "name");
-    return <>
-        {labels.map(({ name, id }) => <div key={id}><Router.Link to={`${match.path}/${id}/${name}`}>{name}</Router.Link></div>)}
-    </>;
+    return <ul>
+        {labels.map((label) => <li key={label.id}><Observer>{() =>
+            <LazyMusicLabel label={label} showName autoGetBrokenImages />
+        }</Observer>
+        </li>)}
+    </ul>;
 });
 
 function useCollectionGraphGenerator(collectionSubset: IObservableArray<CollectionItem>, lpdb: LPDB) {

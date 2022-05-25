@@ -1,6 +1,7 @@
 import { arraySetHas, arraySetToggle, compare } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
+import noop from "lodash/noop";
 import sortBy from "lodash/sortBy";
 import { action } from "mobx";
 import React from "react";
@@ -8,6 +9,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Dropdown from "react-bootstrap/Dropdown";
+import Badge from "react-bootstrap/esm/Badge";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
@@ -22,6 +24,8 @@ import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
 import ReleaseCell from "./ReleaseCell";
 import Disclosure from "./shared/Disclosure";
+import LazyAccordion from "./shared/lazy/LazyAccordion";
+import LazyContent from "./shared/lazy/LazyContent";
 import { mutate } from "./shared/Pendable";
 import { resolve } from "./shared/resolve";
 import usePromiseState from "./shared/usePromiseState";
@@ -167,6 +171,49 @@ function Folders() {
                     onClick={setChecked.bind(null, [])}>
                     Reset
                 </Button>
+            </Col>
+        </Row>
+        <Row>
+            <Col>
+                <LazyAccordion
+                    defaultSections={[]}
+                    sections={sortBy(folders, (folder) => parseLocation(folder.name).label ?? folder.name).map((folder): LazyContent => {
+                        const eventKey = parseLocation(folder.name).label ?? folder.name;
+                        const collectionItemsInFolder = collection.values().filter(({ folder_id }) => folder_id === folder.id);
+                        collectionItemsInFolder.sort(sortByRelease);
+                        return ({
+                            eventKey,
+                            title: ({ active }) => <div style={{ display: "flex", width: "100%" }}>{eventKey}{
+                                !active && <> ({collectionItemsInFolder.length})</>
+                            }<div style={{ flexGrow: 1 }} /><Badge onClick={(e) => {
+                                e.stopPropagation();
+                            }}>Move Here</Badge></div>,
+                            content: () => {
+                                return <>{collectionItemsInFolder.map((item) => {
+                                    const chg = () => {
+                                        arraySetToggle(checked, item.instance_id);
+                                        setChecked([...checked]);
+                                    };
+                                    return <Form.Check
+                                        key={item.instance_id}
+                                        id={"check" + item.instance_id}
+                                        className="text-nowrap"
+                                    >
+                                        <Form.Check.Input
+                                            checked={arraySetHas(checked, item.instance_id)}
+                                            onChange={chg} />
+                                        <Form.Check.Label style={{ display: "flex" }}>
+                                            <div style={{ width: "1rem" }}>
+                                                {item.rating}
+                                            </div>
+                                            <ReleaseCell as={"div"} instance_id={item.instance_id} {...item.basic_information} />
+                                        </Form.Check.Label>
+                                    </Form.Check>;
+                                })}</>;
+                            },
+                        });
+                    })}
+                />
             </Col>
         </Row>
         <Row>
