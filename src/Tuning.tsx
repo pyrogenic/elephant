@@ -5,7 +5,7 @@ import { action, computed, observable, runInAction } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
 import { Card } from "react-bootstrap";
-import { SiAmazon, SiDiscogs } from "react-icons/si";
+import { SiAmazon, SiBandcamp, SiDiscogs } from "react-icons/si";
 import autoFormat from "./autoFormat";
 import { useMediaCondition } from "./CollectionTable";
 import { CollectionItem, FieldsByName, List, Lists } from "./Elephant";
@@ -17,13 +17,13 @@ import Pendable, { DeepPendable, pendingValue } from "./shared/Pendable";
 import { Content } from "./shared/resolve";
 import { Variant } from "./shared/Shared";
 import { TagKind, TagProps } from "./Tag";
+import { injectedValues } from "./shared/yaml";
+import { IComputedValue } from "mobx/dist/internal";
+import ExternalLink from "./shared/ExternalLink";
 
 import AcousticSoundsLogo from "./acoustic-sounds-logo.svg";
 import VinylPostLogo from "./vinyl-post-logo.png";
 import BlackBoxLogo from "./black-box-logo.png";
-import ExternalLink from "./shared/ExternalLink";
-import { injectedValues } from "./shared/yaml";
-import { IComputedValue } from "mobx/dist/internal";
 
 export enum KnownFieldTitle {
     mediaCondition = "Media Condition",
@@ -87,6 +87,7 @@ Vinyl Post
 export enum Source {
     acousticsounds = "Acoustic Sounds",
     amazon = "Amazon",
+    bandcamp = "Bandcamp",
     blackbox = "Black Box",
     discogs = "Discogs",
     gift = "Gift",
@@ -122,7 +123,15 @@ export function orderUri(source: Source, orderNumber: string) {
             return {
                 Icon: () => <img alt={source} src={BlackBoxLogo} className="icon" />,
             };
+        case Source.bandcamp:
+            return {
+                Icon: SiBandcamp,
+                uri: orderNumber,
+            };
         default:
+            if (/^https?:/.test(orderNumber)) {
+                return { uri: orderNumber };
+            }
             return {};
     }
 }
