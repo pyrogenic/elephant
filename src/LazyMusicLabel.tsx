@@ -1,3 +1,4 @@
+import noop from "lodash/noop";
 import sortBy from "lodash/sortBy";
 import { Observer } from "mobx-react";
 import React from "react";
@@ -11,20 +12,57 @@ import { ElementType } from "./shared/TypeConstraints";
 
 type LabelProps = Pick<ElementType<CollectionItem["basic_information"]["labels"]>, "name" | "id">;
 
-export default function LazyMusicLabel({ label: { name, id }, showName, hq }: { label: LabelProps, showName?: boolean | "if-no-logo", hq?: boolean }) {
+export default function LazyMusicLabel({
+    label: { name, id },
+    showName,
+    hq,
+    autoGetBrokenImages,
+}: {
+    label: LabelProps,
+    showName?: boolean | "if-no-logo",
+    hq?: boolean,
+    autoGetBrokenImages?: boolean,
+}) {
     const { lpdb } = React.useContext(ElephantContext);
     const label = React.useMemo(() => lpdb?.label(id), [id, lpdb]);
     return <Observer render={() => {
         const labelValue: Partial<Label> = label?.status === "ready" ? label.value : {};
-        return <MusicLabelLogo remote={label} name={name} {...labelValue} showName={showName} hq={hq} />;
+        return <MusicLabelLogo
+            remote={label}
+            name={name}
+            {...labelValue}
+            showName={showName}
+            hq={hq}
+            autoGetBrokenImages={autoGetBrokenImages}
+        />;
     }} />;
 }
 
-export function MusicLabelLogo({ remote, id, name, images, showName, hq }: { remote?: Remote<any>, id?: number; name?: string; images?: Label["images"], showName?: boolean | "if-no-logo", hq?: boolean }) {
+export function MusicLabelLogo({
+    remote,
+    id,
+    name,
+    images,
+    showName,
+    hq,
+    autoGetBrokenImages = true,
+}: {
+    remote?: Remote<any>,
+    id?: number; name?: string; images?: Label["images"],
+    showName?: boolean | "if-no-logo",
+    hq?: boolean,
+    autoGetBrokenImages?: boolean,
+}) {
     images = images && sortBy(images, factor);
     const image = images?.shift();
     const imgRef = React.createRef<HTMLImageElement>();
+    const { limiter } = React.useContext(ElephantContext);
     const [brokenImage, setBrokenImage] = React.useState(false);
+    React.useEffect(() => {
+        if (brokenImage && remote && ("refresh" in remote) && autoGetBrokenImages) {
+            limiter.schedule(remote.refresh);
+        }
+    }, [autoGetBrokenImages, brokenImage, limiter, name, remote]);
     React.useLayoutEffect(() => {
         if (imgRef.current) {
             if (imgRef.current.complete) {

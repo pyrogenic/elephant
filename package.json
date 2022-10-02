@@ -27,6 +27,7 @@
     "@types/react": "*",
     "@types/yaml": "~1.9.7",
     "bootstrap": "~5.1.3",
+    "bottleneck": "~2.19.5",
     "comlink-loader": "~2.0.0",
     "cytoscape-cola": "~2.5.0",
     "cytoscape": "~3.14.0",

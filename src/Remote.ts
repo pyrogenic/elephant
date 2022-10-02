@@ -4,11 +4,11 @@ export type Remote<TValue> = {
 } | {
     status: "ready";
     value: TValue;
-    refresh(): void;
+    refresh(): Promise<void>;
 } | {
     status: "error";
     error: any;
-    refresh(): void;
+    refresh(): Promise<void>;
 };
 
 export type RemoteType<TRemote> = TRemote extends Remote<infer TValue> ? TValue : never;

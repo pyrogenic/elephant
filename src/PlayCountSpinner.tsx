@@ -53,10 +53,10 @@ export default function PlayCountSpinner(row: CollectionItem) {
             promise.then(() => cache.clear(cacheQuery));
         }
     }, [cache, cacheQuery, client, playsId, playsInfo, row]);
-    const changeFieldPlayCount = React.useCallback((value: number) => {
+    const changeFieldPlayCount = React.useCallback((value: number, modifyHistory: boolean = true) => {
         const info = playsInfo(row);
         if (!playsId || !info) return;
-        changeField(changePlayCount(info, value), false);
+        changeField(changePlayCount(info, value, modifyHistory), false);
     }, [changeField, playsId, playsInfo, row]);
     const changeFieldHistory = React.useCallback(() => {
         const info = playsInfo(row);
@@ -87,6 +87,8 @@ export default function PlayCountSpinner(row: CollectionItem) {
                             inline >
                             <Container fluid>
                                 <Badge bg="dark" onClick={action(() => state.showDay = new Date())}>Today</Badge>
+                                <Badge bg="dark" onClick={changeFieldPlayCount.bind(null, plays - 1, false)}>-</Badge>
+                                <Badge bg="dark" onClick={changeFieldPlayCount.bind(null, plays + 1, false)}>+</Badge>
                                 <pre>
                                     {playDates && changeHistory(info, playDates)}
                                 </pre>
@@ -118,16 +120,18 @@ export default function PlayCountSpinner(row: CollectionItem) {
     }} />;
 }
 
-function changePlayCount(info: PlaysInfo, value: number) {
+function changePlayCount(info: PlaysInfo, value: number, modifyHistory: boolean) {
     const { plays, history } = info;
     const newPlayCount = value.toString();
-    const now = new Date();
-    const today = historyEntry(now);
     const segments = [newPlayCount, ...history];
-    if (value > plays) {
-        arraySetAdd(segments, today);
-    } else {
-        arraySetRemove(segments, today);
+    if (modifyHistory) {
+        const now = new Date();
+        const today = historyEntry(now);
+        if (value > plays) {
+            arraySetAdd(segments, today);
+        } else {
+            arraySetRemove(segments, today);
+        }
     }
     return segments.join("\n");
 }

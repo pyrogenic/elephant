@@ -240,7 +240,7 @@ export default class LPDB {
   }
 
   public master = action((masterId: number | undefined): Remote<MasterRelease> => {
-    let refresh = () => { };
+    let refresh = () => Promise.resolve();
     if (masterId === undefined || masterId === 0) {
       return {
         status: "ready",
@@ -272,7 +272,7 @@ export default class LPDB {
   });
 
   public label = action((labelId: number): Remote<Label> => {
-    let refresh = (fromCache?: boolean) => { };
+    let refresh = (fromCache?: boolean) => Promise.resolve();
     let result = this.labels.get(labelId);
     if (result) {
       return result;

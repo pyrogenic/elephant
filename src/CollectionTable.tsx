@@ -409,7 +409,7 @@ export default function CollectionTable(props: {
                                     }, (e) => {
                                         console.error(e);
                                     });
-                                }}>Test</Dropdown.Item>
+                                }}>Copy to Notes</Dropdown.Item>
                             </Dropdown.Menu>}
                         />
                     </div>;

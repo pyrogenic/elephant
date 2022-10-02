@@ -10,7 +10,10 @@ type LazyContent = {
         |
         {
             eventKey: string,
-            title: (onClick: () => void) => Content,
+        title: (props: {
+            active: boolean,
+            onClick: (() => void),
+        }) => Content,
         }
     );
 

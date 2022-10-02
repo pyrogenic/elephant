@@ -5,6 +5,7 @@ import OrderedMap from "./OrderedMap";
 import { Collection, FieldsById, FieldsByName, Inventory, Lists, Orders } from "./Elephant";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import { DiscogsFolders } from "./DiscogsTypeDefinitions";
+import Bottleneck from "bottleneck";
 
 export interface IElephantContext {
     lpdb?: LPDB;
@@ -18,6 +19,7 @@ export interface IElephantContext {
     inventory: Inventory;
     lists: Lists;
     setError: React.Dispatch<any>;
+    limiter: Bottleneck;
 }
 
 const ElephantContext = React.createContext<IElephantContext>({
@@ -27,6 +29,10 @@ const ElephantContext = React.createContext<IElephantContext>({
     orders: new OrderedMap(),
     lists: new OrderedMap(),
     setError: console.error,
+    limiter: new Bottleneck({
+        maxConcurrent: 1,
+        minTime: 1,
+    }),
 });
 
 export default ElephantContext;
