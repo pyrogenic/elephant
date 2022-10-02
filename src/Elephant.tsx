@@ -22,6 +22,7 @@ import { LabelMode } from "./LabelRoute";
 import LPDB from "./LPDB";
 import Masthead, { CollectionFilter } from "./Masthead";
 import OrderedMap from "./OrderedMap";
+import ExternalLink from "./shared/ExternalLink";
 import { DeepPendable } from "./shared/Pendable";
 import Ruler from "./shared/Ruler";
 import "./shared/Shared.scss";
@@ -225,8 +226,11 @@ export default function Elephant() {
         </Router.Switch>
         <hr />
         <Row>
-          <Col>
+          <Col md={8}>
             This application uses Discogs’ API but is not affiliated with, sponsored or endorsed by Discogs. ‘Discogs’ is a trademark of Zink Media, LLC.
+          </Col>
+          <Col md={4} style={{textAlign: "right"}}>
+            Developed by <ExternalLink href="https://www.discogs.com/user/pyrogenique">Joshua Pollak</ExternalLink>.
           </Col>
         </Row>
       </Container>

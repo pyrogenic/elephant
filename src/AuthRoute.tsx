@@ -1,5 +1,6 @@
 import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
-import { Container } from "react-bootstrap";
+import Button from "react-bootstrap/Button";
+import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
@@ -8,6 +9,7 @@ import Profile from "./Profile";
 import { useRoonId } from "@pyrogenic/proon/lib/useRoon";
 import Folders from "./Folders";
 import Testbed from "./Testbed";
+import ExternalLink from "./shared/ExternalLink";
 
 export default function AuthRoute({
     token,
@@ -31,21 +33,32 @@ export default function AuthRoute({
             <Tab eventKey="home" title="Auth">
                 <Form>
                     <Form.Group className="mb-2">
-                        <Form.Label>User Token</Form.Label>
+                        <Form.Label>
+                            User Token
+                            &nbsp;
+                            <Button size="sm">
+                                Get Yours From <ExternalLink href="https://www.discogs.com/settings/developers">Discogs</ExternalLink>
+                            </Button>
+                        </Form.Label>
                         <Form.Control
                             type="text"
+                            placeholder="paste your discogs personal access token here"
                             value={token}
                             onChange={({ target: { value } }) => setToken(value)}
                         />
+                        <Form.Text>
+                            This app runs completely in your browser and uses this token to retrieve your collection from Discogs. All infromation collected by this app is completely private to your browser.
+                        </Form.Text>
                     </Form.Group>
-                    <Form.Group className="mb-2">
+
+                    {/* <Form.Group className="mb-2">
                         <Form.Label>Roon Extension Identitfier</Form.Label>
                         <Form.Control
                             type="text"
                             value={roonId}
                             onChange={({ target: { value } }) => setRoonId(value)}
                         />
-                    </Form.Group>
+                    </Form.Group> */}
                 </Form>
             </Tab>
             <Tab eventKey="profile" title="Profile">

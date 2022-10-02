@@ -200,6 +200,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     }
 
     private historyCache = throttled("history", () => {
+        this.tracker.prune(3 * 60 * 100);
         return this.tracker.history("discogs", 60 * 1000);
     });
 
