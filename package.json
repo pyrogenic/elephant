@@ -47,7 +47,7 @@
     "mobx-react": "~7.2.0",
     "mobx-state-tree": "~5.0.2",
     "mobx": "~6.3.2",
-    "node-sass": "~6.0.0",
+    "node-sass": "~8.0.0",
     "popper.js": "*",
     "react-bootstrap": "~2.1.2",
     "react-d3-graph": "~2.6.0",
