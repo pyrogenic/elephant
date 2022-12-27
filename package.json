@@ -6,7 +6,6 @@
   "private": true,
   "dependencies": {
     "@pyrogenic/asset": "^1.0.0",
-    "@pyrogenic/proon": "^1.0.0",
     "@pyrogenic/memo": "^1.0.0",
     "@pyrogenic/perl": "^1.0.0",
     "@testing-library/dom": "~7.31.0",
@@ -60,7 +59,7 @@
     "react-multi-select-component": "~4.0.2",
     "react-overlays": "~5.1.1",
     "react-router-dom": "~5.2.0",
-    "react-scripts": "~4.0.3",
+    "react-scripts": "*",
     "react-table": "~7.7.0",
     "react-to-print": "~2.12.6",
     "react": "*",

@@ -88,8 +88,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     pauseCheck?: NodeJS.Timeout;
 
     lastErrorTimestamp = observableStorage<number>("lastErrorTimestamp", 0);
-    simultaneousRequestLimit = observableStorage<number>("simultaneousRequestLimit", 20);
-    requestPerMinuteCap = observableStorage<number>("requestPerMinuteCap", 50);;
+    simultaneousRequestLimit = observableStorage<number>("simultaneousRequestLimit", 5);
+    requestPerMinuteCap = observableStorage<number>("requestPerMinuteCap", 15);;
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {

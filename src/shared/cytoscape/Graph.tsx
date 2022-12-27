@@ -5,6 +5,7 @@ import { Observer } from "mobx-react";
 import React from "react";
 import Button from "react-bootstrap/Button";
 import Check from "../Check";
+import setImmediate from "@pyrogenic/perl/lib/setImmediate";
 
 cytoscape.use(require("cytoscape-cola"));
 

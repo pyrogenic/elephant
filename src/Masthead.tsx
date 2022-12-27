@@ -29,9 +29,10 @@ import { statRoutePaths } from "./StatsRoute";
 import { tagRoutePaths } from "./TagsRoute";
 import { taskRoutePaths } from "./TasksRoute";
 import useActivityMonitor from "./useActivityMonitor";
+import useGetAllCollectionEntries from "./useGetAllCollectionEntries";
 import useGetNewCollectionEntries from "./useGetNewCollectionEntries";
-import useInSoldFolder from "./useInSoldFolder";
 import useInOfflineFolder from "./useInOfflineFolder";
+import useInSoldFolder from "./useInSoldFolder";
 
 const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick }, ref) => {
     return <div
@@ -116,6 +117,7 @@ export default function Masthead({
     const { lpdb } = React.useContext(ElephantContext);
 
     const getNewCollectionEntries = useGetNewCollectionEntries();
+    const getAllCollectionEntries = useGetAllCollectionEntries();
 
     // const folderName = useFolderName();
 
@@ -309,7 +311,11 @@ export default function Masthead({
             <Dropdown.Menu flip={true}>
                 <Dropdown.Item
                     onClick={getNewCollectionEntries}>
-                    Update
+                    Get New Items
+                </Dropdown.Item>
+                <Dropdown.Item
+                    onClick={getAllCollectionEntries}>
+                    Refresh Collection
                 </Dropdown.Item>
                 <Dropdown.Divider />
                 <Dropdown.ItemText>

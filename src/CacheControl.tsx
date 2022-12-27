@@ -9,6 +9,7 @@ import ElephantContext from "./ElephantContext";
 import type { CacheQuery } from "./IDiscogsCache";
 import Badge from "./shared/Badge";
 import { ButtonVariant, Variant } from "./shared/Shared";
+import setImmediate from "@pyrogenic/perl/lib/setImmediate";
 
 //const NON_DEFAULT_FOLDER_QUERY = { query: /\/collection\/folders\/(\{|[2-9]\d*\/)/ };
 export const FOLDER_NAMES_QUERY = { url: /\/collection\/folders\/?$/ };
