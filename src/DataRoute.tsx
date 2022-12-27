@@ -17,6 +17,8 @@ import CollectionItemLink from "./CollectionItemLink";
 import ElephantContext from "./ElephantContext";
 import Badge from "./shared/Badge";
 import { patches } from "./Tuning";
+import setImmediate from "@pyrogenic/perl/lib/setImmediate";
+import "./DataRoute.scss";
 
 // const progress = observable<{
 //     releaseId?: number,
@@ -112,7 +114,7 @@ export const DataIndex = observer(() => {
             </Card>
         </Col>
         <Col>
-            <Card>
+            <Card className="request-tracker">
                 <Card.Header>Request Tracker</Card.Header>
                 <Card.Body>
                     <Form>
@@ -143,7 +145,7 @@ export const DataIndex = observer(() => {
                     <ol>
                         {cache.inflight.map(({ detail, start }, i) => {
                             const end = Date.now();
-                            return <li key={i}><Badge key={i}>{prettyPrint(detail)} ({Math.floor((end - start) / 100) / 10}s)</Badge></li>;
+                            return <li key={i}><Badge key={i}>{prettyPrint(detail)} ({((end - start) / 1000).toFixed(1)}s)</Badge></li>;
                         })}
                     </ol>
                     <hr />
