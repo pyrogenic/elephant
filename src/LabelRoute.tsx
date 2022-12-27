@@ -40,14 +40,14 @@ const LabelPanel = observer(() => {
     const generateGraph = useCollectionGraphGenerator(collectionSubset, lpdb);
     return <>
         <div className="mb-3">
-            <Disclosure title={(icon) => <h2><>
+            <Disclosure title={(icon) => <div className="h2"><>
                 <LazyMusicLabel label={{ id: labelId, name: labelName ?? "…" }} showName={false} />
                 <span className="me-2" />
                 <ExternalLink href={label.status === "ready" ? label.value.uri : undefined}>
                     <LoadingIcon remote={[label, "name"]} />
                 </ExternalLink>
                 {icon}
-            </></h2>} content={() => <>
+            </></div>} content={() => <>
                 {label.status === "ready" && label.value.profile ? <>
                     <DiscoTag src={label.value.profile} {...label.value} />
                 </>
@@ -76,7 +76,7 @@ const LabelPanel = observer(() => {
 });
 
 const LabelIndex = observer(() => {
-    let match = Router.useRouteMatch();
+    //let match = Router.useRouteMatch();
     const { collection } = React.useContext(ElephantContext);
     const labelsAcrossCollection = flatten(collection.values().map(({ basic_information: { labels } }) => labels));
     const labels = sortBy(uniqBy(labelsAcrossCollection, "id"), "name");

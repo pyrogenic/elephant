@@ -6,7 +6,7 @@ import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { useRouteMatch } from "react-router-dom";
 import Profile from "./Profile";
-import { useRoonId } from "@pyrogenic/proon/lib/useRoon";
+//import { useRoonId } from "@pyrogenic/proon/lib/useRoon";
 import Folders from "./Folders";
 import DiscogsSearch from "./DiscogsSearch";
 import Testbed from "./Testbed";
@@ -22,7 +22,7 @@ export default function AuthRoute({
     const r = useRouteMatch();
     const [key, setKey] = useStorageState<string | null>("session", r.path, null);
 
-    const [roonId, setRoonId] = useRoonId();
+    //const [roonId, setRoonId] = useRoonId();
 
     return <Container fluid={false}>
         <Tabs

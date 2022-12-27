@@ -1,7 +1,6 @@
 import { arraySetHas, arraySetToggle, compare } from "@pyrogenic/asset/lib";
 import useStorageState from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
-import noop from "lodash/noop";
 import sortBy from "lodash/sortBy";
 import { action } from "mobx";
 import React from "react";

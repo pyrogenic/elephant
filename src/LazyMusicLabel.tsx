@@ -1,4 +1,3 @@
-import noop from "lodash/noop";
 import sortBy from "lodash/sortBy";
 import { Observer } from "mobx-react";
 import React from "react";

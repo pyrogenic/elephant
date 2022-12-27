@@ -5,7 +5,6 @@ import classConcat, { ClassNames } from "@pyrogenic/perl/lib/classConcat";
 import uniqueId from "lodash/uniqueId";
 import { arraySetToggle } from "@pyrogenic/asset/lib";
 import useLazyMultiContent from "./useLazyMultiContent";
-import noop from "lodash/noop";
 
 export default function LazyAccordion({
     className,

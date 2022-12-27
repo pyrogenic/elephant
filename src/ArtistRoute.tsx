@@ -34,7 +34,7 @@ const ArtistPanel = () => {
   if (!isFinite(artistId) || !lpdb || !artist || !roles) { return null; }
   const primaryArtistSubset = computed(() => collection.values().filter(({ basic_information: { artists } }) => artists.find(({ id }) => id === artistId)));
   return <Observer>{() => <>
-    <Disclosure title={(icon) => <h2><>{artistName ?? artist.name}{icon}</></h2>} content={() => <>
+    <Disclosure title={(icon) => <div className="h2"><>{artistName ?? artist.name}{icon}</></div>} content={() => <>
       {artist.profile && <DiscoTag src={artist.profile} uri={artist.uri} />}
       <dl>
       <dt>Roles</dt>
