@@ -1,31 +1,20 @@
 {
   "files": {
-    "main.css": "/elephant/static/css/main.17ffe969.chunk.css",
-    "main.js": "/elephant/static/js/main.fa9f1414.chunk.js",
-    "main.js.map": "/elephant/static/js/main.fa9f1414.chunk.js.map",
-    "runtime-main.js": "/elephant/static/js/runtime-main.0a124753.js",
-    "runtime-main.js.map": "/elephant/static/js/runtime-main.0a124753.js.map",
-    "static/css/2.04cd7577.chunk.css": "/elephant/static/css/2.04cd7577.chunk.css",
-    "static/js/2.bdd0eea7.chunk.js": "/elephant/static/js/2.bdd0eea7.chunk.js",
-    "static/js/2.bdd0eea7.chunk.js.map": "/elephant/static/js/2.bdd0eea7.chunk.js.map",
-    "static/js/3.11444484.chunk.js": "/elephant/static/js/3.11444484.chunk.js",
-    "static/js/3.11444484.chunk.js.map": "/elephant/static/js/3.11444484.chunk.js.map",
-    "ba1288fbfb7dad1a5852.worker.js": "/elephant/ba1288fbfb7dad1a5852.worker.js",
-    "ba1288fbfb7dad1a5852.worker.js.map": "/elephant/ba1288fbfb7dad1a5852.worker.js.map",
+    "main.css": "/elephant/static/css/main.4e19ed0d.css",
+    "main.js": "/elephant/static/js/main.f0e874ac.js",
+    "static/js/10.9e0e7f80.chunk.js": "/elephant/static/js/10.9e0e7f80.chunk.js",
+    "static/media/elephant.svg": "/elephant/static/media/elephant.5f487aa7a263ca4725cceb38070129e5.svg",
+    "static/media/black-box-logo.png": "/elephant/static/media/black-box-logo.250084b5060c49b5601a.png",
+    "static/media/vinyl-post-logo.png": "/elephant/static/media/vinyl-post-logo.1bcd483fed848827bed1.png",
+    "worker.js": "/elephant/b376d1ab7f4c8507c932.worker.js",
     "index.html": "/elephant/index.html",
-    "static/css/2.04cd7577.chunk.css.map": "/elephant/static/css/2.04cd7577.chunk.css.map",
-    "static/css/main.17ffe969.chunk.css.map": "/elephant/static/css/main.17ffe969.chunk.css.map",
-    "static/js/2.bdd0eea7.chunk.js.LICENSE.txt": "/elephant/static/js/2.bdd0eea7.chunk.js.LICENSE.txt",
-    "static/media/acoustic-sounds-logo.a186348f.svg": "/elephant/static/media/acoustic-sounds-logo.a186348f.svg",
-    "static/media/black-box-logo.250084b5.png": "/elephant/static/media/black-box-logo.250084b5.png",
-    "static/media/elephant.e3c642c8.svg": "/elephant/static/media/elephant.e3c642c8.svg",
-    "static/media/vinyl-post-logo.1bcd483f.png": "/elephant/static/media/vinyl-post-logo.1bcd483f.png"
+    "static/media/acoustic-sounds-logo.svg": "/elephant/static/media/acoustic-sounds-logo.d0363eac28cd1d4450795a84ebc2ecfe.svg",
+    "main.4e19ed0d.css.map": "/elephant/static/css/main.4e19ed0d.css.map",
+    "main.f0e874ac.js.map": "/elephant/static/js/main.f0e874ac.js.map",
+    "10.9e0e7f80.chunk.js.map": "/elephant/static/js/10.9e0e7f80.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/runtime-main.0a124753.js",
-    "static/css/2.04cd7577.chunk.css",
-    "static/js/2.bdd0eea7.chunk.js",
-    "static/css/main.17ffe969.chunk.css",
-    "static/js/main.fa9f1414.chunk.js"
+    "static/css/main.4e19ed0d.css",
+    "static/js/main.f0e874ac.js"
   ]
 }
