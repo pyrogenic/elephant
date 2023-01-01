@@ -32,7 +32,7 @@
     "cytoscape": "~3.14.0",
     "d3": "^5.5.0",
     "discojs": "~2.1.0",
-    "eslint-config-react-app": "~6.0.0",
+    "eslint-config-react-app": "~7.0.1",
     "eslint-plugin-jest": "~24.3.6",
     "eslint": "~7.27.0",
     "gh-pages": "~3.1.0",
@@ -48,6 +48,8 @@
     "mobx": "~6.3.2",
     "node-sass": "~8.0.0",
     "popper.js": "*",
+    "patch-package": "~6.5.0",
+    "postinstall-postinstall": "~2.1.0",
     "react-bootstrap": "~2.1.2",
     "react-d3-graph": "~2.6.0",
     "react-datepicker": "~4.7.0",
@@ -66,7 +68,7 @@
     "sass-loader": "~11.1.1",
     "style-loader": "~2.0.0",
     "typescript": "~4.6.4",
-    "web-vitals": "~1.1.2",
+    "web-vitals": "~1.1.2", 
     "yaml": "~1.10.2"
   },
   "resolutions": {
@@ -79,6 +81,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "yarn build",
+    "postinstall": "patch-package",
     "deploy": "gh-pages -d build"
   },
   "eslintConfig": {

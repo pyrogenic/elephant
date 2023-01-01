@@ -21,7 +21,7 @@ import RefreshButton from "../shared/RefreshButton";
 import AlbumArtists, { uniqueArtistRoles } from "./AlbumArtists";
 import Insert from "./Insert";
 import Listing from "./Listing";
-import RoonLink from "./RoonLink";
+//import RoonLink from "./RoonLink";
 
 function DetailsImpl({ item }: { item: CollectionItem }) {
     const { cache, lpdb } = React.useContext(ElephantContext);
@@ -205,12 +205,12 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                 </Col>
             </Row>;
 
-        const roonContent = () =>
-            <Row>
-                <Col>
-                    <RoonLink item={item} />
-                </Col>
-            </Row>;
+        // const roonContent = () =>
+        //     <Row>
+        //         <Col>
+        //             <RoonLink item={item} />
+        //         </Col>
+        //     </Row>;
 
         return <>
             {/* <Form.Control value={q} onChange={({ target: { value } }) => setQ(value)} />
@@ -249,10 +249,10 @@ function DetailsImpl({ item }: { item: CollectionItem }) {
                         title: "Graph",
                         content: graphContent,
                     },
-                    {
-                        title: "Roon",
-                        content: roonContent,
-                    },
+                    // {
+                    //     title: "Roon",
+                    //     content: roonContent,
+                    // },
                 ]} />
         </>;
     }}</Observer>;
