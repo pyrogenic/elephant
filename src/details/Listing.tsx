@@ -1,7 +1,9 @@
 import { arraySetAdd } from "@pyrogenic/asset/lib";
+import FormControlNumber from "@pyrogenic/perl/lib/bootstrap/FormControlNumber";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
-import { cloneDeep, compact } from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import compact from "lodash/compact";
 import { action, computed, observable, reaction, runInAction, toJS } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
@@ -188,6 +190,13 @@ function InventoryItemComponent({
                                 </Button>)}</>}
                         </Observer>
                         <InputGroup.Text>$</InputGroup.Text>
+                        <FormControlNumber
+                            min={0}
+                            step={0.01}
+                            value={item.price.value ?? 0}
+                            places={2}
+                            onChange={action((v) => item.price.value = v)}
+                        />
                         <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
                             item.price.value = Number(value);
                         })} />
