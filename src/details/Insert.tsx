@@ -21,7 +21,10 @@ const BAD_LABELS = / Record(ings?)?s?/g;
 
 export default function Insert({ item }: { item: CollectionItem }) {
     const artists = item.basic_information.artists.map(({ name }) => autoFormat(name)).join(SEP);
-    const multilineArtists = flatten(item.basic_information.artists.map(({ name }) => [<>{name}</>, <br />]));
+    const multilineArtists = flatten(item.basic_information.artists.map(({ name }, i) => [
+        <React.Fragment key={i}>{name}</React.Fragment>, 
+        <br key={1000 + i}/>,
+    ]));
     multilineArtists.pop();
     const title = item.basic_information.title;
     const multilineTitle = flatten(title.split(BAD_SEPS).map((x) => [<>{x}</>, <br />]));
@@ -76,6 +79,8 @@ export default function Insert({ item }: { item: CollectionItem }) {
 
     function InsertContent(props: HTMLProps<HTMLDivElement>) {
         const headliner = item.basic_information.artists[0]?.name;
+        const catalogNumbers = labels.map(({ catno }) => catno).join(SEP);
+        const preparedTitle = trimTitle ? title.split(BAD_SEPS).shift() : compact(title.split(BAD_SEPS)).join(SEP);
         return <div ref={componentRef} className={classConcat("insert", cover ? undefined : "favor-back")} {...props}>
             <div className="front">
                 <div className="title-card">
@@ -86,10 +91,10 @@ export default function Insert({ item }: { item: CollectionItem }) {
 
             </div>
             <div className="spine" style={{ fontSize }}>
-                <div className="cat-no">{labels.map(({ catno }) => catno).join(SEP)}</div>
+                <div className="cat-no">{catalogNumbers}</div>
                 <div className="space" />
                 {artists !== title && <div className="artist">{artists}</div>}
-                <div className="title">{trimTitle ? title.split(BAD_SEPS).shift() : compact(title.split(BAD_SEPS)).join(SEP)}</div>
+                <div className="title">{preparedTitle}</div>
                 <div className="space" />
                 <div className="label">
                     {labels.map((l, i) => <React.Fragment key={i}><div className="name">{l.name.replace(BAD_LABELS, "")}</div>{logos && <> <LazyMusicLabel label={l} showName={false} /></>}</React.Fragment>)}

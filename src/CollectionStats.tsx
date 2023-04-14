@@ -14,6 +14,7 @@ import { priceToString } from "./CollectionTable";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import isCD from "./isCD";
+import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
 import Check from "./shared/Check";
 import { pendingValue } from "./shared/Pendable";
@@ -37,6 +38,12 @@ function masterYear(lpdb: LPDB, original: CollectionItem) {
         const { basic_information: { year } } = original;
         return pendingValue(year);
     });
+}
+
+function FolderLabel({item: {folder_id}}: {item: CollectionItem}) {
+    const folderName = useFolderName();
+    const label = parseLocation(folderName(folder_id)).label;
+    return <div className="text-muted small">{label}</div>
 }
 
 const SHIPPING_ARBITRAGE_ESTIMATE = 0.75;
@@ -352,10 +359,17 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 </div>
                 {selectedDateInfo && <Col>
                     <h4>{selectedDateInfo.date.toDateString()}</h4>
-                    {selectedDateInfo.items.map((item, n) => <Row key={n}><CollectionItemLink item={item} thumb /></Row>)}
+                    {selectedDateInfo.items.map((item, n) =>
+                        <Row key={n}>
+                            <Col>
+                                <CollectionItemLink item={item} thumb />
+                            </Col>
+                            <Col>
+                                <FolderLabel item={item}/>
+                            </Col>
+                    </Row>)}
                 </Col>}
             </Row>
         </dd>
     </dl>;
 }
-
