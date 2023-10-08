@@ -2,6 +2,7 @@ import { arraySetRemove } from "@pyrogenic/asset/lib";
 import { Discojs } from "discojs";
 import compact from "lodash/compact";
 import pick from "lodash/pick";
+import sum from "lodash/sum";
 import { action, observable, runInAction } from "mobx";
 import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotIn, SnapshotOrInstance, types } from "mobx-state-tree";
 import { uniqueArtistRoles } from "../details/AlbumArtists";
@@ -11,6 +12,7 @@ import { PromiseType } from "../shared/TypeConstraints";
 import { ArtistByIdReference } from "./Artist";
 import { ImageModel } from "./DiscogsImage";
 import MultipleYieldGenerator from "./MultipleYieldGenerator";
+import parseDuration from "./parseDuration";
 import StoreEnv from "./StoreEnv";
 
 type DiscogsRelease = PromiseType<ReturnType<Discojs["getRelease"]>>;
@@ -23,7 +25,7 @@ const ArtistRoleModel = types.model("ArtistRoleModel", {
 
 export type ArtistRole = SnapshotOrInstance<typeof ArtistRoleModel>;
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 7;
 
 const VERBOSE = false;
 
@@ -37,6 +39,8 @@ export const ReleaseModel = types.model("Release", {
     images: types.optional(types.array(ImageModel), []),
     thumb: types.maybe(types.string),
     version: types.optional(types.integer, 0),
+    /** total duration of all tracks in seconds */
+    duration: types.maybe(types.number),
 }).views((self) => ({
     // get roles(): ReleaseRole[] {
     //     return ReleaseRoleStore.forRelease(self);
@@ -95,6 +99,7 @@ export const ReleaseModel = types.model("Release", {
         patch.artists = compact(uniqueArtistRoles(response as DiscogsRelease).map(({ id, role }) => id && ({ artist: id.toString(), role })));
         patch.rating = response.community.rating.average;
         patch.ratingCount = response.community.rating.count;
+        patch.duration = sum(response.tracklist?.map(e => e.duration).map(parseDuration));
         patch.version = CURRENT_VERSION;
         // TODO: connect master
         if (VERBOSE) console.log(`refresh ${self.title}: applying patch...`);
