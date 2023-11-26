@@ -195,8 +195,11 @@ function InventoryItemComponent({
                             step={0.01}
                             value={item.price.value ?? 0}
                             places={2}
-                            onChange={action((v) => item.price.value = v)}
+                            onChange={action((v) => {
+                                item.price.value = v;
+                            })}
                         />
+                        <InputGroup.Text>{item.price.value}</InputGroup.Text>
                         <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
                             item.price.value = Number(value);
                         })} />
