@@ -2,13 +2,12 @@ import type { IconType } from "react-icons";
 import type { Content } from "./resolve";
 
 export default function iconAsContent(icon: IconType): Content {
-    type Hack = {
-        iconAsContent: Content;
+    type IconWithThunk = {
+        contentThunk: Content;
     };
-    var hack: Hack = (icon as unknown as Hack);
+    var thunk: IconWithThunk = (icon as unknown as IconWithThunk);
     if (!("iconAsContent" in icon)) {
-        console.log(`Binding ${icon.name} as content`);
-        hack.iconAsContent = icon.bind(null, {});
+        thunk.contentThunk = icon.bind(null, {});
     }
-    return hack.iconAsContent;
+    return thunk.contentThunk;
 }
