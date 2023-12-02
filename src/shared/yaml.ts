@@ -13,7 +13,6 @@ export function injectedValues<T>(src: string): {
     const values = yaml.parse(document);
     Object.keys(values).forEach((k) => {
         if (!allKeys.has(k)) {
-            console.log(`New key: ${k}`);
             allKeys.add(k);
         }
     })

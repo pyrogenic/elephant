@@ -609,6 +609,7 @@ export default function CollectionTable(props: {
     const locationColumn: BootstrapTableColumn<CollectionItem> = React.useMemo(() => ({
         Header: "Location",
         className: "minimal-column multi-capable",
+        accessor: (a) => a, // required to make sorting available
         Cell: ({ row }: CollectionCell<string>) => <LocationCell item={row.original} />,
         sortType: sortByLocation,
     }), [sortByLocation]);

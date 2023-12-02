@@ -14,7 +14,10 @@ import { priceToString } from "./CollectionTable";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import isCD from "./isCD";
+import { parseLocation, useFolderName } from "./location";
 import LPDB from "./LPDB";
+import { secondsToDurationString } from "./model/parseDuration";
+import { remoteValue } from "./Remote";
 import Check from "./shared/Check";
 import { pendingValue } from "./shared/Pendable";
 import { ElementType } from "./shared/TypeConstraints";
@@ -37,6 +40,16 @@ function masterYear(lpdb: LPDB, original: CollectionItem) {
         const { basic_information: { year } } = original;
         return pendingValue(year);
     });
+}
+
+function parseTime(time: string) {
+    return 1;
+}
+
+function FolderLabel({item: {folder_id}}: {item: CollectionItem}) {
+    const folderName = useFolderName();
+    const label = parseLocation(folderName(folder_id)).label;
+    return <div className="text-muted small">{label}</div>
 }
 
 const SHIPPING_ARBITRAGE_ESTIMATE = 0.75;
@@ -201,6 +214,25 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         return Array.from(data.keys()).map((e) => [new Date(e), data.get(e)!.length, data.get(e)!]);
     }, [items, playsInfo])
 
+    const listeningStats = React.useMemo((): {discs: number, duration: number} => {
+        let discs = 0;
+        let hours = 1;
+        if (lpdb) {
+            items.forEach((item) => {
+                if (isCD(item)) return;
+                const info = playsInfo(item);
+                if (!info) return;
+                discs += info.plays;
+                const seconds = lpdb.releaseStore.get(item.basic_information.id).duration ?? (30 * 60);
+                if (seconds > 60 * 60) {
+                    console.log(item.basic_information.title, seconds / (60 * 60));
+                }
+                hours += info.plays * seconds;
+            });
+        }
+        return {discs, duration: hours};
+    }, [items, playsInfo, lpdb]);
+
     const [showSales, setShowSales] = useStorageState<boolean>("session", ["CollectionStats", "showSales"], false);
 
     const [selectedDateInfo, setSelectedDateInfo] = React.useState<{ row: number, date: Date, items: CollectionItem[] }>();
@@ -298,6 +330,12 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 height={400}
             />
         </dd>
+        <dt>Total Plays</dt>
+        <dd>{listeningStats.discs}</dd>
+        <dt>Total Time</dt>
+        <dd>{secondsToDurationString(listeningStats.duration, "units")} (Approx. {Math.floor(listeningStats.duration / 3600) - 1500} hours on current cartridge)</dd>
+        <dt>Cost per Hour</dt>
+        <dd>{priceToString({ currency: CurrenciesEnum.USD, value: (purchasePrice - income.value.value) / (listeningStats.duration / 3600)})}</dd>
         <dt>Listening History</dt>
         <dd>
             <Row>
@@ -352,10 +390,17 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 </div>
                 {selectedDateInfo && <Col>
                     <h4>{selectedDateInfo.date.toDateString()}</h4>
-                    {selectedDateInfo.items.map((item, n) => <Row key={n}><CollectionItemLink item={item} thumb /></Row>)}
+                    {selectedDateInfo.items.map((item, n) =>
+                        <Row key={n}>
+                            <Col>
+                                <CollectionItemLink item={item} thumb />
+                            </Col>
+                            <Col>
+                                <FolderLabel item={item}/>
+                            </Col>
+                    </Row>)}
                 </Col>}
             </Row>
         </dd>
     </dl>;
 }
-

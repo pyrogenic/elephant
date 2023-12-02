@@ -90,7 +90,7 @@ tr.sold {
 .condition-row {
     display: flex !important;
     justify-content: center;
-    > {
+    > * {
         width: 3.6rem;
     }
     .badge {

@@ -303,7 +303,7 @@ export default function Elephant() {
 
   function updateInventory() {
     const listings = client.getInventory(InventoryStatusesEnum.ALL).then(((r) => client.all("listings", r, addToInventory)), setError);
-    const orders = client.listOrders().then(((r) => client.all<OrdersResponse, ElementType<OrdersResponse["orders"]>, "orders">("orders", r, addToOrders)), setError);
+    const orders = client.listOrders().then(((r) => client.all<"orders", ElementType<OrdersResponse["orders"]>, OrdersResponse>("orders", r, addToOrders)), setError);
     return Promise.all([listings, orders]);
   }
 
