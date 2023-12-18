@@ -249,6 +249,9 @@ export default function Masthead({
                 <Router.NavLink exact to="/auth">Auth</Router.NavLink>
             </Navbar.Text>
             <Navbar.Text>
+                <Router.NavLink exact to="/folders">Folders</Router.NavLink>
+            </Navbar.Text>
+            <Navbar.Text>
                 {artistsNav}
             </Navbar.Text>
             <Navbar.Text>

@@ -1,5 +1,6 @@
+import { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import { Discojs } from "discojs";
-import React from "react";
+import React, { SetStateAction } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -30,45 +31,85 @@ type DiscogsProfile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 //     folders?: { [id: number]: FolderMetadata },
 // };
 
-export default function Profile() {
-    const { cache, client } = React.useContext(ElephantContext);
-
-    const [promise, setPromise] = React.useState<Promise<any>>();
-
-    const [refresh, setRefresh] = React.useState(1);
-    const doRefresh = React.useCallback(() => {
-        if (!cache) return Promise.resolve();
-        const p = setRefresh.bind(null, refresh + 1);
-        const promise = cache.clear(PROFILE_QUERY).then(p, p);
-        setPromise(promise);
-        return promise;
-    }, [refresh, cache]);
-
-    const [profile, setProfile] = React.useState<Remote<DiscogsProfile>>({ status: "pending" });
-    const [editingProfile, setEditingProfile] = React.useState(false);
-    const profileMetadata = React.useMemo(() => profile.status === "ready" ? injectedValues(profile.value.profile).values : undefined, [profile]);
-
+function usePromise() {
+    const state = React.useState<Promise<any>>();
+    const [promise, setPromise] = state;
+    // When promise changes, add a "then" that clears the promise state if it's still the same promise. 
     React.useEffect(() => {
-        console.log(`Promise: ${promise}`);
         if (promise) {
-            const t = setPromise.bind(null, (p) => promise === p ? undefined : p);
-            promise.then(t, t);
+            const resetPromiseIfValueMatches = setPromise.bind(null, (currentPromise) => promise === currentPromise ? undefined : currentPromise);
+            promise.then(resetPromiseIfValueMatches, resetPromiseIfValueMatches);
         }
     }, [promise, setPromise]);
+    return state;
+}
 
+function useProfile(): [Remote<DiscogsProfile>, ((profileData: string | undefined) => Promise<DiscogsProfile>), any, ((key: string, value: any) => Promise<DiscogsProfile>), Promise<any> | undefined] {
+    const { cache, client } = React.useContext(ElephantContext);
+
+    const [promise, setPromise] = usePromise();
+    const [profile, setProfile] = React.useState<Remote<DiscogsProfile>>({ status: "pending" });
+    const [refresh, setRefresh] = React.useState(1);
+
+    const doRefresh = React.useCallback(() => {
+        if (!cache) return Promise.resolve();
+        const triggerRefresh = setRefresh.bind(null, refresh + 1);
+        const promise = cache.clear(PROFILE_QUERY).then(triggerRefresh, triggerRefresh);
+        setPromise(promise);
+        return promise;
+    }, [cache, refresh, setPromise]);
+    
+    // When the value of refresh changes, fetch data from the server.
     React.useEffect(() => {
         if (!client) return;
-        const p = client.getProfile().then(
+        const promise = client.getProfile().then(
             (value) => {
                 setProfile({ status: "ready", value, refresh: doRefresh });
-                setEditingProfile(false);
+                // setEditingProfile(false);
             },
             (error) => setProfile({ status: "error", error, refresh: doRefresh }),
         );
-        setPromise(p)
+        setPromise(promise)
         // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally not including doRefresh here
     }, [client, refresh]);
 
+    const pushProfile = React.useCallback((profileData: string | undefined) => {
+        if (!client) return Promise.reject<DiscogsProfile>("not connected");
+        if (profile.status !== "ready") return Promise.reject<DiscogsProfile>("not ready");
+        return setPromise(client.editProfile({ profile: profileData }).then(doRefresh))!;
+    }, [client, doRefresh, profile.status, setPromise]);
+    const profileMetadata = React.useMemo(() => profile.status === "ready" ? injectedValues<{test: string}>(profile.value.profile).values : undefined, [profile]);
+    const pushMetadataValue = React.useCallback((key, value) => {
+        if (profile.status !== "ready") return Promise.reject<DiscogsProfile>("not ready");
+        const profileData = injectValue(profile.value.profile, key, value);
+        setProfile({...profile, value: {...profile.value, profile: profileData}});
+        return pushProfile(profileData);
+    }, [pushProfile, profile]);
+
+    return [profile, pushProfile, profileMetadata, pushMetadataValue, promise];
+}
+
+export function useProfileMetadata<TSchema>(key: string, defaultValue?: TSchema) {
+    const [, , completeProfileMetadata, pushMetadataValue ] = useProfile();
+
+    const profileMetadata = React.useMemo(() =>
+        key in completeProfileMetadata
+            ? completeProfileMetadata[key]
+            : defaultValue,
+        [completeProfileMetadata, defaultValue, key]);
+    
+    const setProfileMetadata = React.useCallback((value) => {
+        return pushMetadataValue(key, value);
+    }, [pushMetadataValue, key]);
+
+    return [profileMetadata, setProfileMetadata];
+}
+
+export default function Profile() {
+    const [profile, pushProfile, profileMetadata, _, promise] = useProfile();
+
+        
+    const [editingProfile, setEditingProfile] = React.useState(false);
     const [preview, setPreview] = React.useState(false);
     const [floatingValue, setFloatingValue] = React.useState<string>();
     React.useEffect(() => {
@@ -96,7 +137,7 @@ export default function Profile() {
                                     <DiscoTag src={floatingValue ?? profile.value.profile} uri={profile.value.uri} />}
                                 {floatingValue && <Form.Group>
                                     <Form.Label>Test</Form.Label>
-                                    <Form.Control onChange={(e) => floatingValue && setFloatingValue(injectValue(floatingValue, "test", e.target.value))} />
+                                    <Form.Control onChange={(e) => floatingValue && setFloatingValue(injectValue(floatingValue, "test", e.target.value))} defaultValue={profileMetadata?.test}/>
                                 </Form.Group>}
                             </Card.Body>
                             {editingProfile && <Card.Footer>
@@ -115,8 +156,8 @@ export default function Profile() {
                                     Revert
                                 </Button>
                                 <Button
-                                    disabled={floatingValue === profile.value.profile}
-                                    onClick={() => setPromise(client?.editProfile({ profile: floatingValue }).then(doRefresh))}
+                                    disabled={floatingValue === profile.value.profile || promise !== undefined}
+                                    onClick={() => pushProfile(floatingValue)}
                                 >
                                     Submit
                                 </Button>
@@ -126,8 +167,8 @@ export default function Profile() {
                 </Form>}
             </Col>
             <Col>
-                {profileMetadata && <ReactJson src={profileMetadata} collapsed={false} />}
-                {profile.status === "ready" && <ReactJson src={profile.value} collapsed={true} />}
+                {profileMetadata && <ReactJson src={profileMetadata} collapsed={false} name="metadata"/>}
+                {profile.status === "ready" && <ReactJson src={profile.value} collapsed={true} name="DiscogsProfile" />}
             </Col>
         </Row>
         <Row>

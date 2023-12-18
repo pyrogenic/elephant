@@ -445,6 +445,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     }
 }
 
+const failedQueries = new Set<string>();
+
 function test(query: string | RegExp, value: string | object | null): boolean {
     try {
         if (value === null) {
@@ -456,6 +458,9 @@ function test(query: string | RegExp, value: string | object | null): boolean {
             }
             return query.test(value);
         } else if (typeof query === "string") {
+            if (failedQueries.has(query)) {
+                return false;
+            }
             try {
                 const result = jsonpath.query(value, query, 1);
                 return result.length > 0;
@@ -464,8 +469,9 @@ function test(query: string | RegExp, value: string | object | null): boolean {
                     jsonpath.parse(query);
                 } catch (parseError) {
                     console.error("Failed to parse JSONPath expression", query, parseError);
+                    failedQueries.add(query);
                 }
-                throw e;
+                return false;
             }
         } else {
             return test(query, JSON.stringify(value));

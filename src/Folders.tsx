@@ -1,9 +1,10 @@
-import { arraySetHas, arraySetToggle, compare } from "@pyrogenic/asset/lib";
-import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import { arraySetHas, arraySetRemove, arraySetToggle, compare } from "@pyrogenic/asset/lib";
+import useStorageState, {SetState} from "@pyrogenic/perl/lib/useStorageState";
 import compact from "lodash/compact";
 import sortBy from "lodash/sortBy";
 import { action } from "mobx";
 import React from "react";
+import { Container } from "react-bootstrap";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -21,6 +22,7 @@ import { DiscogsFolder, DiscogsFolders } from "./DiscogsTypeDefinitions";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
+import { useProfileMetadata } from "./Profile";
 import ReleaseCell from "./ReleaseCell";
 import Disclosure from "./shared/Disclosure";
 import LazyAccordion from "./shared/lazy/LazyAccordion";
@@ -43,7 +45,14 @@ export type FolderSets = {
     unknown: DiscogsFolders,
 };
 
-function Folders() {
+type FoldersMetadata = {
+    locations: string[],
+    folders: {key: string, value: {
+        location: string,
+    }},
+}
+
+function FoldersContent() {
     const { cache, client, folders, collection } = React.useContext(ElephantContext);
     const [checked, setChecked] = useStorageState<number[]>("session", ["folders", "checked"], []);
     const checkedItems = React.useMemo(() => collection.values().filter(({ instance_id }) => arraySetHas(checked, instance_id)), [checked, collection]);
@@ -73,6 +82,24 @@ function Folders() {
         const p1 = newName && client?.createFolder(newName);
         setPromise(Promise.all(compact([p0, p1])).then(() => cache?.clear(FOLDER_NAMES_QUERY, true)));
     }, [cache, client, setPromise]);
+    const moveCheckedTo = React.useCallback((newFolderId: number) => {
+        const promises = checkedItems.map((item) => {
+            if (!client) {
+                return Promise.resolve();
+            }
+            const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId)
+                .then(() => {
+                    item.folder_id = newFolderId;
+                    arraySetRemove(checked, item.instance_id);
+                    setChecked([...checked]);
+                });
+            mutate(item, "folder_id", newFolderId, promise);
+            return promise;
+        });
+        Promise.all(promises).then(action(() => {
+            cache?.clear(collectionItemCacheQuery(...checkedItems), true);
+        }));
+    }, [cache, checked, checkedItems, client, setChecked]);
     return <>
         <Row>
             <Col>
@@ -131,23 +158,16 @@ function Folders() {
             </Col>
         </Row>
         <Row>
-            <Col>
-                <Dropdown
+            {/* <Col xs="auto" className="flex-fill"/> */}
+            <Col xs="auto" className="mb-2">
+                {/* <Dropdown
                     className="d-inline me-2"
                     onSelect={(newFolderIdStr) => {
                         const newFolderId = Number(newFolderIdStr);
                         if (!client || !newFolderIdStr || isNaN(newFolderId)) {
                             return;
                         }
-                        const promises = checkedItems.map((item) => {
-                            const promise = client.moveReleaseInstanceToFolder(item.folder_id, item.id, item.instance_id, newFolderId)
-                                .then(() => item.folder_id = newFolderId);
-                            mutate(item, "folder_id", newFolderId, promise)
-                            return promise;
-                        });
-                        Promise.all(promises).then(action(() => {
-                            cache?.clear(collectionItemCacheQuery(...checkedItems), true);
-                        }));
+                        moveCheckedTo(newFolderId);
                     }}>
                     <Dropdown.Toggle>Move {checkedItems.length} items…</Dropdown.Toggle>
                     <Dropdown.Menu>
@@ -162,56 +182,57 @@ function Folders() {
                             return menuItem;
                         })}
                     </Dropdown.Menu>
-                </Dropdown>
+                </Dropdown> */}
                 <Button
-                    className="me-2"
+                    size="sm"
+                    className="mi-2"
                     variant="secondary"
                     disabled={checked.length === 0}
                     onClick={setChecked.bind(null, [])}>
-                    Reset
+                    Uncheck All
                 </Button>
             </Col>
         </Row>
         <Row>
-            <Col>
+            <Col xs={12} sm={12} md={8} lg={6}>
                 <LazyAccordion
                     defaultSections={[]}
                     sections={sortBy(folders, (folder) => parseLocation(folder.name).label ?? folder.name).map((folder): LazyContent => {
                         const eventKey = parseLocation(folder.name).label ?? folder.name;
                         const collectionItemsInFolder = collection.values().filter(({ folder_id }) => folder_id === folder.id);
                         collectionItemsInFolder.sort(sortByRelease);
+
+                        //const [folderMetadata, setFolderMetadat] = useProfileMetadata<FoldersMetadata>("folders");
+
                         return ({
                             eventKey,
-                            title: ({ active }) => <div style={{ display: "flex", width: "100%" }}>{eventKey}{
-                                !active && <> ({collectionItemsInFolder.length})</>
-                            }<div style={{ flexGrow: 1 }} /><Badge onClick={(e) => {
-                                e.stopPropagation();
-                            }}>Move Here</Badge></div>,
-                            content: () => {
-                                return <>{collectionItemsInFolder.map((item) => {
-                                    const chg = () => {
-                                        arraySetToggle(checked, item.instance_id);
-                                        setChecked([...checked]);
-                                    };
-                                    return <Form.Check
+                            title: ({ active }) =>
+                                <Row style={{ display: "flex", width: "100%" }}>
+                                    <Col xs="auto" style={{whiteSpace: "nowrap"}}>
+                                        {eventKey}{
+                                            !active && <> ({collectionItemsInFolder.length})</>
+                                        }
+                                    </Col>
+                                    <Col className="flex-grow" />
+                                    {!active && checked.length > 0 && <Col xs="auto">
+                                        <Badge className="me-2" style={{ marginTop: "-2px" }} onClick={(e) => {
+                                            e.stopPropagation();
+                                            moveCheckedTo(folder.id);
+                                        }}>Move Here</Badge>
+                                    </Col>}
+                                </Row>,
+                            content: (checked) => {
+                                return <>{collectionItemsInFolder.map((item) =>
+                                    <LazyItemCheckbox
                                         key={item.instance_id}
-                                        id={"check" + item.instance_id}
-                                        className="text-nowrap"
-                                    >
-                                        <Form.Check.Input
-                                            checked={arraySetHas(checked, item.instance_id)}
-                                            onChange={chg} />
-                                        <Form.Check.Label style={{ display: "flex" }}>
-                                            <div style={{ width: "1rem" }}>
-                                                {item.rating}
-                                            </div>
-                                            <ReleaseCell as={"div"} instance_id={item.instance_id} {...item.basic_information} />
-                                        </Form.Check.Label>
-                                    </Form.Check>;
-                                })}</>;
+                                        item={item}
+                                        checked={checked}
+                                        setChecked={setChecked}
+                                />)}</>;
                             },
                         });
                     })}
+                    deps={checked}
                 />
             </Col>
         </Row>
@@ -262,9 +283,11 @@ function Folders() {
     </>;
 }
 
-// export default observer(Folders);
-export default Folders;
-
+export default function Folders() {
+    return <Container>
+        <FoldersContent/>
+    </Container>
+};
 
 function sortByRelease(a: CollectionItem, b: CollectionItem) {
     const r0 = compare<Artist>(a.basic_information.artists, b.basic_information.artists, {
@@ -281,3 +304,33 @@ function sortByRelease(a: CollectionItem, b: CollectionItem) {
     });
 }
 
+function LazyItemCheckbox({ checked, item, setChecked }: {
+    checked: number[],
+    item: CollectionItem,
+    setChecked: SetState<number[]>,
+}) {
+    const chg = () => {
+        arraySetToggle(checked, item.instance_id);
+        setChecked([...checked]);
+    };
+    const isChecked = React.useMemo(
+        () => {
+            return arraySetHas(checked, item.instance_id);
+        },
+        [checked, item.instance_id]);
+    return <Form.Check
+        key={item.instance_id}
+        id={"check" + item.instance_id}
+        className="text-nowrap"
+    >
+        <Form.Check.Input
+            checked={isChecked}
+            onChange={chg} />
+        <Form.Check.Label style={{ display: "flex" }}>
+            <div style={{ width: "1rem" }}>
+                {item.rating}
+            </div>
+            <ReleaseCell as={"div"} instance_id={item.instance_id} {...item.basic_information} />
+        </Form.Check.Label>
+    </Form.Check>;
+}

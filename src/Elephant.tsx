@@ -19,6 +19,7 @@ import DiscogsIndexedCache from "./DiscogsIndexedCache";
 import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
+import Folders from "./Folders";
 import { LabelMode } from "./LabelRoute";
 import LPDB from "./LPDB";
 import Masthead, { CollectionFilter } from "./Masthead";
@@ -200,6 +201,9 @@ export default function Elephant() {
               setToken={setToken}
               token={token}
             />
+          </Router.Route>
+          <Router.Route path="/folders">
+            <Folders />
           </Router.Route>
           <Router.Route path={ARTISTS_PATH}>
             <ArtistMode />
