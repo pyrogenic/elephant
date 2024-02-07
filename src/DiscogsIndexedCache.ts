@@ -287,11 +287,10 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     }
 
                     while (this.simultaneousRequestLimit.value) {
-                        const inflight = this.tracker.inflight("discogs");
-                        if (inflight.length >= this.simultaneousRequestLimit.value) {
+                        if (this.inflight.length >= this.simultaneousRequestLimit.value) {
                             waited++;
-                            if (this.log) console.log(`Waiting for the number of inflight requests (${inflight.length}) to drop: ${key}`);
-                            await Promise.any(inflight.map((e) => e.promise!)).catch(noop);
+                            if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflight.length}) to drop: ${key}`);
+                            await Promise.any(this.inflight.map((e) => e.promise!)).catch(noop);
                         } else {
                             break;
                         }
