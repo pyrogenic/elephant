@@ -3,7 +3,8 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import * as idb from "idb";
 import jsonpath from "jsonpath";
 import noop from "lodash/noop";
-import { action, makeObservable, observable, reaction, runInAction } from "mobx";
+import { action, makeObservable, observe, observable, reaction, runInAction } from "mobx";
+import Semaphore from "ts-semaphore";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { Artist } from "./model/Artist";
 import { Release } from "./model/Release";
@@ -71,6 +72,10 @@ function throttled<T>(name: string, factory: () => T, interval: number = 500) {
         expire = now + interval;
         return value = factory();
     }
+    function invalidate() {
+        expire = 0;
+    }
+    get.invalidate = invalidate;
     return get;
 }
 
@@ -81,6 +86,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     log: boolean = false;
     version: number = 0;
     waiting: string[] = [];
+    simultaneousRequestSemaphore: Semaphore = new Semaphore(1);
     get tracker() { return PromiseTracker(); }
     pause?: Promise<any>;
     errorPause: number = 0;
@@ -134,6 +140,12 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             clear: action,
         });
         this.tracker.listeners.push(this.checkRate);
+        observe(this.simultaneousRequestLimit, this.updateSemaphore);
+        this.updateSemaphore();
+    }
+
+    private updateSemaphore() {
+        this.simultaneousRequestSemaphore = new Semaphore(this.simultaneousRequestLimit.value);
     }
 
     private checkRate = () => {
@@ -286,17 +298,18 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                         await Promise.all(this.priorityGets.values()).catch(noop);
                     }
 
-                    while (this.simultaneousRequestLimit.value) {
-                        if (this.inflight.length >= this.simultaneousRequestLimit.value) {
-                            waited++;
-                            if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflight.length}) to drop: ${key}`);
-                            await Promise.any(this.inflight.map((e) => e.promise!)).catch(noop);
-                        } else {
-                            break;
-                        }
-                    }
+                    // while (this.simultaneousRequestLimit.value) {
+                    //     if (this.inflight.length >= this.simultaneousRequestLimit.value) {
+                    //         waited++;
+                    //         if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflight.length}) to drop: ${key}`);
+                    //         await this.waitingSemaphore.acquire()
+                    //     } else {
+                    //         break;
+                    //     }
+                    // }
 
                     if (this.pause === undefined) {
+                        await this.simultaneousRequestSemaphore.aquire();
                         break;
                     }
 
@@ -320,6 +333,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             try {
                 const promise = factory();
                 this.tracker.track("discogs", key, promise);
+                this.inflightCache.invalidate();
                 let newValue: T;
                 newValue = await promise;
                 if (log) { console.log({ key, newValue }); }
@@ -342,6 +356,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 if (--retries <= 0) {
                     throw e;
                 }
+            } finally {
+                this.simultaneousRequestSemaphore.release();
             }
         }
     }
