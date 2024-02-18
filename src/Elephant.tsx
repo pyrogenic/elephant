@@ -97,6 +97,7 @@ export default function Elephant() {
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
       userToken: token,
       cache,
+      allowUnsafeHeaders: false,
     });
   }, [cache, token]);
 
