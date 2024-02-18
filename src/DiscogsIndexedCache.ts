@@ -56,7 +56,16 @@ function observableStorage<T extends number | string | boolean>(key: string, def
     const obj = observable({ value: def }, undefined, { name: key });
     const current = localStorage.getItem(key);
     if (current !== null) {
-        obj.value = current as T;
+        try {
+            var typedCurrent: T = JSON.parse(current);
+            if (typeof def != typeof typedCurrent) {
+                console.warn(`Ignoring invalid saved value: '${typedCurrent}'`);
+            } else {
+                obj.value = typedCurrent;
+            }
+        } catch {
+            console.warn(`Ignoring invalid saved value: '${current}'`);
+        }
     }
     reaction(() => `${obj.value}`, localStorage.setItem.bind(localStorage, key));
     return obj;

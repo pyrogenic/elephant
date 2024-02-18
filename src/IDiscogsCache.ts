@@ -1,4 +1,4 @@
-import { ResultCache } from "discojs";
+import type { ResultCache } from "discojs";
 
 export type CacheQuery = {
     url?: string | RegExp;
