@@ -274,7 +274,7 @@ function FoldersContent() {
         </Row>
         <Row>
             <Disclosure title={(icon) => <Col><h4>Folder Sets {resolve(icon)}</h4></Col>}>
-            {Object.entries(folderSets).map(([key, folders]) => <Col md={4}>
+            {Object.entries(folderSets).map(([key, folders]) => <Col md={4} key={key}>
                 <h4>{key}</h4>
                 {folders && <ReactJson key={key} src={folders} />}
             </Col>)}
