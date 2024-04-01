@@ -154,7 +154,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
     }, [priceData]);
 
     const ratingByYearData = React.useMemo(() => {
-        const data = new Map<number, any[]>();
+        const data = new Map<number, number[]>();
         items.forEach((item) => {
             if (isCD(item)) {
                 return;
@@ -224,9 +224,9 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                 if (!info) return;
                 discs += info.plays;
                 const seconds = lpdb.releaseStore.get(item.basic_information.id).duration ?? (30 * 60);
-                if (seconds > 60 * 60) {
-                    console.log(item.basic_information.title, seconds / (60 * 60));
-                }
+                // if (seconds > 60 * 60) {
+                //     console.log(item.basic_information.title, seconds / (60 * 60));
+                // }
                 hours += info.plays * seconds;
             });
         }
