@@ -91,7 +91,7 @@ export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
   const cache = React.useMemo(() => new DiscogsIndexedCache(), []);
-  
+
   const client = React.useMemo(() => {
     return new Discojs({
       userAgent: "Elephant/0.1.0 +https://pyrogenic.github.io/elephant",
@@ -100,26 +100,6 @@ export default function Elephant() {
       allowUnsafeHeaders: false,
     });
   }, [cache, token]);
-
-  const [foldersPromise, setFoldersPromise] = React.useState<Promise<any>>();
-  const updateFolders = React.useCallback(() => {
-    if (foldersPromise !== undefined) {
-      return foldersPromise;
-    }
-    let fp: Promise<any> | undefined = undefined;
-    fp = client.listFolders().then(({ folders }) => {
-      setFolders(folders);
-    }, setError).then(setFoldersPromise.bind(null, (oldVal => {
-      if (oldVal === fp) {
-        return undefined;
-      } else {
-        return oldVal;
-      }
-    })));
-    setFoldersPromise(fp);
-    return fp;
-  }, [client, foldersPromise]);
-
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
   const [filter, setFilter] = React.useState<CollectionFilter>();
@@ -267,6 +247,10 @@ export default function Elephant() {
       </Container>
     </Router.BrowserRouter>
   </ElephantContext.Provider>;
+
+  function updateFolders(): Promise<any> {
+    return client.listFolders().then(({ folders }) => setFolders(folders), setError);
+  }
 
   function getIdentity() {
     client.getProfile().then(setProfile, setError);
