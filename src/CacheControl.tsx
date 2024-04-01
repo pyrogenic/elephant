@@ -164,7 +164,7 @@ function OpButton({
     const collectionButton = <Button
         variant={variant}
         onClick={() => setPromise(onClick().then(clearPromise))}
-        disabled={activePromise !== undefined}
+        disabled={promise !== undefined}
         title={activePromise?.label}
     >
         {label}

@@ -3,7 +3,7 @@ import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import * as idb from "idb";
 import jsonpath from "jsonpath";
 import noop from "lodash/noop";
-import { action, makeObservable, observe, observable, reaction, runInAction } from "mobx";
+import { action, makeObservable, observe, observable, reaction, runInAction, computed, IValueDidChange } from "mobx";
 import Semaphore from "ts-semaphore";
 import IDiscogsCache, { CacheQuery } from "./IDiscogsCache";
 import { Artist } from "./model/Artist";
@@ -149,12 +149,13 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             clear: action,
         });
         this.tracker.listeners.push(this.checkRate);
-        observe(this.simultaneousRequestLimit, this.updateSemaphore);
-        this.updateSemaphore();
+        reaction(() => this.simultaneousRequestLimit.value, this.updateSemaphore.bind(this), { fireImmediately: true });
     }
 
-    private updateSemaphore() {
-        this.simultaneousRequestSemaphore = new Semaphore(this.simultaneousRequestLimit.value);
+    private updateSemaphore(count: number) {
+        if (count > 0) {
+            this.simultaneousRequestSemaphore = new Semaphore(count);
+        }
     }
 
     private checkRate = () => {
