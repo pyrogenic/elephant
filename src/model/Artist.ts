@@ -60,6 +60,10 @@ export const ArtistModel = types.model("Artist", {
         // console.log(`persist ${self.name} result: ${result}`);
     });
     const refresh = flow(function* refresh(fromDiscogs = false) {
+        if (Number(self.id) === 194) {
+            actionState.resolve?.();
+            return;
+        }
         try {
             const { cache, client } = getEnv<StoreEnv>(self);
             if (fromDiscogs) {
