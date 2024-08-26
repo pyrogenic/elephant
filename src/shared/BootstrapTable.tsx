@@ -17,6 +17,7 @@ import {
     Row,
     TableInstance,
     TableOptions,
+    TableRowProps,
     useExpanded,
     UseExpandedOptions,
     UseExpandedRowProps,
@@ -211,16 +212,16 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
                         Header: ({ getToggleAllPageRowsSelectedProps }: UseRowSelectInstanceProps<TElement>) => {
                             return getToggleAllPageRowsSelectedProps ? (
                                 <div>
-                                    <IndeterminateCheckbox {...getToggleAllPageRowsSelectedProps()} />
+                                    <IndeterminateCheckbox name="selectAll" {...getToggleAllPageRowsSelectedProps()} />
                                 </div>
                             ) : null;
                         },
                         // The cell can use the individual row's getToggleRowSelectedProps method
                         // to the render a checkbox
-                        Cell: ({ row }: { row: UseRowSelectRowProps<TElement> }) => {
+                        Cell: ({ row }: { row: UseRowSelectRowProps<TElement> & TableRowProps}) => {
                             return row.getToggleRowSelectedProps ? (
                                 <div>
-                                    <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
+                                    <IndeterminateCheckbox name={`selectRow${row.key}`} {...row.getToggleRowSelectedProps()} />
                                 </div>
                             ) : null;
                         },
@@ -335,6 +336,7 @@ export default function BootstrapTable<TElement extends {}>(props: BootstrapTabl
         spine={mnemonic && spine}
         />,
         pageSizeSelector: <select
+            name="pageSize"
             value={pageSize}
             onChange={e => {
                 setPageSize(Number(e.target.value));

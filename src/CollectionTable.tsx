@@ -956,6 +956,7 @@ function FieldEditor<As = "text">(props: {
                     "contextDropdownMenu",
                 )}
                 className="hover-lined"
+                name={`edit${noteId}`}
                 disabled={pending(pendable)}
                 value={floatingValue ?? pendingValue(pendable)}
                 onChange={({ target: { value } }) => setFloatingValue(value)}

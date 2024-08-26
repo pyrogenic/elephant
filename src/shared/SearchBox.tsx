@@ -28,6 +28,7 @@ export default function SearchBox(
     }), [collection, filter]);
     return <div className={classConcat("search-box", className)}>
         <Observer render={() => <Form.Control
+            name="searchString"
             placeholder={`search ${count.get()} records`} value={search} onChange={({ target: { value } }) => {
             setSearch(value);
             }} />} />
