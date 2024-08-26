@@ -1,3 +1,10 @@
 .react-datepicker__day--today:not(.react-datepicker__day--keyboard-selected) {
     outline: auto #0095b680;
 }
+
+.today .spinner .count {
+    background-color: #3dcc4a;
+    color: white;
+    // border: red 2px solid;
+    border-radius: 5px !important;
+}

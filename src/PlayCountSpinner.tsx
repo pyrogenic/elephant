@@ -15,6 +15,7 @@ import Badge from "react-bootstrap/esm/Badge";
 import Container from "react-bootstrap/esm/Container";
 import { collectionItemCacheQuery } from "./collectionItemCache";
 import "./PlayCountSpinner.scss";
+import classConcat from "@pyrogenic/perl/lib/classConcat";
 
 export default function PlayCountSpinner(row: CollectionItem) {
     const { cache, client } = React.useContext(ElephantContext);
@@ -106,7 +107,8 @@ export default function PlayCountSpinner(row: CollectionItem) {
             placement={"bottom"}
             onExiting={() => changeFieldHistory()}
         >
-            <div style={{ background: playDates?.find((d) => (d.getTime() > Date.now())) ? "red" : undefined }}>
+            <div className={classConcat(playDates?.find((d) => Date.now() - d.getTime() < 24 * 60 * 60 * 1000) && "today")}
+               style={{ background: playDates?.find((d) => (d.getTime() > Date.now())) ? "red" : undefined }}>
                 <Spinner
                     value={plays ?? 0}
                     min={0}
