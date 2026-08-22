@@ -61,7 +61,14 @@ export type List = DeepPendable<{
   items: DiscogsListItems,
 }>;
 
-export type DiscogsCollectionItem = ElementType<CollectionItems>;
+/**
+ * Discogs marks `folder_id` and `notes` optional on a collection item — `notes` is omitted when the
+ * instance has no custom-field values. Everything Elephant ingests comes from `listAllItemsInFolder`,
+ * which always carries `folder_id`, and `addToCollection` defaults `notes` to `[]` on the way in, so
+ * the rest of the app can treat both as present.
+ */
+export type DiscogsCollectionItem = ElementType<CollectionItems> &
+  Required<Pick<ElementType<CollectionItems>, "folder_id" | "notes">>;
 export type CollectionItem = DeepPendable<DiscogsCollectionItem>;
 export type Collection = OrderedMap<number, CollectionItem>;
 export type DiscogsInventoryItem = ElementType<InventoryItems>;
@@ -73,6 +80,16 @@ export type Profile = PromiseType<ReturnType<Discojs["getProfile"]>>;
 export type Field = ElementType<FieldsResponse["fields"]>;
 export type FieldsById = Map<number, Field>;
 export type FieldsByName = Map<string, Field>;
+
+/**
+ * Drain one of discojs' `getAll*` / `listAll*` async iterators, handing each page to `onPage` as it
+ * arrives. Discojs requests the maximum 100 items per page and stops after the last one.
+ */
+async function forEachPage<TPage>(pages: AsyncIterable<TPage>, onPage: (page: TPage) => void) {
+  for await (const page of pages) {
+    onPage(page);
+  }
+}
 
 const ROOT_PATH = "/";
 const COLLECTION_PATH = ROOT_PATH;
@@ -260,7 +277,7 @@ export default function Elephant() {
 
   function addToCollection(items: CollectionItems) {
     transaction(() => {
-      items.forEach(lpdb.addToCollection);
+      items.forEach((item) => lpdb.addToCollection({ notes: [], ...item } as DiscogsCollectionItem));
       setCollectionTimestamp(new Date());
     });
   }
@@ -307,13 +324,13 @@ export default function Elephant() {
   }
 
   function updateInventory() {
-    const listings = client.getInventory(InventoryStatusesEnum.ALL).then(((r) => client.all("listings", r, addToInventory)), setError);
-    const orders = client.listOrders().then(((r) => client.all("orders", r, addToOrders)), setError);
+    const listings = forEachPage(client.getAllInventory(InventoryStatusesEnum.ALL), ({ listings }) => addToInventory(listings)).catch(setError);
+    const orders = forEachPage(client.listAllOrders(), ({ orders }) => addToOrders(orders)).catch(setError);
     return Promise.all([listings, orders]);
   }
 
   function updateLists() {
-    return client.getLists().then(((r) => client.all("lists", r, addToLists)), setError);
+    return forEachPage(client.getAllLists(), ({ lists }) => addToLists(lists)).catch(setError);
   }
 
   function updateCustomFields() {
@@ -322,8 +339,6 @@ export default function Elephant() {
   }
 
   function updateCollection() {
-    return client.listItemsInFolder(0, undefined, {
-      perPage: 100,
-    }).then(((r) => client.all("releases", r, addToCollection)), setError);
+    return forEachPage(client.listAllItemsInFolder(0), ({ releases }) => addToCollection(releases)).catch(setError);
   }
 }

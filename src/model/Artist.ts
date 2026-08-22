@@ -1,6 +1,6 @@
 import pick from "lodash/pick";
 import { applySnapshot, flow, getEnv, getSnapshot, IAnyModelType, onSnapshot, SnapshotOrInstance, types } from "mobx-state-tree";
-import { Discojs } from "../../../discojs/lib";
+import { Discojs } from "discojs";
 import autoFormat from "../autoFormat";
 import { ElephantMemory } from "../DiscogsIndexedCache";
 import { getStore } from "../LPDB";
