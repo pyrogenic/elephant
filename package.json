@@ -81,6 +81,8 @@
   "scripts": {
     "start-rs": "react-scripts start",
     "start": "FORCE_COLOR=true yarn start-rs | cat",
+    "relay": "node worker/local-relay.mjs",
+    "start-with-relay": "npm-run-all --parallel relay start-rs",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

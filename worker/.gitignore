@@ -1,0 +1,7 @@
+# miniflare's local state from `wrangler dev` — caches, and an observability trace
+# store that records live requests. Never commit it: it is regenerated on demand and
+# is exactly the sort of thing that quietly captures an Authorization header.
+.wrangler/
+
+# wrangler's local secrets file, if you ever add one.
+.dev.vars
