@@ -1,0 +1,26 @@
+# Elephant's Discogs relay.
+#
+# Deliberately NOT a yarn workspace member: the root package.json globs
+# `packages/*` (one level), so nothing in here is reached by the root
+# `resolutions` that pin typescript ~4.6.4 and jest 27. There is no
+# package.json and no build step here on purpose — `npx wrangler@4` bundles
+# this with its own esbuild, so a modern toolchain never enters the lockfile.
+#
+#   npx wrangler@4 dev --port 8787     # local
+#   npx wrangler@4 deploy              # ship it
+
+name = "elephant-proxy"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+# Comma-separated. Browser hygiene only — curl ignores CORS entirely, so this
+# is not a security boundary. It exists so a stray page can't quietly spend
+# this worker's request quota.
+ALLOWED_ORIGINS = "https://pyrogenic.github.io,http://localhost:3000,http://127.0.0.1:3000"
+
+# Discogs requires a identifying User-Agent. The browser cannot send one
+# (it's a forbidden header name, which is why Elephant passes
+# `allowUnsafeHeaders: false` to discojs), so Elephant is out of compliance
+# today. Setting it here fixes that for free.
+UPSTREAM_USER_AGENT = "Elephant/0.1.0 +https://pyrogenic.github.io/elephant"

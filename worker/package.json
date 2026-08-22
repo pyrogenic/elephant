@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "This file exists ONLY so wrangler treats this directory as the project root.",
+    "Without it, wrangler walks up to the nearest package.json (packages/elephant)",
+    "and resolves wrangler.toml relative to THAT, failing with a misleading",
+    "'Missing entry-point to Worker script'.",
+    "",
+    "It is deliberately dependency-free. The root package.json globs 'packages/*'",
+    "(one level), so packages/elephant/worker is NOT a yarn workspace member and",
+    "nothing here is touched by the root resolutions that pin typescript ~4.6.4",
+    "and jest 27. Keep it that way: run wrangler via 'npx wrangler@4', never as a",
+    "declared dependency."
+  ],
+  "name": "elephant-proxy-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module"
+}
