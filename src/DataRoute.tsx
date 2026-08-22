@@ -5,6 +5,7 @@ import min from "lodash/min";
 import uniqBy from "lodash/uniqBy";
 import { action } from "mobx";
 import { observer } from "mobx-react";
+import { CONCURRENCY_CEILING } from "./DiscogsIndexedCache";
 import React from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -120,15 +121,43 @@ export const DataIndex = observer(() => {
                     <Form>
                         <Form.Group>
                             <Form.Label>Simultaneous Request Limit</Form.Label>
-                            <Form.Control type="number" min={0} max={cache.requestPerMinuteCap.value} value={cache.simultaneousRequestLimit.value} onChange={action(({ target: { value } }) => cache.simultaneousRequestLimit.value = Number(value))} />
+                            {/* max was `cache.requestPerMinuteCap.value` — a concurrency bounded by a per-minute rate. */}
+                            <Form.Control type="number" min={0} max={CONCURRENCY_CEILING} value={cache.simultaneousRequestLimit.value} onChange={action(({ target: { value } }) => cache.simultaneousRequestLimit.value = Number(value))} />
                         </Form.Group>
                         <Form.Group>
-                            <Form.Label>Request Per Minute Cap</Form.Label>
+                            <Form.Label>Requests per minute when estimating</Form.Label>
                             <Form.Control type="number" min={0} max={120} value={cache.requestPerMinuteCap.value} onChange={action(({ target: { value } }) => cache.requestPerMinuteCap.value = Number(value))} />
+                            <Form.Text>
+                                Only used when Discogs' real numbers aren't readable. When they are,
+                                Elephant paces off the reported remaining count instead and ignores this.
+                            </Form.Text>
                         </Form.Group>
                         <Form.Group>
-                            <Form.Label>Error Rate Limit</Form.Label>
-                            <div><Form.Text>{cache.rpm[1]} rpm</Form.Text></div>
+                            <Form.Label>Estimated hard cap</Form.Label>
+                            <div><Form.Text className={cache.observedRateLimit ? "text-muted" : undefined}>
+                                {cache.rpm[1]} rpm
+                                {cache.observedRateLimit ? " — not in use; pacing off the reported numbers below" : null}
+                            </Form.Text></div>
+                        </Form.Group>
+                        <Form.Group>
+                            <Form.Label>Discogs rate limit</Form.Label>
+                            <div><Form.Text>
+                                {cache.rateLimit.observedAt
+                                    ? <>
+                                        {cache.rateLimit.used ?? "?"} used / {cache.rateLimit.limit ?? "?"} allowed,
+                                        {" "}{cache.rateLimit.remaining ?? "?"} remaining
+                                        {" "}({cache.effectiveRemaining ?? "?"} after {cache.inflight.length} in flight)
+                                        {" "}<span className="text-muted">
+                                            (reported {Math.round((Date.now() - cache.rateLimit.observedAt) / 1000)}s ago
+                                            {cache.observedRateLimit ? "" : "; too old to pace on"})
+                                        </span>
+                                    </>
+                                    : <>
+                                        Not reported. Discogs omits the header that would let a browser read
+                                        these, so Elephant is estimating — set a relay on the Auth tab to see
+                                        the real numbers.
+                                    </>}
+                            </Form.Text></div>
                         </Form.Group>
                     </Form>
                     <h5>Cache Checks</h5>
