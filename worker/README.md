@@ -31,31 +31,23 @@ so — so `yarn elephant start` works either way.
 The local relay is plain Node with no dependencies and runs on the repo's pinned Node 20.
 Only the *hosted* one needs wrangler, and therefore Node >= 22.
 
-## Node version — only matters for the hosted worker
+## Node version
 
-The local relay runs on Node 20, the repo's pinned version. Skip this section unless you
-are deploying to Cloudflare.
+Both entry points run on whatever the repo root gives you (`.nvmrc` is `lts/*`), so there
+is nothing to do here.
 
-**Wrangler 4 requires Node >= 22. The repo's `.nvmrc` pins Node 20.** These cannot be
-reconciled: the pin exists because `packages/discojs` fails to build above Node 21
-(`browserslist-generator` uses the `assert { type: 'json' }` syntax removed in 22), and
-wrangler refuses to start below 22.
+This used to be a conflict: the root was pinned to Node 20 for `packages/discojs`' build,
+while wrangler 4 requires Node >= 22, so wrangler could not run in-tree at all. That pin
+is gone — only `packages/discojs` needs 18–21, and it is built from inside its own
+directory where its own `.nvmrc` applies.
 
-So run every wrangler command on a *different* Node than the rest of the monorepo:
-
-```sh
-fnm use system      # or `fnm install 22 && fnm use 22`
-npx wrangler@4 dev --port 8787
-```
-
-Symptom if you forget:
+If you do end up on an older Node, wrangler says so plainly:
 
 ```
 Wrangler requires at least Node.js v22.0.0. You are using v20.20.2.
 ```
 
-Nothing else in this directory cares about the Node version — there is no build step
-and no dependency tree.
+The local relay has no such floor — it is dependency-free and runs anywhere modern.
 
 ## Why there is a package.json here
 
