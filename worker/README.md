@@ -6,7 +6,12 @@ rate limit. Two entry points, one shared implementation (`src/core.mjs`):
 | | run it | Discogs rate-limit bucket | your token |
 | --- | --- | --- | --- |
 | **local** (recommended) | `yarn elephant relay` | **your own IP's 60/min** | never leaves your machine |
-| hosted (Cloudflare) | `npx wrangler@4 deploy` | shared with every other user of it | transits the worker |
+| hosted (Cloudflare) | `yarn elephant relay:deploy` | shared with every other user of it | transits the worker |
+
+**Nothing is deployed right now** -- the hosted worker was torn down in favour of the
+local one (`yarn elephant relay:teardown` removes it, `relay:deploy` brings it back).
+Deploying publishes a public URL; the guards in `src/core.mjs` are what keep that from
+being an open proxy, so read them before you do.
 
 **Prefer the local one.** Discogs buckets rate limits by source IP even for correctly
 authenticated requests, so a hosted relay pools all of its users into a single 60/min

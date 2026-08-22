@@ -83,6 +83,8 @@
     "start": "FORCE_COLOR=true yarn start-rs | cat",
     "relay": "node worker/local-relay.mjs",
     "start-with-relay": "npm-run-all --parallel relay start-rs",
+    "relay:deploy": "npx wrangler@4 deploy --config worker/wrangler.toml",
+    "relay:teardown": "npx wrangler@4 delete --config worker/wrangler.toml",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
