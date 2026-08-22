@@ -15,9 +15,15 @@ import ExternalLink from "./shared/ExternalLink";
 export default function AuthRoute({
     token,
     setToken,
+    apiBaseUrl,
+    setApiBaseUrl,
+    relayUnreachable,
 }: {
     token: string,
     setToken: SetState<string>,
+    apiBaseUrl: string,
+    setApiBaseUrl: (value: string) => void,
+    relayUnreachable: boolean,
 }) {
     const r = useRouteMatch();
     const [key, setKey] = useStorageState<string | null>("session", r.path, null);
@@ -48,7 +54,31 @@ export default function AuthRoute({
                             onChange={({ target: { value } }) => setToken(value)}
                         />
                         <Form.Text>
-                            This app runs completely in your browser and uses this token to retrieve your collection from Discogs. All infromation collected by this app is completely private to your browser.
+                            Elephant runs in your browser and uses this token to retrieve your collection from Discogs. Your collection data is stored in this browser's database and is not sent anywhere else.
+                        </Form.Text>
+                    </Form.Group>
+
+                    <Form.Group className="mb-2">
+                        <Form.Label>Relay</Form.Label>
+                        <Form.Control
+                            type="text"
+                            placeholder="https://api.discogs.com (direct)"
+                            value={apiBaseUrl}
+                            onChange={({ target: { value } }) => setApiBaseUrl(value.trim())}
+                        />
+                        <Form.Text>
+                            Discogs doesn't let a browser read the headers that say how many requests
+                            you have left, so by default Elephant has to guess — and guesses low.
+                            Pointing this at a relay makes those numbers visible, and roughly doubles
+                            throughput by avoiding a CORS preflight on every request.
+                            {" "}
+                            <strong>Your token passes through the relay in transit.</strong>
+                            {" "}
+                            It isn't stored there, but if you'd rather not, leave this empty to talk to
+                            Discogs directly — everything still works, just more conservatively.
+                            {relayUnreachable
+                                ? <> <strong>The configured relay is unreachable, so Elephant is talking to Discogs directly.</strong></>
+                                : null}
                         </Form.Text>
                     </Form.Group>
 

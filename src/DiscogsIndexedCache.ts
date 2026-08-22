@@ -1,4 +1,5 @@
 import { arraySetRemove } from "@pyrogenic/asset/lib";
+import type { RateLimitInfo } from "discojs";
 import IMemoOptions from "@pyrogenic/memo/lib/IMemoOptions";
 import * as idb from "idb";
 import jsonpath from "jsonpath";
@@ -9,6 +10,63 @@ import { Artist } from "./model/Artist";
 import { Release } from "./model/Release";
 import PromiseTracker from "./shared/PromiseTracker";
 import { PromiseType } from "./shared/TypeConstraints";
+
+/**
+ * How long a rate-limit reading stays useful for pacing.
+ *
+ * Discogs' window is a rolling 60s, so a reading older than one full window says
+ * nothing about the current one — at which point we fall back to guessing, which is
+ * also what makes the low-priority gate below self-healing rather than a deadlock.
+ */
+const RATE_LIMIT_FRESH_MS = 60 * 1000;
+
+/**
+ * Requests held back from low-priority work so an interactive page load isn't starved
+ * by a background prefetch that got there first.
+ */
+const PRIORITY_RESERVE = 10;
+
+/**
+ * Headroom never spent by anything, so we stop *before* the limit rather than on it.
+ *
+ * Driving to exactly 0 means the next request is a 429, and a 429 costs a full 60s
+ * stall — far more than the handful of requests this holds back.
+ */
+const SAFETY_RESERVE = 3;
+
+/**
+ * Fraction of the reported limit we actually aim for.
+ *
+ * Discogs' window is rolling and the budget is per-token, so anything else using the
+ * same token — another tab, another tool — spends from the same pool. Pacing at 100%
+ * is therefore guaranteed to 429 eventually. This is passed to discojs as the request
+ * limit, which sets its `minTime` between requests (0.8 * 60/min -> one per 1250ms).
+ */
+const RATE_LIMIT_TARGET = 0.8;
+
+/**
+ * Ceiling handed to discojs for how many requests may overlap.
+ *
+ * Deliberately above anything the UI offers, so discojs is never the binding
+ * constraint: the live control is `simultaneousRequestLimit`, enforced in
+ * `getInternal` where it can be changed without rebuilding the client. discojs'
+ * limiter governs the *rate*; this cache governs the *concurrency*.
+ */
+export const CONCURRENCY_CEILING = 10;
+
+/** Requests per minute to aim for, given a reported limit. */
+export function paceFor(limit: number) {
+    return Math.max(1, Math.floor(limit * RATE_LIMIT_TARGET));
+}
+
+/** How long to stall everything after a network failure or a 5xx. */
+const ERROR_PAUSE_MS = 10 * 1000;
+
+/**
+ * Total time a single request will spend waiting out 429s before giving up.
+ * Discogs' window is a rolling 60s, so this is two full windows.
+ */
+const MAX_RATE_LIMIT_WAIT_MS = 2 * 60 * 1000;
 
 type CachedRequest = {
     url: string;
@@ -71,6 +129,10 @@ function observableStorage<T extends number | string | boolean>(key: string, def
     return obj;
 }
 
+function sleep(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 function throttled<T>(name: string, factory: () => T, interval: number = 500) {
     let expire = 0;
     let value = factory();
@@ -95,6 +157,65 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     errorPause: number = 0;
     unpause?: () => void;
     pauseCheck?: NodeJS.Timeout;
+
+    /**
+     * What Discogs last told us about our rate limit, as opposed to what we guessed.
+     *
+     * `observedAt` of 0 means "never observed" — which is the normal state when
+     * talking to api.discogs.com directly, because the browser cannot read the
+     * headers without a relay adding Access-Control-Expose-Headers. Everything that
+     * consumes this must degrade to the guessed values in that case.
+     */
+    rateLimit: {
+        limit?: number;
+        used?: number;
+        remaining?: number;
+        observedAt: number;
+        status?: number;
+    } = { observedAt: 0 };
+
+    /**
+     * Passed to discojs as `onRateLimit`. Must stay a stable bound method: the
+     * Discojs client is memoized on its options, and Elephant re-fetches the whole
+     * collection whenever the client identity changes.
+     */
+    public observeRateLimit = ({ limit, used, remaining, status }: RateLimitInfo) => {
+        // A response with none of the headers readable tells us nothing; keep the
+        // last real reading rather than blanking it out.
+        if (limit === undefined && used === undefined && remaining === undefined) {
+            return;
+        }
+        runInAction(() => {
+            this.rateLimit = { limit, used, remaining, status, observedAt: Date.now() };
+        });
+    };
+
+    /**
+     * The last reading, or undefined if we have none or it has aged out. Everything
+     * that paces off real numbers goes through here so the fallback is uniform.
+     */
+    public get observedRateLimit() {
+        const { observedAt, remaining } = this.rateLimit;
+        if (!observedAt || remaining === undefined) { return undefined; }
+        if (Date.now() - observedAt > RATE_LIMIT_FRESH_MS) { return undefined; }
+        return this.rateLimit;
+    }
+
+    /**
+     * What's left in the window, discounting requests already in flight.
+     *
+     * `remaining` describes the moment a response was produced; anything dispatched
+     * since is not reflected in it. Without this correction a burst of concurrent
+     * requests all read the same stale headroom and collectively overshoot.
+     *
+     * Derived from `remaining` rather than `limit - used` deliberately: `used` keeps
+     * counting past the cap once you are over it, while `remaining` clamps at 0.
+     */
+    public get effectiveRemaining() {
+        const observed = this.observedRateLimit;
+        if (!observed) { return undefined; }
+        return (observed.remaining ?? 0) - this.inflightCount;
+    }
 
     lastErrorTimestamp = observableStorage<number>("lastErrorTimestamp", 0);
     simultaneousRequestLimit = observableStorage<number>("simultaneousRequestLimit", 5);
@@ -138,6 +259,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             log: observable,
             version: observable,
             waiting: observable,
+            rateLimit: observable,
             simultaneousRequestLimit: observable,
             requestPerMinuteCap: observable,
             clear: action,
@@ -147,13 +269,28 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
 
     private checkRate = () => {
         const [rpm, hardCap] = this.rpm;
-        var cap = this.requestPerMinuteCap.value;
-        if (hardCap < cap) {
-            cap = hardCap;
+        const effectiveRemaining = this.effectiveRemaining;
+
+        let overBudget: boolean;
+        if (effectiveRemaining !== undefined) {
+            // Discogs is telling us the truth, so use it. This is also automatically
+            // correct across tabs and other tools sharing the token: `remaining` is the
+            // server's count for the credential, not this tab's count of what it sent.
+            overBudget = effectiveRemaining <= SAFETY_RESERVE;
         } else {
-            //runInAction(() => this.lastErrorTimestamp = undefined);
+            // No readable headers — the direct-connection case. Unchanged from before:
+            // a conservative manual cap, narrowed further by the guessed hard cap
+            // (which collapses to ~1/min for two minutes after an error).
+            var cap = this.requestPerMinuteCap.value;
+            if (hardCap < cap) {
+                cap = hardCap;
+            } else {
+                //runInAction(() => this.lastErrorTimestamp = undefined);
+            }
+            overBudget = rpm >= cap;
         }
-        if (rpm >= cap || this.errorPause > Date.now()) {
+
+        if (overBudget || this.errorPause > Date.now()) {
             if (this.unpause === undefined) {
                 this.pause = new Promise<void>((unpause, _) => {
                     if (this.log) console.log("paused");
@@ -198,6 +335,15 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     });
 
     public get inflight() { return this.inflightCache(); }
+
+    /**
+     * Un-throttled in-flight count, for gating decisions only.
+     *
+     * `inflight` is cached for 500ms, which is fine for the UI but wrong here: during
+     * a burst the count is stale exactly when it matters, so every concurrent request
+     * reads the same headroom and they collectively overshoot.
+     */
+    private get inflightCount() { return this.tracker.inflight("discogs").length; }
 
     private dbInflightCache = throttled("dbInflight", () => {
         const history = this.tracker.inflight("idb");
@@ -275,6 +421,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
         if (log) { console.log({ key, cache, bypass, log }); }
         let retries = 3;
         let waited = 0;
+        // Tracked separately from `retries`: waiting out a rate limit is not a failure,
+        // so it gets its own budget and cannot exhaust the retry budget.
+        let rateLimitWaitMs = 0;
         while (true) {
             runInAction(() => this.waiting.push(key));
             try {
@@ -295,10 +444,32 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                         await Promise.all(this.priorityGets.values()).catch(noop);
                     }
 
+                    // Hold back background work while the window is nearly spent, so an
+                    // interactive page load isn't starved by a prefetch that got here
+                    // first. Only possible with real numbers — `effectiveRemaining` is
+                    // undefined without them, and this is skipped entirely.
+                    //
+                    // Cannot deadlock: a reading older than one Discogs window is
+                    // discarded, so if nothing else is in flight to refresh it, the gate
+                    // opens on its own within 60s.
+                    while (!this.highPriorityKey(key)
+                        && (this.effectiveRemaining ?? Infinity) <= PRIORITY_RESERVE) {
+                        waited++;
+                        if (this.log) console.log(`Reserving the last ${PRIORITY_RESERVE} requests for interactive work: ${key}`);
+                        await sleep(1000);
+                    }
+
+                    // `inflightCount`, not `inflight` — the latter is cached for 500ms.
+                    // When one request settles, every coroutine parked on the
+                    // `Promise.any` below wakes in the same microtask drain; with a stale
+                    // count they all read the same pre-completion value and all pass the
+                    // gate together, overshooting the limit. With a live count the first
+                    // one through is tracked before the next re-checks (there is no await
+                    // between this check and `tracker.track`, so it is atomic).
                     while (this.simultaneousRequestLimit.value) {
-                        if (this.inflight.length >= this.simultaneousRequestLimit.value) {
+                        if (this.inflightCount >= this.simultaneousRequestLimit.value) {
                             waited++;
-                            if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflight.length}) to drop: ${key}`);
+                            if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflightCount}) to drop: ${key}`);
                             await Promise.any(this.inflight.map((e) => e.promise!)).catch(noop);
                         } else {
                             break;
@@ -337,22 +508,76 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 }
                 return newValue;
             } catch (e: any) {
-                if ("statusCode" in e) {
-                    console.log(`${e.statusCode}: ${key}`);
+                const statusCode: number | undefined = typeof e?.statusCode === "number" ? e.statusCode : undefined;
+
+                // 429 is not a failure, it's "come back later" — so it must not
+                // consume the retry budget.
+                //
+                // This branch is unreachable today and that is exactly why it has to
+                // exist. Discogs' 429 carries no CORS headers at all, so in a browser
+                // `fetch` rejects with a bare TypeError before the status is legible;
+                // it lands in the network-error branch below. The moment traffic goes
+                // through the relay it becomes a real DiscogsError with a status, and
+                // without this branch it would be silently swallowed by the
+                // `statusCode` case that used to sit here — taking Elephant's only
+                // working brake with it.
+                if (statusCode === 429) {
+                    // `retryAfter` (seconds) is populated once discojs parses the
+                    // Retry-After header; until then assume a full window. Discogs'
+                    // limit is a rolling 60s, so 60 is the only safe guess.
+                    const retryAfterMs = (typeof e?.retryAfter === "number" ? e.retryAfter : 60) * 1000;
+                    if (rateLimitWaitMs + retryAfterMs > MAX_RATE_LIMIT_WAIT_MS) {
+                        console.warn(`Rate limited for over ${MAX_RATE_LIMIT_WAIT_MS / 1000}s, giving up: ${key}`);
+                        throw e;
+                    }
+                    rateLimitWaitMs += retryAfterMs;
+                    console.log(`429, pausing ${retryAfterMs / 1000}s: ${key}`);
+                    // Pause every request, not just this one: the limit is per-token,
+                    // so anything else in flight is equally over budget.
+                    //
+                    // Deliberately NOT setting lastErrorTimestamp. That triggers the
+                    // 0.1x rate cut for two minutes, which is a guess standing in for
+                    // information we now have — Retry-After is the precise remedy, and
+                    // stacking the guess on top would double-punish.
+                    this.pauseFor(retryAfterMs);
+                    continue;
+                }
+
+                // A bad credential will not fix itself by retrying. Surface it so the
+                // caller (Elephant's setError, wired into getProfile) can say so.
+                if (statusCode === 401) {
+                    throw e;
+                }
+
+                // 5xx is transient — back off and retry. Previously swallowed.
+                // Other 4xx (404 especially) means "this really isn't there"; keep the
+                // long-standing behaviour of resolving undefined rather than throwing.
+                if (statusCode !== undefined && statusCode < 500) {
+                    console.log(`${statusCode}: ${key}`);
                     return undefined;
                 }
+
+                // 5xx, or a network/CORS failure with no status at all.
                 console.warn(e);
-                const interval = 10 * 1000; // 10 seconds
-                const now = Date.now();
-                runInAction(() => this.lastErrorTimestamp.value = now);
-                const t = now + interval;
-                this.errorPause = t;
-                setTimeout(this.clearErrorPause, interval, t);
+                runInAction(() => this.lastErrorTimestamp.value = Date.now());
+                this.pauseFor(ERROR_PAUSE_MS);
                 if (--retries <= 0) {
                     throw e;
                 }
             }
         }
+    }
+
+    /**
+     * Stall every request for `ms`. `checkRate` polls `errorPause`, so this gates
+     * the whole cache, not just the caller — which is what we want, since both
+     * rate limits and outages are properties of the connection, not the request.
+     */
+    private pauseFor = (ms: number) => {
+        const until = Date.now() + ms;
+        if (until <= this.errorPause) { return; }
+        this.errorPause = until;
+        setTimeout(this.clearErrorPause, ms, until);
     }
 
     private clearErrorPause = (t: number) => {

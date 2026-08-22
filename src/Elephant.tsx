@@ -1,4 +1,4 @@
-import useStorageState from "@pyrogenic/perl/lib/useStorageState";
+import useStorageState, { SetState } from "@pyrogenic/perl/lib/useStorageState";
 import Bottleneck from "bottleneck";
 import { Discojs, InventoryStatusesEnum } from "discojs";
 import "jquery/dist/jquery.slim";
@@ -15,7 +15,7 @@ import { ArtistMode } from "./ArtistRoute";
 import AuthRoute from "./AuthRoute";
 import CollectionTable from "./CollectionTable";
 import { DataIndex } from "./DataRoute";
-import DiscogsIndexedCache from "./DiscogsIndexedCache";
+import DiscogsIndexedCache, { CONCURRENCY_CEILING, paceFor } from "./DiscogsIndexedCache";
 import { DiscogsFolders } from "./DiscogsTypeDefinitions";
 import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
@@ -104,10 +104,54 @@ const TUNING_PATH = "/tuning";
 
 export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, STATS_PATH, DATA_PATH, TUNING_PATH };
 
+/**
+ * Relay to route Discogs traffic through, or "" for a direct connection.
+ *
+ * A relay exists because Discogs omits `Access-Control-Expose-Headers`, so a browser
+ * cannot read the `X-Discogs-Ratelimit*` headers and Elephant has to guess its budget.
+ * See packages/elephant/worker.
+ *
+ * The saved setting wins over the build-time default so that a user can always see —
+ * and switch off — the relay their credential passes through.
+ */
+function useApiBaseUrl(): [string, (value: string) => void, boolean] {
+  const buildDefault = process.env.REACT_APP_DISCOGS_API_BASE ?? "";
+
+  // `null` means "the user has never chosen", which is NOT the same as "" — an explicit
+  // choice of a direct connection. The distinction is load-bearing: useStorageState
+  // persists its default on mount, so defaulting to `buildDefault` would write "" into
+  // localStorage the first time anyone loads the app, and that stored "" would then win
+  // over the build default forever. Changing the shipped default could never reach an
+  // existing user.
+  const [saved, setSaved] = useStorageState<string | null>("local", "DiscogsApiBaseUrl", null);
+  const effective = saved ?? buildDefault;
+
+  // Trips when the relay is configured but unreachable, so Elephant falls back to a
+  // direct connection rather than failing every request. Deliberately a one-shot probe
+  // at startup, not a per-request circuit breaker: silent per-request failover would
+  // make "are these numbers real or guessed?" unanswerable.
+  const [unreachable, setUnreachable] = React.useState(false);
+
+  React.useEffect(() => {
+    setUnreachable(false);
+    if (!effective) { return; }
+    let cancelled = false;
+    // Worker-local, so this costs no Discogs rate limit to answer.
+    fetch(`${effective.replace(/\/+$/, "")}/__health`)
+      .then((r) => { if (!cancelled && !r.ok) { setUnreachable(true); } })
+      .catch(() => { if (!cancelled) { setUnreachable(true); } });
+    return () => { cancelled = true; };
+  }, [effective]);
+
+  return [unreachable ? "" : effective, setSaved, unreachable];
+}
+
 export default function Elephant() {
   const [token, setToken] = useStorageState<string>("local", "DiscogsUserToken", "");
 
   const cache = React.useMemo(() => new DiscogsIndexedCache(), []);
+
+  const [apiBaseUrl, setApiBaseUrl, relayUnreachable] = useApiBaseUrl();
 
   const client = React.useMemo(() => {
     return new Discojs({
@@ -115,8 +159,25 @@ export default function Elephant() {
       userToken: token,
       cache,
       allowUnsafeHeaders: false,
+      // "" means the discojs default, https://api.discogs.com.
+      apiBaseUrl: apiBaseUrl || undefined,
+      // discojs derives its spacing between requests from these (minTime =
+      // interval / limit). Left at the Discogs figures it paces at *exactly* the
+      // cap, which is guaranteed to 429 eventually: the window is rolling and the
+      // budget is per-token, so any other tab or tool spends from the same pool.
+      // Aim below it instead — a 429 costs a 60s stall, far more than the handful
+      // of requests this gives up.
+      requestLimit: paceFor(25),
+      requestLimitAuth: paceFor(60),
+      // Without this discojs serialises everything (its default is 1), so throughput
+      // collapses to 1/latency and the cache's simultaneousRequestLimit has no visible
+      // effect. This is only a ceiling — the live control is in the cache.
+      maxConcurrent: CONCURRENCY_CEILING,
+      // Stable bound method — an inline arrow here would rebuild the client on every
+      // render, and the effects below re-fetch the entire collection when it changes.
+      onRateLimit: cache.observeRateLimit,
     });
-  }, [cache, token]);
+  }, [cache, token, apiBaseUrl]);
 
   const [search, setSearch] = useStorageState<string>("session", "search", "");
   const [filter, setFilter] = React.useState<CollectionFilter>();
@@ -218,6 +279,9 @@ export default function Elephant() {
             <AuthRoute
               setToken={setToken}
               token={token}
+              apiBaseUrl={apiBaseUrl}
+              setApiBaseUrl={setApiBaseUrl}
+              relayUnreachable={relayUnreachable}
             />
           </Router.Route>
           <Router.Route path="/folders">

@@ -46,9 +46,12 @@ const OptionsMenuIcon = React.forwardRef<HTMLDivElement, ButtonProps>(({ onClick
 });
 
 function SpeedTracker() {
-    const { rpm, db, waiting, errorPause, total } = useActivityMonitor();
+    const { rpm, db, waiting, errorPause, total, limit, used, remaining, observed } = useActivityMonitor();
     const pauseLabel = errorPause ? `${Math.ceil((errorPause - Date.now()) / 1000)}s` : undefined;
-    const label = pauseLabel ?? total ? total : undefined;
+    // Parenthesised deliberately: `pauseLabel ?? total ? total : undefined` parses as
+    // `(pauseLabel ?? total) ? total : undefined`, so `label` was never the pause text
+    // and the "pausing for" line below only rendered when `total` happened to be truthy.
+    const label = pauseLabel ?? (total ? total : undefined);
     return <>
         <Navbar.Text>
             <Loader autoHide>
@@ -62,9 +65,17 @@ function SpeedTracker() {
         {!db ? null : <Navbar.Text>
             {db} db
         </Navbar.Text>}
-        {!rpm ? null : <Navbar.Text>
-            {rpm} rpm
-        </Navbar.Text>}
+        {observed
+            // Real numbers from Discogs. `used` can exceed `limit` once you are over
+            // budget, so show it as-is rather than clamping and hiding the overshoot.
+            ? <Navbar.Text title={`${remaining ?? "?"} requests remaining this minute (reported by Discogs)`}>
+                {used ?? "?"}/{limit ?? "?"}
+            </Navbar.Text>
+            // No relay, so the headers are unreadable and this is Elephant's own count
+            // of what it sent. Marked with a ~ so it is never mistaken for the real thing.
+            : !rpm ? null : <Navbar.Text title="Estimated — Discogs' rate-limit headers are not readable without a relay">
+                ~{rpm} rpm
+            </Navbar.Text>}
         {!waiting ? null : <Navbar.Text>
             {waiting} blocked
         </Navbar.Text>}
