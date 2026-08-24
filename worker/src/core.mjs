@@ -57,6 +57,16 @@ const EXPOSE = [
 /** Discogs' window is a rolling 60s and it never sends Retry-After, so 60 is the only safe value. */
 const FALLBACK_RETRY_AFTER = '60'
 
+/**
+ * Statuses the fetch spec calls "null body status". Handing `new Response(...)` a body
+ * with one of these THROWS, and an empty ArrayBuffer counts as a body — so relaying a
+ * 204 verbatim blows up unless it is special-cased.
+ *
+ * This is not hypothetical: Discogs answers a successful custom-field edit (the [+] play
+ * count button) with 204, so every write took this path.
+ */
+const NULL_BODY_STATUSES = new Set([204, 205, 304])
+
 function corsHeaders(origin) {
   const h = new Headers()
   if (origin) h.set('Access-Control-Allow-Origin', origin)
@@ -185,7 +195,9 @@ export async function handleRequest(request, env) {
     headers.set('Retry-After', FALLBACK_RETRY_AFTER)
   }
 
-  return new Response(await upstream.arrayBuffer(), {
+  const body = NULL_BODY_STATUSES.has(upstream.status) ? null : await upstream.arrayBuffer()
+
+  return new Response(body, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers,

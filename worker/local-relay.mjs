@@ -53,7 +53,15 @@ const server = createServer(async (req, res) => {
         res.end(Buffer.from(await response.arrayBuffer()));
     } catch (e) {
         // Never leak header contents into logs; the message alone is enough to debug.
-        res.writeHead(500, { "Content-Type": "text/plain" });
+        console.error(`Relay error: ${req.method} ${req.url}:`, e);
+        // CORS headers on the error too, or the browser reports a bare CORS failure and
+        // hides the real message — which is exactly how the 204 bug above presented.
+        const headers = { "Content-Type": "text/plain" };
+        if (req.headers.origin) {
+            headers["Access-Control-Allow-Origin"] = req.headers.origin;
+            headers["Vary"] = "Origin";
+        }
+        res.writeHead(500, headers);
         res.end(`Relay error: ${e.message}\n`);
     }
 });
