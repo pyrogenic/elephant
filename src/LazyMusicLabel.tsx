@@ -4,6 +4,7 @@ import React from "react";
 import * as Router from "react-router-dom";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
+import labelInitialism from "./labelInitialism";
 import { Label } from "./LPDB";
 import { Remote } from "./Remote";
 import RefreshButton from "./shared/RefreshButton";
@@ -14,11 +15,13 @@ type LabelProps = Pick<ElementType<CollectionItem["basic_information"]["labels"]
 export default function LazyMusicLabel({
     label: { name, id },
     showName,
+    abbreviateName,
     hq,
     autoGetBrokenImages,
 }: {
     label: LabelProps,
     showName?: boolean | "if-no-logo",
+    abbreviateName?: boolean,
     hq?: boolean,
     autoGetBrokenImages?: boolean,
 }) {
@@ -31,6 +34,7 @@ export default function LazyMusicLabel({
             name={name}
             {...labelValue}
             showName={showName}
+            abbreviateName={abbreviateName}
             hq={hq}
             autoGetBrokenImages={autoGetBrokenImages}
         />;
@@ -43,15 +47,18 @@ export function MusicLabelLogo({
     name,
     images,
     showName,
+    abbreviateName,
     hq,
     autoGetBrokenImages = true,
 }: {
     remote?: Remote<any>,
     id?: number; name?: string; images?: Label["images"],
     showName?: boolean | "if-no-logo",
+    abbreviateName?: boolean,
     hq?: boolean,
     autoGetBrokenImages?: boolean,
 }) {
+    const displayName = (abbreviateName && name) ? labelInitialism(name) : name;
     images = images && sortBy(images, factor);
     const image = images?.shift();
     const imgRef = React.createRef<HTMLImageElement>();
@@ -77,12 +84,12 @@ export function MusicLabelLogo({
     if (image && !brokenImage) {
         const { uri, uri150 } = image;
         return <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label">
-            <img ref={imgRef} className="music-label-logo-inline" src={hq ? uri : uri150} alt="logo" title={name} />{showName === true && <span className="name">{name}</span>}
+            <img ref={imgRef} className="music-label-logo-inline" src={hq ? uri : uri150} alt="logo" title={name} />{showName === true && <span className="name" title={name}>{displayName}</span>}
         </Router.NavLink>;
     } else if (showName ?? "if-no-logo") {
         return <>
             {brokenImage && <RefreshButton bare remote={remote} />}
-            <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label">{name}</Router.NavLink>
+            <Router.NavLink to={`/labels/${id}/${name}`} className="quiet music-label" title={name}>{displayName}</Router.NavLink>
         </>;
     } else {
         return null;

@@ -571,7 +571,7 @@ export default function CollectionTable(props: {
         className: "centered-column",
         accessor: ({ basic_information: { labels } }) => uniqueLabels(labels),
         Cell: ({ value }: { value: Labels }) => {
-            return <>{value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} />)}</>;
+            return <>{value.map((label, i) => <LazyMusicLabel key={i} label={label} hq={true} abbreviateName={true} />)}</>;
         },
         sortType: autoSortBy("Label"),
     }), [autoSortBy]);

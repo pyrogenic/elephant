@@ -25,7 +25,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
-.token
+.token*
 /tmp
 
 npm-debug.log*
