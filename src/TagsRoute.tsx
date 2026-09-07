@@ -1,3 +1,4 @@
+import { groupBy, upperFirst } from "lodash";
 import flatten from "lodash/flatten";
 import sortBy from "lodash/sortBy";
 import uniqBy from "lodash/uniqBy";
@@ -43,11 +44,21 @@ const TagPanel = () => {
 const TagsIndex = observer(() => {
     const { collection } = React.useContext(ElephantContext);
     const tagsFor = useTagsFor();
-    const tags = computed(() => uniqBy(flatten(collection.values().map((item) => tagsFor(item, { includeLocation: true }).get())), "tag"));
+    const tags = computed(() => sortBy(uniqBy(flatten(collection.values().map((item) => tagsFor(item, { includeLocation: true }).get())), "tag"), "tag"));
+    const tagsGrouped = computed(() => sortBy(groupBy(tags.get(), "kind"), "name"));
 
-    return <>
-        {(sortBy(tags.get(), "name").map((tag) => <Tag key={resolveToString(tag.tag)} {...tag} />))}
-    </>;
+    return <dl>
+        {tagsGrouped.get().map((tagGroup) => {
+            const kind = tagGroup[0].kind;
+            return <>
+                <dt key={kind}>{upperFirst(kind)}</dt>
+                <dd>
+                    {sortBy(tagGroup, "name").map((tag) => <Tag key={resolveToString(tag.tag)} {...tag} extra={undefined}/>)}
+                </dd>
+            </>;
+            })
+            }
+    </dl>;
 });
 
 export function TagsMode() {
