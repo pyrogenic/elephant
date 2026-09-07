@@ -7,5 +7,5 @@ declare module "comlink-loader!*" {
         tags(): Promise<string[]>;
     }
 
-    export = WebpackWorker;
+    export default WebpackWorker;
 }
