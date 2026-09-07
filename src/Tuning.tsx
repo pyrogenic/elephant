@@ -321,11 +321,14 @@ const novelFormats = computed(() => TUNING_TRACKER.formats.filter((k) => !(k in 
 const novelRoles = computed(() => TUNING_TRACKER.roles.filter((k) => !(k in ROLES)));
 
 export const SHIPS_IN_NOTE = { "Vinyl": "Play graded based on a complete play through. Ships in archival inner / PPL outer.", "CD": "Verified no-error playthrough." };
+export const LINER_NOTES_ONLY_NOTE = { "CD": "Liner notes only (no original case)." };
 
-const IDIOMS = [
-    "№",
-    ...Object.values(SHIPS_IN_NOTE),
-];
+const IDIOMS = {
+    "№": SHIPS_IN_NOTE,
+    "LNO": LINER_NOTES_ONLY_NOTE,
+    "VS": "?",
+    "VSO": "?",
+};
 
 function Tuning() {
     return <Card>
@@ -344,7 +347,9 @@ function Tuning() {
                         <dt>Novel Formats</dt>
                         <dd>{novelFormats.get().join(", ")}</dd>
                         <dt>Idioms</dt>
-                        <dd>{IDIOMS.map((s, i) => <code className="me-5" key={i}>{s}</code>)}</dd>
+                        <dd><dl>
+                            {Object.entries(IDIOMS).map(([abbr, meaning], i) => <><dt><code className="me-5" key={i}>{abbr}</code></dt><dd>{JSON.stringify(meaning)}</dd></>)}
+                        </dl></dd>
                     </>}
                 </Observer>
             </dl>
