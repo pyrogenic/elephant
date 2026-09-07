@@ -199,10 +199,10 @@ function InventoryItemComponent({
                                 item.price.value = v;
                             })}
                         />
-                        <InputGroup.Text>{item.price.value}</InputGroup.Text>
-                        <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
+                        {/* <InputGroup.Text>{item.price.value}</InputGroup.Text> */}
+                        {/* <Form.Control type="number" min="0.01" step="0.01" value={item.price.value?.toFixed(2)} onChange={action(({ target: { value } }) => {
                             item.price.value = Number(value);
-                        })} />
+                        })} /> */}
                         {(!suggestions && getSuggestions) ? <Button
                             onClick={getSuggestions}
                         >Get Suggestions</Button>
@@ -386,7 +386,9 @@ function InventoryItemComponent({
                     {communityRating && <> ({communityRating.average}, {communityRating.count} votes)</>}
                 </Button>
 
-                <DiscogsLinkback uri={item.uri}>View on Discogs</DiscogsLinkback>
+                <DiscogsLinkback uri={`https://www.discogs.com/sell/history/${item.release.id}`} block={false}>Price History</DiscogsLinkback>
+                
+                <DiscogsLinkback uri={item.uri} block={false}>Listing on Discogs</DiscogsLinkback>
 
                 {/* <Row>
                     <Col>

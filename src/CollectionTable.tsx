@@ -258,7 +258,7 @@ export default function CollectionTable(props: {
                                         }
                                     } else if (listingFolderId && listingFolderId !== item.folder_id) {
                                         newFolderId = listingFolderId;
-                                    } else if (listingLocation !== expectedLocation) {
+                                    } else if (listingLocation !== expectedLocation && expectedLocation !== "Uncategorized") {
                                         // a.k.a "suggestedLocation"
                                         newLocation = expectedLocation;
                                         arrowButtonTitle = `Listing location: ${listingLocation ?? "unset"}`;
