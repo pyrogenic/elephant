@@ -8,7 +8,6 @@ import { Container } from "react-bootstrap";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
-import Dropdown from "react-bootstrap/Dropdown";
 import Badge from "react-bootstrap/esm/Badge";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -22,7 +21,6 @@ import { DiscogsFolder, DiscogsFolders } from "./DiscogsTypeDefinitions";
 import { CollectionItem } from "./Elephant";
 import ElephantContext from "./ElephantContext";
 import { parseLocation } from "./location";
-import { useProfileMetadata } from "./Profile";
 import ReleaseCell from "./ReleaseCell";
 import Disclosure from "./shared/Disclosure";
 import LazyAccordion from "./shared/lazy/LazyAccordion";
@@ -45,12 +43,12 @@ export type FolderSets = {
     unknown: DiscogsFolders,
 };
 
-type FoldersMetadata = {
-    locations: string[],
-    folders: {key: string, value: {
-        location: string,
-    }},
-}
+// type FoldersMetadata = {
+//     locations: string[],
+//     folders: {key: string, value: {
+//         location: string,
+//     }},
+// }
 
 function FoldersContent() {
     const { cache, client, folders, collection } = React.useContext(ElephantContext);
@@ -274,7 +272,7 @@ function FoldersContent() {
         </Row>
         <Row>
             <Disclosure title={(icon) => <Col><h4>Folder Sets {resolve(icon)}</h4></Col>}>
-            {Object.entries(folderSets).map(([key, folders]) => <Col md={4}>
+            {Object.entries(folderSets).map(([key, folders]) => <Col md={4} key={key}>
                 <h4>{key}</h4>
                 {folders && <ReactJson key={key} src={folders} />}
             </Col>)}
