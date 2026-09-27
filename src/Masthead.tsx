@@ -13,7 +13,7 @@ import * as Router from "react-router-dom";
 import { artistRoutePath as artistRoutePaths } from "./ArtistRoute";
 import autoFormat from "./autoFormat";
 import { Profile } from "./DiscogsTypeDefinitions";
-import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, STATS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
+import { ARTISTS_PATH, Collection, CollectionItem, COLLECTION_PATH, LABELS_PATH, LISTING_PATH, STATS_PATH, TAGS_PATH, TASKS_PATH } from "./Elephant";
 import logo from "./elephant.svg";
 import ElephantContext from "./ElephantContext";
 import isVinyl from "./isVinyl";
@@ -261,6 +261,9 @@ export default function Masthead({
             </Navbar.Text>
             <Navbar.Text>
                 <Router.NavLink exact to="/folders">Folders</Router.NavLink>
+            </Navbar.Text>
+            <Navbar.Text>
+                <Router.NavLink to={LISTING_PATH}>Listings</Router.NavLink>
             </Navbar.Text>
             <Navbar.Text>
                 {artistsNav}

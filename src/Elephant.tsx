@@ -21,6 +21,7 @@ import "./Elephant.scss";
 import ElephantContext, { IElephantContext } from "./ElephantContext";
 import Folders from "./Folders";
 import { LabelMode } from "./LabelRoute";
+import { ListingQueueMode } from "./ListingQueueRoute";
 import LPDB from "./LPDB";
 import Masthead, { CollectionFilter } from "./Masthead";
 import OrderedMap from "./OrderedMap";
@@ -101,8 +102,9 @@ const TASKS_PATH = "/tasks";
 const STATS_PATH = "/stats";
 const DATA_PATH = "/data";
 const TUNING_PATH = "/tuning";
+const LISTING_PATH = "/listing";
 
-export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, STATS_PATH, DATA_PATH, TUNING_PATH };
+export { COLLECTION_PATH, AUTH_PATH, ARTISTS_PATH, LABELS_PATH, TAGS_PATH, TASKS_PATH, STATS_PATH, DATA_PATH, TUNING_PATH, LISTING_PATH };
 
 /**
  * Relay to route Discogs traffic through, or "" for a direct connection.
@@ -286,6 +288,9 @@ export default function Elephant() {
           </Router.Route>
           <Router.Route path="/folders">
             <Folders />
+          </Router.Route>
+          <Router.Route path={LISTING_PATH}>
+            <ListingQueueMode />
           </Router.Route>
           <Router.Route path={ARTISTS_PATH}>
             <ArtistMode />

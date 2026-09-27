@@ -5,6 +5,7 @@ import { ElementType, PromiseType } from "./shared/TypeConstraints";
 
 export type ListingOptions = Parameters<Discojs["createListing"]>[0];
 export type PriceSuggestions = PromiseType<ReturnType<Discojs["getPriceSuggestions"]>>;
+export type MarketplaceStatistics = PromiseType<ReturnType<Discojs["getMarketplaceStatistics"]>>;
 export type RatingOptions = Parameters<Discojs["editReleaseInstanceRating"]>[3];
 export type DiscogsFolders = PromiseType<ReturnType<Discojs["listFolders"]>>["folders"];
 export type DiscogsFolder = ElementType<DiscogsFolders>;

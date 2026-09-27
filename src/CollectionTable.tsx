@@ -212,14 +212,7 @@ export default function CollectionTable(props: {
                 accessor(item) {
                     const { id } = item;
                     return <>
-                        <div className="condition-row">
-                            <div className="grade grade-media">
-                                <ConditionBadge kind="media" item={item} />
-                            </div>
-                            <div className="grade grade-sleeve">
-                                <ConditionBadge kind="sleeve" item={item} />
-                            </div>
-                        </div>
+                        <ConditionBadges item={item} />
                         <Observer render={() => {
                             const listing = inventory.get(id);
                             const ordersForItem: ([Order, OrderItem] | [])[] = orders.values().map((order) => {
@@ -768,6 +761,21 @@ export function useSleeveCondition() {
 export function useNotes() {
     const { notesId } = useNoteIds();
     return React.useCallback((notes: CollectionNotes) => (notesId ? getNote(notes, notesId) : undefined), [notesId]);
+}
+
+/**
+ * The joined media/sleeve condition pill, as the collection table's Cond. column draws it.
+ * Shared so other views (the listing queue) get the same widget and not a lookalike.
+ */
+export function ConditionBadges({ item }: { item: CollectionItem }) {
+    return <div className="condition-row">
+        <div className="grade grade-media">
+            <ConditionBadge kind="media" item={item} />
+        </div>
+        <div className="grade grade-sleeve">
+            <ConditionBadge kind="sleeve" item={item} />
+        </div>
+    </div>;
 }
 
 function ConditionBadge({ kind, item }: { kind: "media" | "sleeve", item: CollectionItem }) {

@@ -3,7 +3,6 @@ import FormControlNumber from "@pyrogenic/perl/lib/bootstrap/FormControlNumber";
 import classConcat from "@pyrogenic/perl/lib/classConcat";
 import { CurrenciesEnum, InventoryStatusesEnum, ListingStatusesEnum, ReleaseConditionsEnum, SleeveConditionsEnum } from "discojs";
 import cloneDeep from "lodash/cloneDeep";
-import compact from "lodash/compact";
 import { action, computed, observable, reaction, runInAction, toJS } from "mobx";
 import { Observer } from "mobx-react";
 import React from "react";
@@ -19,9 +18,10 @@ import boxInfo from "../boxInfo";
 import { useClearCacheForCollectionItem } from "../collectionItemCache";
 import { priceToString, useMediaCondition, useNotes, useSleeveCondition } from "../CollectionTable";
 import DiscogsLinkback from "../DiscogsLinkback";
-import { ListingOptions, PriceSuggestions } from "../DiscogsTypeDefinitions";
+import { PriceSuggestions } from "../DiscogsTypeDefinitions";
 import { CollectionItem, InventoryItem } from "../Elephant";
 import ElephantContext from "../ElephantContext";
+import { buildCreateListingOptions, fullEditPayload } from "../listingOptions";
 import { parseLocation, useFolderName } from "../location";
 import OrderedMap from "../OrderedMap";
 import Check from "../shared/Check";
@@ -29,7 +29,7 @@ import { mutate, pendingValue } from "../shared/Pendable";
 import RefreshButton from "../shared/RefreshButton";
 import usePromiseState from "../shared/usePromiseState";
 import { injectValue } from "../shared/yaml";
-import { autoVariant, MEDIA_CONDITIONS, SHIPS_IN_NOTE, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
+import { autoVariant, MEDIA_CONDITIONS, SLEEVE_CONDITIONS, useNoteIds } from "../Tuning";
 import useBusy from "../useBusy";
 import useFolderSets from "../useFolderSets";
 import useRefreshInventory from "../useRefreshInventory";
@@ -59,19 +59,14 @@ export default function Listing({ item }: { item: CollectionItem }) {
     }
 
     const condition = getMediaCondition(item.notes);
-    const sleeveCondition = getSleeveCondition(item.notes);
-    if (!condition || !sleeveCondition) {
+    const createListingOptions = buildCreateListingOptions(
+        { getMediaCondition, getSleeveCondition, getNotes, folderName },
+        item,
+        condition && suggestions?.[condition]?.value,
+    );
+    if (!createListingOptions) {
         return <i>Can't create listing without conditions set.</i>;
     }
-    const createListingOptions: ListingOptions = {
-        condition: condition,
-        sleeveCondition: sleeveCondition,
-        price: suggestions?.[condition]?.value ?? 1,
-        releaseId: item.id,
-        status: ListingStatusesEnum.DRAFT,
-        location: boxInfo(folderName(item.folder_id))?.[0],
-        comments: compact([getNotes(item.notes), ...item.basic_information.formats.map((f) => SHIPS_IN_NOTE[f.name as keyof typeof SHIPS_IN_NOTE])]).join(" "),
-    };
 
     const openListedFolderId = openListed?.id;
     const createListingSection = listings.length === 0 && <Row><Col>
@@ -305,16 +300,7 @@ function InventoryItemComponent({
                     variant="primary"
                     disabled={promise !== undefined || noChanges.get()}
                     onClick={() => {
-                        const promise = client!.editListing(item.id, {
-                            releaseId: item.release.id,
-                            location: item.location,
-                            condition: item.condition,
-                            sleeveCondition: item.sleeve_condition,
-                            comments: item.comments,
-                            price: item.price.value!,
-                            allowOffers: item.allow_offers,
-                            status: ListingStatusesEnum.DRAFT,
-                        }).then(action(() => {
+                        const promise = client!.editListing(item.id, fullEditPayload(item, ListingStatusesEnum.DRAFT)).then(action(() => {
                             originalValue.location = item.location;
                             originalValue.condition = item.condition;
                             originalValue.sleeve_condition = item.sleeve_condition;
@@ -333,16 +319,7 @@ function InventoryItemComponent({
                     variant="warning"
                     disabled={promise !== undefined || (noChanges.get() && originalValue.status !== InventoryStatusesEnum.DRAFT)}
                     onClick={() => {
-                        const promise = client!.editListing(item.id, {
-                            releaseId: item.release.id,
-                            location: item.location,
-                            condition: item.condition,
-                            sleeveCondition: item.sleeve_condition,
-                            comments: item.comments,
-                            price: item.price.value!,
-                            allowOffers: item.allow_offers,
-                            status: ListingStatusesEnum.FOR_SALE,
-                        }).then(action(() => {
+                        const promise = client!.editListing(item.id, fullEditPayload(item, ListingStatusesEnum.FOR_SALE)).then(action(() => {
                             originalValue.location = item.location;
                             originalValue.condition = item.condition;
                             originalValue.sleeve_condition = item.sleeve_condition;

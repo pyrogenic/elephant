@@ -6,7 +6,7 @@ import { action, autorun, computed, observable, runInAction, set } from "mobx";
 import { getEnv, getRoot, IAnyStateTreeNode, Instance, SnapshotOrInstance, types } from "mobx-state-tree";
 import { IObservableArray } from "mobx/dist/internal";
 import DiscogsIndexedCache from "./DiscogsIndexedCache";
-import { PriceSuggestions } from "./DiscogsTypeDefinitions";
+import { MarketplaceStatistics, PriceSuggestions } from "./DiscogsTypeDefinitions";
 import { Collection, CollectionItem, Inventory, InventoryItem, List, Lists } from "./Elephant";
 import { Artist, ArtistByIdReference, ArtistStore, ArtistStoreModel } from "./model/Artist";
 import { ReleaseByIdReference, ReleaseStore, ReleaseStoreModel } from "./model/Release";
@@ -122,6 +122,7 @@ export default class LPDB {
   private readonly byTagCache: Map<string, number[]> = new Map();
   private readonly inventoryByReleaseIdCache = new OrderedMap<number, InventoryItem | undefined>();
   private readonly priceSuggestionsByReleaseIdCache = new OrderedMap<number, Remote<PriceSuggestions>>();
+  private readonly marketplaceStatsByReleaseIdCache = new OrderedMap<number, Remote<MarketplaceStatistics>>();
 
   public readonly store: Instance<typeof StoreModel>;
 
@@ -354,6 +355,30 @@ export default class LPDB {
     }
     const existing = observable(existingValue);
     const refresh = () => this.client.getPriceSuggestions(id).then(
+      action((value) => {
+        set(existing, { status: "ready", value, refresh });
+        return existing;
+      }),
+      action((error) => {
+        set(existing, { status: "error", error, refresh });
+        return existing;
+      }));
+    refresh();
+    return existing;
+  }
+
+  public marketplaceStats(releaseId: number, refresh: boolean = false) {
+    return this.marketplaceStatsByReleaseIdCache.getOrRefresh(releaseId, this.marketplaceStatsByReleaseId.bind(this, releaseId), refresh);
+  }
+
+  private marketplaceStatsByReleaseId = (id: number, existingValue?: Remote<MarketplaceStatistics>) => {
+    if (existingValue === undefined) {
+      existingValue = { status: "pending" };
+    } else {
+      existingValue.status = "pending";
+    }
+    const existing = observable(existingValue);
+    const refresh = () => this.client.getMarketplaceStatistics(id).then(
       action((value) => {
         set(existing, { status: "ready", value, refresh });
         return existing;
