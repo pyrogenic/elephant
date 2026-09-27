@@ -145,6 +145,20 @@ function throttled<T>(name: string, factory: () => T, interval: number = 500) {
     return get;
 }
 
+
+function throttledConditional<T>(name: string, factory: () => {value: T, cache: boolean}, interval: number = 500) {
+    let expire = 0;
+    let value = factory().value;
+    function get() {
+        const now = Date.now();
+        if (now < expire) return value;
+        const res = factory();
+        if (res.cache) expire = now + interval;
+        return value = res.value;
+    }
+    return get;
+}
+
 export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMemoOptions> {
     storage: ElephantMemory;
     cache: boolean = true;
@@ -336,14 +350,27 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
 
     public get inflight() { return this.inflightCache(); }
 
-    /**
-     * Un-throttled in-flight count, for gating decisions only.
-     *
-     * `inflight` is cached for 500ms, which is fine for the UI but wrong here: during
-     * a burst the count is stale exactly when it matters, so every concurrent request
-     * reads the same headroom and they collectively overshoot.
-     */
-    private get inflightCount() { return this.tracker.inflight("discogs").length; }
+    // This gates starting new requests, so the numerical check can't be cached unless we hit the limit,
+    // in which case it's fine to back off a little too long. 
+    private inflightCountIsTooHighCache = throttledConditional("inflightCountIsTooHigh", () => {
+        var value = {
+            count: 0,
+            tooHigh: false,
+        };
+        if (this.simultaneousRequestLimit.value) {
+            value.count = this.tracker.inflight("discogs").length;
+            value.tooHigh = value.count >= this.simultaneousRequestLimit.value
+        }
+        return {value, cache: value.tooHigh};
+    }, 100);
+
+    private get inflightCountIsTooHigh() {
+        return this.inflightCountIsTooHighCache().tooHigh;
+    }
+
+    private get inflightCount() {
+        return this.inflightCountIsTooHighCache().count;
+    }
 
     private dbInflightCache = throttled("dbInflight", () => {
         const history = this.tracker.inflight("idb");
@@ -467,7 +494,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     // one through is tracked before the next re-checks (there is no await
                     // between this check and `tracker.track`, so it is atomic).
                     while (this.simultaneousRequestLimit.value) {
-                        if (this.inflightCount >= this.simultaneousRequestLimit.value) {
+                        if (this.inflightCountIsTooHigh) {
                             waited++;
                             if (this.log) console.log(`Waiting for the number of inflight requests (${this.inflightCount}) to drop: ${key}`);
                             await Promise.any(this.inflight.map((e) => e.promise!)).catch(noop);
