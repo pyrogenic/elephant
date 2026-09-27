@@ -6,7 +6,7 @@ import cloneDeep from "lodash/cloneDeep";
 import compact from "lodash/compact";
 import { action, computed, observable, reaction, runInAction, toJS } from "mobx";
 import { Observer } from "mobx-react";
-import React from "react";
+import React, { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -53,7 +53,8 @@ export default function Listing({ item }: { item: CollectionItem }) {
 
     const { openListed } = useFolderSets();
     const folderName = useFolderName();
-
+    const location = useMemo(() => boxInfo(folderName(item.folder_id))?.[0], [item.folder_id, folderName]);
+    
     if (!lpdb) {
         return null;
     }
@@ -69,7 +70,7 @@ export default function Listing({ item }: { item: CollectionItem }) {
         price: suggestions?.[condition]?.value ?? 1,
         releaseId: item.id,
         status: ListingStatusesEnum.DRAFT,
-        location: boxInfo(folderName(item.folder_id))?.[0],
+        location: location,
         comments: compact([getNotes(item.notes), ...item.basic_information.formats.map((f) => SHIPS_IN_NOTE[f.name as keyof typeof SHIPS_IN_NOTE])]).join(" "),
     };
 
@@ -145,7 +146,7 @@ function InventoryItemComponent({
     const noChanges = React.useMemo(() => computed(() => JSON.stringify(item) === JSON.stringify(originalValue)), [item, originalValue]);
     const setListingLocationByFolderId = React.useMemo(() => action((newFolderId: number) => {
         const location = folderName(newFolderId);
-        item.location = location;
+        item.location = boxInfo(location)?.[0] ?? location;
     }), [folderName, item]);
     // const collectionItemNotes = React.useMemo(() => collectionItem.notes.find(({ field_id }) => field_id === notesId), []);
     if (!lpdb) return null;
@@ -161,7 +162,7 @@ function InventoryItemComponent({
         {error && <Alert variant="warning">{JSON.stringify(error)}</Alert>}
         <Observer>
         {() => {
-                const suggestedLocation = parseLocation(folderName(collectionItem.folder_id)).label;
+            const suggestedLocation = parseLocation(folderName(collectionItem.folder_id)).label;
             return <Form>
                 <Form.Group>
                     <Form.Label>Condition</Form.Label>

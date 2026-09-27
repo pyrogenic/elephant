@@ -10,7 +10,7 @@ export type Location = {
     status: "remain" | "leave" | "listed" | "sold" | "unknown",
 }
 
-export function parseLocation(str: string): Location {
+export function parseLocation(str: string, log: boolean = false): Location {
     const [typeSrc, rest] = str.split(/- |, /, 2);
     let type: Location["type"];
     let label: Location["label"];
@@ -46,6 +46,7 @@ export function parseLocation(str: string): Location {
     const [statusSrc, boxNameSrc] = labelSrc.split(/ (?!\w)/, 2);
     const boxMatch = /\((?<label>.*)\)/.exec(boxNameSrc);
     label = boxMatch?.groups?.label ?? boxNameSrc;
+    if (log) console.log({parseLocation: {str, typeSrc, statusSrc, boxNameSrc, boxMatch}});
     switch (statusSrc) {
         case "Remain":
         case "Top":
