@@ -68,6 +68,49 @@ const ERROR_PAUSE_MS = 10 * 1000;
  */
 const MAX_RATE_LIMIT_WAIT_MS = 2 * 60 * 1000;
 
+/**
+ * Default for `requestTimeoutSeconds` — how long one attempt may stay unsettled.
+ *
+ * Generous, because this bounds more than the network: `factory()` is discojs'
+ * `limiter.schedule(...)`, so the clock also covers time spent queued behind
+ * discojs' reservoir, which can legitimately be a full 60s window.
+ */
+const DEFAULT_REQUEST_TIMEOUT_S = 120;
+
+/**
+ * Thrown by `withTimeout`. Carries no `statusCode`, so the handler in `getInternal`
+ * treats it as the network failure it is: pause, consume a retry, try again.
+ */
+export class RequestTimeoutError extends Error {
+    constructor(key: string, ms: number) {
+        super(`No response after ${Math.round(ms / 1000)}s: ${key}`);
+        this.name = "RequestTimeoutError";
+        // TS 4.6 targets es5, where subclassing a builtin loses the prototype chain
+        // unless it is restored by hand — without this, `instanceof` is false.
+        Object.setPrototypeOf(this, RequestTimeoutError.prototype);
+    }
+}
+
+/**
+ * `promise`, but rejecting if it has not settled within `ms`.
+ *
+ * A request that never settles is worse than one that fails: it holds a slot against
+ * `simultaneousRequestLimit` forever, and `activeGets` hands the same dead promise to
+ * every later caller of that key, so the URL is permanently poisoned for the session.
+ *
+ * The losing side is not cancelled — discojs exposes no `AbortSignal`, so the original
+ * fetch keeps running and keeps its slot in discojs' own limiter. This frees Elephant's
+ * accounting, not the browser's connection.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, key: string): Promise<T> {
+    if (!(ms > 0)) { return promise; }
+    let timer: ReturnType<typeof setTimeout>;
+    const expiry = new Promise<never>((_, reject) => {
+        timer = setTimeout(reject, ms, new RequestTimeoutError(key, ms));
+    });
+    return Promise.race([promise, expiry]).finally(() => clearTimeout(timer));
+}
+
 type CachedRequest = {
     url: string;
     data: any;
@@ -220,6 +263,8 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
     lastErrorTimestamp = observableStorage<number>("lastErrorTimestamp", 0);
     simultaneousRequestLimit = observableStorage<number>("simultaneousRequestLimit", 5);
     requestPerMinuteCap = observableStorage<number>("requestPerMinuteCap", 15);;
+    /** Per-attempt deadline, in seconds. 0 disables the timeout entirely. */
+    requestTimeoutSeconds = observableStorage<number>("requestTimeoutSeconds", DEFAULT_REQUEST_TIMEOUT_S);
 
     constructor() {
         this.storage = idb.openDB<MyDB>("DiscogsIndexedCache", 7, {
@@ -262,6 +307,7 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
             rateLimit: observable,
             simultaneousRequestLimit: observable,
             requestPerMinuteCap: observable,
+            requestTimeoutSeconds: observable,
             clear: action,
         });
         this.tracker.listeners.push(this.checkRate);
@@ -498,7 +544,11 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                 if (this.log) console.log(`Resuming after waiting: ${key}`);
             }
             try {
-                const promise = factory();
+                // Track the *raced* promise, not `factory()`'s: the tracker is what
+                // `inflight` — and so the concurrency gate above, and the Data tab's
+                // list — is derived from, and tracking the un-raced one would leave a
+                // timed-out request counted as in flight forever.
+                const promise = withTimeout(factory(), this.requestTimeoutSeconds.value * 1000, key);
                 this.tracker.track("discogs", key, promise);
                 let newValue: T;
                 newValue = await promise;
@@ -557,7 +607,9 @@ export default class DiscogsIndexedCache implements IDiscogsCache, Required<IMem
                     return undefined;
                 }
 
-                // 5xx, or a network/CORS failure with no status at all.
+                // 5xx, a timeout, or a network/CORS failure with no status at all — all
+                // of them transient as far as we can tell from here, so all of them get
+                // the same pause-and-retry.
                 console.warn(e);
                 runInAction(() => this.lastErrorTimestamp.value = Date.now());
                 this.pauseFor(ERROR_PAUSE_MS);

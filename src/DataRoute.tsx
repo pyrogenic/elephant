@@ -133,6 +133,15 @@ export const DataIndex = observer(() => {
                             </Form.Text>
                         </Form.Group>
                         <Form.Group>
+                            <Form.Label>Request Timeout</Form.Label>
+                            <Form.Control type="number" min={0} max={600} value={cache.requestTimeoutSeconds.value} onChange={action(({ target: { value } }) => cache.requestTimeoutSeconds.value = Number(value))} />
+                            <Form.Text>
+                                Seconds before an attempt is abandoned and retried. Covers queueing
+                                inside Discojs as well as the network, so keep it well above one
+                                rate-limit window. Set to 0 to let requests run forever.
+                            </Form.Text>
+                        </Form.Group>
+                        <Form.Group>
                             <Form.Label>Estimated hard cap</Form.Label>
                             <div><Form.Text className={cache.observedRateLimit ? "text-muted" : undefined}>
                                 {cache.rpm[1]} rpm
