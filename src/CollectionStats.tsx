@@ -237,6 +237,8 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
 
     const [selectedDateInfo, setSelectedDateInfo] = React.useState<{ row: number, date: Date, items: CollectionItem[] }>();
 
+    const chartHeight = 900;
+
     return <dl>
         <dt>Count</dt>
         <dd>{items.length}</dd>
@@ -339,7 +341,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
         <dt>Listening History</dt>
         <dd>
             <Row>
-                <div style={{ width: 1024 }}>
+                <div style={{ width: 1024, height: chartHeight }}>
                     <Chart
                         chartType="Calendar"
                         width="100%"
@@ -356,7 +358,7 @@ export default function CollectionStats({ items }: { items: CollectionItem[] }) 
                             ],
                             ...listensByDate.map(([a, b]) => [a, b])]}
                         options={{
-                            height: 800,
+                            height: chartHeight,
                         }}
                         chartEvents={[
                             // {
